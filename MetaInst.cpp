@@ -64,7 +64,7 @@ namespace {
             }
 
             void addEdge(MetaVertex<T>* from, MetaVertex<T>* to) {
-                from.addAdjacency(to);
+                from->addAdjacency(to);
             }
 
     };
@@ -86,22 +86,25 @@ namespace {
         SUB,
         MUL,
         DIV,
+        REMAINDER,
         AND,
         OR,
         XOR,
         SHIFT,
         NEG,
-        RET
+        RET,
+        // represent allocation for a data.
+        ALLOCATION
     };
 
     class MetaConstant : MetaOperand {
 
-    }
+    };
 
 
     class MetaArgument : MetaOperand {
 
-    }
+    };
 
 
     class MetaInst : MetaOperand {
@@ -115,17 +118,48 @@ namespace {
         public:
             MetaInst() { }
 
-            MetaInst(Instruction* i) {
+            MetaInst(std::vector<InstType> ty) : type(ty) {
 
             }
 
+            void addOperand(MetaOperand* op) {
+                operandList.push_back(op);
+            }
+
     };
+    
+    class MetaFunction;
 
     class MetaBB {
         private:
         protected:
 
-        std::list<MetaInst> instList;
+        std::vector<MetaInst*> instList;
+        std::vector<MetaBB*> preds;
+        
+        // record parent scope
+        const MetaFunction* parent;
+
+        public:
+
+        MetaBB(MetaFunction* f) : parent(f) { }
+
+        ~MetaBB() {
+            for (auto inst : instList) {
+                delete inst;
+            }
+        }
+
+        MetaInst* addInstruction(std::vector<InstType> ty) {
+            MetaInst* newInst = new MetaInst();
+            instList.push_back(newInst);
+            return newInst;
+        }
+
+        void addInstruction(MetaInst* inst) {
+            instList.push_back(inst);
+        }
+
 
     };
 
@@ -134,18 +168,27 @@ namespace {
         protected:
 
         // a function should contains a set of constants.
-        std::unordered_set<MetaConstant> constants;
+        std::unordered_set<MetaConstant*> constants;
         // arguments, as well.
-        std::unordered_set<MetaArgument> args;
+        std::unordered_set<MetaArgument*> args;
+        // basic blocks.
+        std::vector<MetaBB*> bbs;
 
         public:
 
-        void addConstant(const Constant & c) {
-            constants.insert(MetaConstant());
+        void addConstant(MetaConstant* c) {
+            constants.insert(c);
         }
         
-        void addArgument(const Argument & a) {
-            args.insert(MetaArgument());
+        void addArgument(MetaArgument* a) {
+            args.insert(a);
+        }
+    
+        // create a new bb at the end of bb list.
+        MetaBB* buildBB() {
+            MetaBB* newBB = new MetaBB(this);
+            bbs.push_back(newBB);
+            return newBB;
         }
 
     };
@@ -169,7 +212,7 @@ namespace {
             }
 
             void addMetaInst(Instruction* i) {
-                vertex.push_back(new MetaInst(i));
+                vertex.push_back(new MetaInst());
             }
     };
     
@@ -189,25 +232,212 @@ namespace {
             outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
 
             MetaFunction mf;
+            
+            // record the reflection between primitive type and Meta type.
+            std::unordered_map<BasicBlock*, MetaBB*> bbMap;
+            std::unordered_map<Instruction*, MetaInst*> instMap;
+            std::unordered_map<Constant*, MetaConstant*> constantMap;
+            std::unordered_map<Argument*, MetaArgument*> argMap;
 
+            // create all meta basic block and instructions.
+            for (auto bb = F.begin(); bb != F.end(); ++bb) {
+                MetaBB* newBB = mf.buildBB();
+                bbMap.insert({&*bb, newBB});
+                for (auto i = bb->begin(); i != bb->end(); ++i) {
+                    MetaInst* newInst = new MetaInst(getInstType(&*i));
+                    newBB->addInstruction(newInst);
+                    instMap.insert({&*i, newInst});
+                }
+            }
+
+            // construct graph
             for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
                 // we create graph for each basic block
+                MetaBB* curBB = bbMap.find(&*bb)->second;
+                
                 for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
-                    // 笑死 乱打属于是 先dereference再取地址
-                    // if this instruction never appear, then add it to vertex list.
-                    Use* edges = i->getOperandList();
+                    // add this instruction to current basic block.
+                    MetaInst* curInst = instMap.find(&*i)->second;
+
                     outs() << "going to print values..." << "\n";
-                    while (edges) {
-                        Value* value = edges->get();
+                    for (auto op = i->op_begin(); op != i->op_end(); ++op) {
+                        Value* value = op->get();
                         printType(value);
-                        outs() << "the operand number of current use is " << edges->getOperandNo() << "#" << "\n";
-                        edges = edges->getNext();
+                        if (Argument* arg = dyn_cast<Argument>(value)) {
+                            MetaArgument* metaArg = nullptr;
+                                auto pair = argMap.find(arg);
+                            if (pair == argMap.end()) {
+                                metaArg = new MetaArgument();
+                                mf.addArgument(metaArg);
+                                argMap.insert({arg, metaArg});
+                            } 
+                            else {
+                                metaArg = pair->second;
+                            }
+                            curInst->addOperand((MetaOperand*)metaArg);
+                        }
+                        else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
+                            if (auto it = bbMap.find(bb) == bbMap.end()) {
+                                
+                            }
+                            else {
+
+                            }
+                        }
+                        else if (Constant* c = dyn_cast<Constant>(value)) {
+                            MetaConstant* metaCons = nullptr;
+                            auto pair = constantMap.find(c);
+                            if (pair == constantMap.end()) {
+                                metaCons = new MetaConstant();
+                                mf.addConstant(metaCons);
+                                constantMap.insert({c, metaCons});
+                            }
+                            else {
+                                metaCons = pair->second;
+                            }
+                            curInst->addOperand((MetaOperand*)metaCons);
+                        }
+                        // if this Instruction did not appeared yet, create a meta inst for it.
+                        else if (Instruction* inst = dyn_cast<Instruction>(value)) {
+                            MetaInst* usedInst = instMap.find(inst)->second;
+                            curInst->addOperand((MetaOperand*)usedInst);
+                        }
+                        outs() << "the operand number of current value is " << op->getOperandNo() << "#" << "\n";
                     }
                 }
             }
+        
             outs() << "\n";
+            return true;
         }
+        
+        // determine the type of a instruction. referenced Instruction.h
+        std::vector<InstType> getInstType(Instruction* inst) {
+            std::vector<InstType> ty;
+            outs() << "type of this instruction is: " << inst->getOpcodeName() << "\n";
+            switch (inst->getOpcode()) {
+                // Terminators
+                case Instruction::Ret:   
+                case Instruction::Br:
+                case Instruction::Switch:
+                case Instruction::IndirectBr:
+                case Instruction::Invoke:
+                case Instruction::Resume:
+                case Instruction::Unreachable:
+                case Instruction::CleanupRet:
+                case Instruction::CatchRet:
+                case Instruction::CatchPad:
+                case Instruction::CatchSwitch:
+                case Instruction::CallBr:
+                    ty.push_back(InstType::JUMP);
+                    break;
 
+                // Standard unary operators...
+                case Instruction::FNeg:
+                    ty.push_back(InstType::NEG);
+                    break;
+
+                // Standard binary operators...
+                case Instruction::Add:
+                case Instruction::FAdd:
+                    ty.push_back(InstType::ADD);
+                    break;
+                case Instruction::Sub:
+                case Instruction::FSub:
+                    ty.push_back(InstType::SUB);
+                    break;
+                case Instruction::Mul:
+                case Instruction::FMul:
+                    ty.push_back(InstType::MUL);
+                    break;
+                case Instruction::UDiv:
+                case Instruction::SDiv:
+                case Instruction::FDiv:
+                    ty.push_back(InstType::DIV);
+                    break;
+                case Instruction::URem:
+                case Instruction::SRem:
+                case Instruction::FRem:
+                    ty.push_back(InstType::REMAINDER);
+                    break;
+
+                // Logical operators...
+                case Instruction::And:
+                    ty.push_back(InstType::AND);
+                    break;
+                case Instruction::Or :
+                    ty.push_back(InstType::OR);
+                    break;
+                case Instruction::Xor:
+                    ty.push_back(InstType::XOR);
+                    break;
+
+                // Memory instructions...
+                case Instruction::Alloca:
+                    ty.push_back(InstType::ALLOCATION);
+                    break;
+                case Instruction::Load:
+                    ty.push_back(InstType::LOAD);
+                    break;
+                case Instruction::Store:
+                    ty.push_back(InstType::STORE);
+                    break;
+                case Instruction::AtomicCmpXchg:
+                case Instruction::AtomicRMW:
+                case Instruction::Fence:
+                case Instruction::GetElementPtr:
+                    break;
+
+                // Convert instructions...
+                case Instruction::Trunc:
+                case Instruction::ZExt:
+                case Instruction::SExt:
+                case Instruction::FPTrunc:
+                case Instruction::FPExt:
+                case Instruction::FPToUI:
+                case Instruction::FPToSI:
+                case Instruction::UIToFP:
+                case Instruction::SIToFP:
+                case Instruction::IntToPtr:
+                case Instruction::PtrToInt:
+                case Instruction::BitCast:
+                case Instruction::AddrSpaceCast:
+                    break;
+
+                // Other instructions...
+                case Instruction::ICmp:
+                case Instruction::FCmp:
+                    ty.push_back(InstType::COMPARE);
+                    break;
+                case Instruction::PHI:
+                case Instruction::Select:
+                    break;
+                case Instruction::Call:
+                    ty.push_back(InstType::JUMP);
+                    break;
+                case Instruction::Shl:
+                case Instruction::LShr:
+                case Instruction::AShr:
+                    ty.push_back(InstType::SHIFT);
+                    break;
+                case Instruction::VAArg:
+                case Instruction::ExtractElement:
+                case Instruction::InsertElement:
+                case Instruction::ShuffleVector:
+                case Instruction::ExtractValue:
+                case Instruction::InsertValue:
+                case Instruction::LandingPad:
+                case Instruction::CleanupPad:
+                case Instruction::Freeze:
+                    break;
+
+                default:
+                    break;
+            }
+
+            return ty;
+
+        } 
 
         // this function is used to print the subclass of a Value in INSTRUCTION level.
         void printType(Value* value) {
@@ -246,6 +476,6 @@ namespace {
 char MetaInstPass::ID = 0;
 
 
-static RegisterPass<MetaInstPass> X("meta-inst", "MetaInst Pass",
+static RegisterPass<MetaInstPass> X("meta-trans", "MetaTrans Pass",
                              false /* Only looks at CFG */,
                              false /* Analysis Pass */);
