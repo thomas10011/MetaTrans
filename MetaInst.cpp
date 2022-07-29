@@ -135,14 +135,20 @@ namespace {
         protected:
 
         std::vector<MetaInst*> instList;
-        std::vector<MetaBB*> preds;
+        
+        // point to next BB if exists.
+        MetaBB* nextBB;
+        // possibly a phi node.
+        MetaInst* entry;
+        // each bb end with a terminator.
+        MetaInst* terminator;
         
         // record parent scope
         const MetaFunction* parent;
 
         public:
 
-        MetaBB(MetaFunction* f) : parent(f) { }
+        MetaBB(MetaFunction* f) : nextBB(nullptr), entry(nullptr), terminator(nullptr), parent(f) { }
 
         ~MetaBB() {
             for (auto inst : instList) {
@@ -160,6 +166,18 @@ namespace {
             instList.push_back(inst);
         }
 
+        void setNextBB(MetaBB* next) { nextBB = next; }
+
+        MetaBB* getNextBB() { return nextBB; }
+
+        void setEnrty(MetaInst* inst) { entry = inst; }
+
+        MetaInst* getEntry() { return entry; }
+
+        void setTerminator(MetaInst* inst) { terminator = inst; }
+
+        MetaInst* getTerminator() { return terminator; }
+
 
     };
 
@@ -173,6 +191,9 @@ namespace {
         std::unordered_set<MetaArgument*> args;
         // basic blocks.
         std::vector<MetaBB*> bbs;
+
+        // CFG root
+        MetaBB* root;
 
         public:
 
@@ -220,8 +241,6 @@ namespace {
 
         static char ID;
 
-
-
         /* data */
         MetaInstPass() : FunctionPass(ID) {
                        
@@ -264,7 +283,7 @@ namespace {
                         Value* value = op->get();
                         printType(value);
                         if (Argument* arg = dyn_cast<Argument>(value)) {
-                            MetaArgument* metaArg = nullptr;
+                                MetaArgument* metaArg = nullptr;
                                 auto pair = argMap.find(arg);
                             if (pair == argMap.end()) {
                                 metaArg = new MetaArgument();
@@ -276,13 +295,11 @@ namespace {
                             }
                             curInst->addOperand((MetaOperand*)metaArg);
                         }
+                        // create CFG here.
                         else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
-                            if (auto it = bbMap.find(bb) == bbMap.end()) {
-                                
-                            }
-                            else {
-
-                            }
+                            auto it = bbMap.find(bb);
+                            curBB->setNextBB(it->second);
+                            curBB->setTerminator(curInst);
                         }
                         else if (Constant* c = dyn_cast<Constant>(value)) {
                             MetaConstant* metaCons = nullptr;
