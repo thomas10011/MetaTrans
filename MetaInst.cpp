@@ -77,6 +77,7 @@ namespace {
     class MetaInst;
     class MetaBB;
     class MetaFunction;
+    struct MetaInstPass;
 
     enum InstType {
         // NONE represent a Non-Instruction operand.
@@ -104,18 +105,16 @@ namespace {
         ALLOCATION
     };
 
-    class MetaConstant : MetaOperand {
+    class MetaConstant : public MetaOperand {
 
     };
 
 
-    class MetaArgument : MetaOperand {
+    class MetaArgument : public MetaOperand {
 
     };
 
-    struct MetaInstPass;
-
-    class MetaInst : MetaOperand {
+    class MetaInst : public MetaOperand {
         private:
         protected:
 
@@ -134,24 +133,42 @@ namespace {
                 operandList.push_back(op);
             }
 
-            virtual void processOperand(
+            virtual void processOperand (
                 Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
                 MetaInstPass& pass
             );
+
+            static MetaInst* createMetaInst(std::vector<InstType> ty);
 
 
 
     };
     
     // represent a phi node.
-    class MetaPhi : MetaInst {
+    class MetaPhi : public MetaInst {
         private:
         protected:
 
-        
+            std::unordered_map<MetaBB*, MetaOperand*> bbValueMap;
 
         public:
 
+            MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
+
+            virtual void processOperand (
+                Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
+                MetaInstPass& pass
+            ) override;
+
+            void addValue(MetaBB* bb, MetaOperand* op) {
+                bbValueMap.insert({bb, op});
+            }
+
+            MetaOperand* getValue(MetaBB* bb) {
+                auto pair = bbValueMap.find(bb);
+                if (pair == bbValueMap.end()) return nullptr;
+                return pair->second;
+            }
     };
     
 
@@ -289,9 +306,28 @@ namespace {
                 MetaBB* newBB = mf.buildBB();
                 bbMap.insert({&*bb, newBB});
                 for (auto i = bb->begin(); i != bb->end(); ++i) {
-                    MetaInst* newInst = new MetaInst(getInstType(&*i));
+                    MetaInst* newInst = MetaInst::createMetaInst(getInstType(&*i));
                     newBB->addInstruction(newInst);
                     instMap.insert({&*i, newInst});
+
+                    // create all arg and constant.
+                    for (auto op = i->op_begin(); op != i->op_end(); ++op) {
+                        Value* value = op->get();
+                        if (Argument* arg = dyn_cast<Argument>(value)) {
+                            auto pair = argMap.find(arg);
+                            if (pair != argMap.end()) break;
+                            MetaArgument* metaArg = new MetaArgument();
+                            mf.addArgument(metaArg);
+                            argMap.insert({arg, metaArg});
+                        }
+                        else if (Constant* c = dyn_cast<Constant>(value)) {
+                            auto pair = constantMap.find(c);
+                            if (pair != constantMap.end()) break;
+                            MetaConstant* metaCons = new MetaConstant();
+                            mf.addConstant(metaCons);
+                            constantMap.insert({c, metaCons});
+                        }
+                    }
                 }
             }
 
@@ -303,11 +339,6 @@ namespace {
                 for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
                     // add this instruction to current basic block.
                     MetaInst* curInst = instMap.find(&*i)->second;
-
-                    // deal with phi node.
-                    if (auto phi = dyn_cast<PHINode>(&*i)) {
-
-                    }
                     outs() << "going to print values..." << "\n";
                     curInst->processOperand(&*i, curBB, mf, *this);
                 }
@@ -416,6 +447,8 @@ namespace {
                     ty.push_back(InstType::COMPARE);
                     break;
                 case Instruction::PHI:
+                    ty.push_back(InstType::PHI);
+                    break;
                 case Instruction::Select:
                     break;
                 case Instruction::Call:
@@ -447,34 +480,41 @@ namespace {
 
         // this function is used to print the subclass of a Value in INSTRUCTION level.
         void printType(Value* value) {
-            outs() << "value address: " << value;
+            outs() << "value address: " << value << ";";
             if (dyn_cast<Argument>(value)) { 
-                outs() << " real type: Argument" << "\n";
+                outs() << " real type: Argument";
             }
             else if (dyn_cast<BasicBlock>(value)) {
-                outs() << " real type: BasicBlock" << "\n";
+                outs() << " real type: BasicBlock";
             }
             else if (dyn_cast<InlineAsm>(value)) {
-                outs() << " real type: nlineAsm" << "\n";
+                outs() << " real type: nlineAsm";
             }
             else if (dyn_cast<MetadataAsValue>(value)) {
-                outs() << " real type: MetadataAsValue" << "\n";
+                outs() << " real type: MetadataAsValue";
             }
             else if (dyn_cast<Constant>(value)) {
-                outs() << " real type: Constant" << "\n";
+                outs() << " real type: Constant";
             }
             else if (dyn_cast<MemoryAccess>(value)) {
-                outs() << " real type: MemoryAccess" << "\n";
+                outs() << " real type: MemoryAccess";
             }
             else if (dyn_cast<Instruction>(value)) {
-                outs() << " real type: Instruction" << "\n";
+                outs() << " real type: Instruction";
             }
             else if (dyn_cast<Operator>(value)) {
-                outs() << " real type: Operator" << "\n";
+                outs() << " real type: Operator";
             }
         }
 
     };
+
+    MetaInst* MetaInst::createMetaInst(std::vector<InstType> ty) {
+        if (ty[0] == InstType::PHI)
+            return new MetaPhi(ty);
+        else 
+            return new MetaInst(ty);
+    }
 
     void MetaInst::processOperand(
         Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
@@ -484,16 +524,7 @@ namespace {
             Value* value = op->get();
             pass.printType(value);
             if (Argument* arg = dyn_cast<Argument>(value)) {
-                MetaArgument* metaArg = nullptr;
-                auto pair = pass.argMap.find(arg);
-                if (pair == pass.argMap.end()) {
-                    metaArg = new MetaArgument();
-                    f.addArgument(metaArg);
-                    pass.argMap.insert({arg, metaArg});
-                } 
-                else {
-                    metaArg = pair->second;
-                }
+                MetaArgument* metaArg = pass.argMap.find(arg)->second;
                 addOperand((MetaOperand*)metaArg);
             }
             // create CFG here.
@@ -503,24 +534,47 @@ namespace {
                 curBB->setTerminator(this);
             }
             else if (Constant* c = dyn_cast<Constant>(value)) {
-                MetaConstant* metaCons = nullptr;
-                auto pair = pass.constantMap.find(c);
-                if (pair == pass.constantMap.end()) {
-                    metaCons = new MetaConstant();
-                    f.addConstant(metaCons);
-                    pass.constantMap.insert({c, metaCons});
-                }
-                else {
-                    metaCons = pair->second;
-                }
+                MetaConstant* metaCons = pass.constantMap.find(c)->second;
                 addOperand((MetaOperand*)metaCons);
             }
-            // if this Instruction did not appeared yet, create a meta inst for it.
             else if (Instruction* inst = dyn_cast<Instruction>(value)) {
                 MetaInst* usedInst = pass.instMap.find(inst)->second;
                 addOperand((MetaOperand*)usedInst);
             }
-            outs() << "the operand number of current value is " << op->getOperandNo() << "#" << "\n";
+            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
+        }
+    }
+
+    void MetaPhi::processOperand(
+        Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
+        MetaInstPass& pass
+    ) {
+        // invoke parent class's method first.
+        MetaInst::processOperand(curInst, curBB, f, pass);
+        outs() << "processing meta phi node's operands..." << "\n";
+        auto phi = dyn_cast<PHINode>(curInst);
+        for (auto bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
+            Value* value = phi->getIncomingValueForBlock(*bb);
+            MetaOperand* op = nullptr;
+            if (Argument* arg = dyn_cast<Argument>(value)) {
+                op = (MetaOperand*)pass.argMap.find(arg)->second;
+            }
+            else if (Constant* c = dyn_cast<Constant>(value)) {
+                op = (MetaOperand*)pass.constantMap.find(c)->second;
+            }
+            else if (Instruction* i = dyn_cast<Instruction>(value)) {
+                op = (MetaOperand*)pass.instMap.find(i)->second;
+            }
+            assert(op);
+            addValue(pass.bbMap.find(*bb)->second, op);
+            outs() << "basic block: "<< bb << "; value: " << value << "; ";
+        }
+        outs() << "\n";
+        
+        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
+            Value* value = op->get();
+            pass.printType(value); 
+            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
     }
 
