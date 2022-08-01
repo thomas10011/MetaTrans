@@ -1,6 +1,7 @@
 #include "llvm/Pass.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/DerivedUser.h"
@@ -73,6 +74,10 @@ namespace {
 
     };
 
+    class MetaInst;
+    class MetaBB;
+    class MetaFunction;
+
     enum InstType {
         // NONE represent a Non-Instruction operand.
         NONE,
@@ -82,6 +87,8 @@ namespace {
         CALL,
         BRANCH,
         JUMP,
+        // phi node.
+        PHI,
         ADD,
         SUB,
         MUL,
@@ -106,6 +113,7 @@ namespace {
 
     };
 
+    struct MetaInstPass;
 
     class MetaInst : MetaOperand {
         private:
@@ -126,9 +134,26 @@ namespace {
                 operandList.push_back(op);
             }
 
+            virtual void processOperand(
+                Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
+                MetaInstPass& pass
+            );
+
+
+
     };
     
-    class MetaFunction;
+    // represent a phi node.
+    class MetaPhi : MetaInst {
+        private:
+        protected:
+
+        
+
+        public:
+
+    };
+    
 
     class MetaBB {
         private:
@@ -246,17 +271,18 @@ namespace {
                        
         }
         
+        // record the reflection between primitive type and Meta type.
+        std::unordered_map<BasicBlock*, MetaBB*> bbMap;
+        std::unordered_map<Instruction*, MetaInst*> instMap;
+        std::unordered_map<Constant*, MetaConstant*> constantMap;
+        std::unordered_map<Argument*, MetaArgument*> argMap;
+
         bool runOnFunction(Function & F) override {
             
             outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
 
             MetaFunction mf;
             
-            // record the reflection between primitive type and Meta type.
-            std::unordered_map<BasicBlock*, MetaBB*> bbMap;
-            std::unordered_map<Instruction*, MetaInst*> instMap;
-            std::unordered_map<Constant*, MetaConstant*> constantMap;
-            std::unordered_map<Argument*, MetaArgument*> argMap;
 
             // create all meta basic block and instructions.
             for (auto bb = F.begin(); bb != F.end(); ++bb) {
@@ -278,49 +304,12 @@ namespace {
                     // add this instruction to current basic block.
                     MetaInst* curInst = instMap.find(&*i)->second;
 
-                    outs() << "going to print values..." << "\n";
-                    for (auto op = i->op_begin(); op != i->op_end(); ++op) {
-                        Value* value = op->get();
-                        printType(value);
-                        if (Argument* arg = dyn_cast<Argument>(value)) {
-                                MetaArgument* metaArg = nullptr;
-                                auto pair = argMap.find(arg);
-                            if (pair == argMap.end()) {
-                                metaArg = new MetaArgument();
-                                mf.addArgument(metaArg);
-                                argMap.insert({arg, metaArg});
-                            } 
-                            else {
-                                metaArg = pair->second;
-                            }
-                            curInst->addOperand((MetaOperand*)metaArg);
-                        }
-                        // create CFG here.
-                        else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
-                            auto it = bbMap.find(bb);
-                            curBB->setNextBB(it->second);
-                            curBB->setTerminator(curInst);
-                        }
-                        else if (Constant* c = dyn_cast<Constant>(value)) {
-                            MetaConstant* metaCons = nullptr;
-                            auto pair = constantMap.find(c);
-                            if (pair == constantMap.end()) {
-                                metaCons = new MetaConstant();
-                                mf.addConstant(metaCons);
-                                constantMap.insert({c, metaCons});
-                            }
-                            else {
-                                metaCons = pair->second;
-                            }
-                            curInst->addOperand((MetaOperand*)metaCons);
-                        }
-                        // if this Instruction did not appeared yet, create a meta inst for it.
-                        else if (Instruction* inst = dyn_cast<Instruction>(value)) {
-                            MetaInst* usedInst = instMap.find(inst)->second;
-                            curInst->addOperand((MetaOperand*)usedInst);
-                        }
-                        outs() << "the operand number of current value is " << op->getOperandNo() << "#" << "\n";
+                    // deal with phi node.
+                    if (auto phi = dyn_cast<PHINode>(&*i)) {
+
                     }
+                    outs() << "going to print values..." << "\n";
+                    curInst->processOperand(&*i, curBB, mf, *this);
                 }
             }
         
@@ -487,6 +476,53 @@ namespace {
 
     };
 
+    void MetaInst::processOperand(
+        Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
+        MetaInstPass& pass
+    ) {
+        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
+            Value* value = op->get();
+            pass.printType(value);
+            if (Argument* arg = dyn_cast<Argument>(value)) {
+                MetaArgument* metaArg = nullptr;
+                auto pair = pass.argMap.find(arg);
+                if (pair == pass.argMap.end()) {
+                    metaArg = new MetaArgument();
+                    f.addArgument(metaArg);
+                    pass.argMap.insert({arg, metaArg});
+                } 
+                else {
+                    metaArg = pair->second;
+                }
+                addOperand((MetaOperand*)metaArg);
+            }
+            // create CFG here.
+            else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
+                auto it = pass.bbMap.find(bb);
+                curBB->setNextBB(it->second);
+                curBB->setTerminator(this);
+            }
+            else if (Constant* c = dyn_cast<Constant>(value)) {
+                MetaConstant* metaCons = nullptr;
+                auto pair = pass.constantMap.find(c);
+                if (pair == pass.constantMap.end()) {
+                    metaCons = new MetaConstant();
+                    f.addConstant(metaCons);
+                    pass.constantMap.insert({c, metaCons});
+                }
+                else {
+                    metaCons = pair->second;
+                }
+                addOperand((MetaOperand*)metaCons);
+            }
+            // if this Instruction did not appeared yet, create a meta inst for it.
+            else if (Instruction* inst = dyn_cast<Instruction>(value)) {
+                MetaInst* usedInst = pass.instMap.find(inst)->second;
+                addOperand((MetaOperand*)usedInst);
+            }
+            outs() << "the operand number of current value is " << op->getOperandNo() << "#" << "\n";
+        }
+    }
 
 }
 
