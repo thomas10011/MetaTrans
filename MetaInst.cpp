@@ -179,7 +179,7 @@ namespace {
         std::vector<MetaInst*> instList;
         
         // point to next BB if exists.
-        MetaBB* nextBB;
+        std::vector<MetaBB*> successors;
         // possibly a phi node.
         MetaInst* entry;
         // each bb end with a terminator.
@@ -190,7 +190,7 @@ namespace {
 
         public:
 
-        MetaBB(MetaFunction* f) : nextBB(nullptr), entry(nullptr), terminator(nullptr), parent(f) { }
+        MetaBB(MetaFunction* f) : entry(nullptr), terminator(nullptr), parent(f) { }
 
         ~MetaBB() {
             for (auto inst : instList) {
@@ -208,11 +208,13 @@ namespace {
             instList.push_back(inst);
         }
 
-        void setNextBB(MetaBB* next) { nextBB = next; }
+        void addNextBB(MetaBB* next) { successors.push_back(next); }
 
-        MetaBB* getNextBB() { return nextBB; }
+        std::vector<MetaBB*> getNextBB() { return successors; }
 
-        void setEnrty(MetaInst* inst) { entry = inst; }
+        MetaBB* getNextBB(int index) { return successors[index]; }
+
+        void setEntry(MetaInst* inst) { entry = inst; }
 
         MetaInst* getEntry() { return entry; }
 
@@ -253,6 +255,14 @@ namespace {
             bbs.push_back(newBB);
             return newBB;
         }
+
+        void setRoot(MetaBB* rootBB) {
+            root = rootBB;
+        }
+
+        std::vector<MetaBB*>::iterator begin() { return bbs.begin(); }
+
+        std::vector<MetaBB*>::iterator end() { return bbs.end(); }
 
     };
 
@@ -299,14 +309,42 @@ namespace {
             outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
 
             MetaFunction mf;
-            
+            createMetaElements(F, mf);
 
+            // construct graph
+            mf.setRoot(bbMap.find(&*F.begin())->second);
+            for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
+                // we create graph for each basic block
+                MetaBB* curBB = bbMap.find(&*bb)->second;
+                
+                for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
+                    // add this instruction to current basic block.
+                    MetaInst* curInst = instMap.find(&*i)->second;
+                    outs() << "going to print values..." << "\n";
+                    curInst->processOperand(&*i, curBB, mf, *this);
+                }
+            }
+            
+            for (auto bb = mf.begin(); bb != mf.end(); ++bb) {
+                outs() << "successor amount of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
+            }
+            
+            outs() << "\n";
+            return true;
+        }
+
+        void createMetaElements(Function& F, MetaFunction& mf) {
             // create all meta basic block and instructions.
             for (auto bb = F.begin(); bb != F.end(); ++bb) {
                 MetaBB* newBB = mf.buildBB();
                 bbMap.insert({&*bb, newBB});
+                bool first_non_phi = true;
                 for (auto i = bb->begin(); i != bb->end(); ++i) {
                     MetaInst* newInst = MetaInst::createMetaInst(getInstType(&*i));
+                    if (i->getOpcode() != Instruction::PHI && first_non_phi) {
+                        newBB->setEntry(newInst);
+                        first_non_phi = false;
+                    }
                     newBB->addInstruction(newInst);
                     instMap.insert({&*i, newInst});
 
@@ -330,22 +368,6 @@ namespace {
                     }
                 }
             }
-
-            // construct graph
-            for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
-                // we create graph for each basic block
-                MetaBB* curBB = bbMap.find(&*bb)->second;
-                
-                for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
-                    // add this instruction to current basic block.
-                    MetaInst* curInst = instMap.find(&*i)->second;
-                    outs() << "going to print values..." << "\n";
-                    curInst->processOperand(&*i, curBB, mf, *this);
-                }
-            }
-        
-            outs() << "\n";
-            return true;
         }
         
         // determine the type of a instruction. referenced Instruction.h
@@ -530,7 +552,7 @@ namespace {
             // create CFG here.
             else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
                 auto it = pass.bbMap.find(bb);
-                curBB->setNextBB(it->second);
+                curBB->addNextBB(it->second);
                 curBB->setTerminator(this);
             }
             else if (Constant* c = dyn_cast<Constant>(value)) {
