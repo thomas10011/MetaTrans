@@ -20,7 +20,7 @@ namespace MetaTrans {
     class MetaInst;
     class MetaBB;
     class MetaFunction;
-    struct MetaInstPass;
+    struct MetaFunctionPass;
 
 
     class MetaData {
@@ -123,7 +123,7 @@ namespace MetaTrans {
 
             virtual void processOperand (
                 Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
-                MetaInstPass& pass
+                MetaFunctionPass& pass
             );
 
             static MetaInst* createMetaInst(std::vector<InstType> ty);
@@ -147,7 +147,7 @@ namespace MetaTrans {
 
             virtual void processOperand (
                 Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
-                MetaInstPass& pass
+                MetaFunctionPass& pass
             ) override;
 
             void addValue(MetaBB* bb, MetaOperand* op);
@@ -229,6 +229,27 @@ namespace MetaTrans {
 
         std::vector<MetaBB*>::iterator end();
 
+    };
+
+    struct MetaFunctionPass : FunctionPass {
+
+        static char ID;
+
+        // record the reflection between primitive type and Meta type.
+        std::unordered_map<BasicBlock*, MetaBB*> bbMap;
+        std::unordered_map<Instruction*, MetaInst*> instMap;
+        std::unordered_map<Constant*, MetaConstant*> constantMap;
+        std::unordered_map<Argument*, MetaArgument*> argMap;
+
+        MetaFunctionPass();
+
+        bool runOnFunction(Function & F) override;
+
+        void createMetaElements(Function& F, MetaFunction& mf);
+
+        std::vector<InstType> getInstType(Instruction* inst);
+
+        void printType(Value* value);
     };
 }
 
