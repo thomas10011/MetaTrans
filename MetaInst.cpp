@@ -306,6 +306,23 @@ namespace MetaTrans {
             return new MetaInst(ty);
     }
 
+
+    MetaArgument::MetaArgument() { }
+
+    MetaArgument::MetaArgument(DataType ty) : type(ty) { }
+
+    void MetaArgument::setArgIndex(int i) { argIndex = i; }
+
+    MetaInst::MetaInst() { }
+
+    MetaInst::~MetaInst() { }
+
+    MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) { }
+
+    void MetaInst::addOperand(MetaOperand* op) {
+        operandList.push_back(op);
+    }
+
     void MetaInst::processOperand(
         Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
         MetaInstPass& pass
@@ -334,6 +351,8 @@ namespace MetaTrans {
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
     }
+
+    MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
 
     void MetaPhi::processOperand(
         Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
@@ -368,6 +387,71 @@ namespace MetaTrans {
         }
     }
 
+    void MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
+        bbValueMap.insert({bb, op});
+    }
+
+    MetaOperand* MetaPhi::getValue(MetaBB* bb) {
+        auto pair = bbValueMap.find(bb);
+        if (pair == bbValueMap.end()) return nullptr;
+        return pair->second;
+    }
+
+    MetaBB::MetaBB(MetaFunction* f) : entry(nullptr), terminator(nullptr), parent(f) { }
+
+    MetaBB::~MetaBB() {
+        for (auto inst : instList) {
+            delete inst;
+        }
+    }
+
+    MetaInst* MetaBB::addInstruction(std::vector<InstType> ty) {
+        MetaInst* newInst = new MetaInst();
+        instList.push_back(newInst);
+        return newInst;
+    }
+
+    void MetaBB::addInstruction(MetaInst* inst) {
+        instList.push_back(inst);
+    }
+
+    void MetaBB::addNextBB(MetaBB* next) { successors.push_back(next); }
+
+    std::vector<MetaBB*> MetaBB::getNextBB() { return successors; }
+
+    MetaBB* MetaBB::getNextBB(int index) { return successors[index]; }
+
+    void MetaBB::setEntry(MetaInst* inst) { entry = inst; }
+
+    MetaInst* MetaBB::getEntry() { return entry; }
+
+    void MetaBB::setTerminator(MetaInst* inst) { terminator = inst; }
+
+    MetaInst* MetaBB::getTerminator() { return terminator; }
+
+
+    void MetaFunction::addConstant(MetaConstant* c) {
+        constants.insert(c);
+    }
+    
+    void MetaFunction::addArgument(MetaArgument* a) {
+        args.insert(a);
+    }
+
+    // create a new bb at the end of bb list.
+    MetaBB* MetaFunction::buildBB() {
+        MetaBB* newBB = new MetaBB(this);
+        bbs.push_back(newBB);
+        return newBB;
+    }
+
+    void MetaFunction::setRoot(MetaBB* rootBB) {
+        root = rootBB;
+    }
+
+    std::vector<MetaBB*>::iterator MetaFunction::begin() { return bbs.begin(); }
+
+    std::vector<MetaBB*>::iterator MetaFunction::end() { return bbs.end(); }
 }
 
 char MetaTrans::MetaInstPass::ID = 0;

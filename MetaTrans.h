@@ -38,7 +38,7 @@ namespace MetaTrans {
 
             int getOffset();
             void setOffset(int offs);
-    }
+    };
 
     class MetaOperand {
 
@@ -48,7 +48,7 @@ namespace MetaTrans {
     class MetaConstant : public MetaOperand {
         private:
         protected:
-            longlong value;
+            long value;
 
     };
 
@@ -71,7 +71,9 @@ namespace MetaTrans {
             DataType type; 
         
         public:
-            MetaArgument(DataType ty) : type(ty) {}
+            MetaArgument();
+
+            MetaArgument(DataType ty); 
 
             void setArgIndex(int i);
     };
@@ -113,15 +115,11 @@ namespace MetaTrans {
             std::vector<MetaOperand*> operandList;
 
         public:
-            MetaInst() { }
+            MetaInst();
 
-            MetaInst(std::vector<InstType> ty) : type(ty) {
+            MetaInst(std::vector<InstType> ty); 
 
-            }
-
-            void addOperand(MetaOperand* op) {
-                operandList.push_back(op);
-            }
+            void addOperand(MetaOperand* op);
 
             virtual void processOperand (
                 Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
@@ -130,7 +128,7 @@ namespace MetaTrans {
 
             static MetaInst* createMetaInst(std::vector<InstType> ty);
 
-            virtual ~MetaInst() { }
+            virtual ~MetaInst();
 
 
     };
@@ -145,22 +143,17 @@ namespace MetaTrans {
 
         public:
 
-            MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
+            MetaPhi(std::vector<InstType> ty); 
 
             virtual void processOperand (
                 Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
                 MetaInstPass& pass
             ) override;
 
-            void addValue(MetaBB* bb, MetaOperand* op) {
-                bbValueMap.insert({bb, op});
-            }
+            void addValue(MetaBB* bb, MetaOperand* op);
 
-            MetaOperand* getValue(MetaBB* bb) {
-                auto pair = bbValueMap.find(bb);
-                if (pair == bbValueMap.end()) return nullptr;
-                return pair->second;
-            }
+            MetaOperand* getValue(MetaBB* bb);
+
     };
     
 
@@ -182,37 +175,27 @@ namespace MetaTrans {
 
         public:
 
-        MetaBB(MetaFunction* f) : entry(nullptr), terminator(nullptr), parent(f) { }
+        MetaBB(MetaFunction* f);
 
-        ~MetaBB() {
-            for (auto inst : instList) {
-                delete inst;
-            }
-        }
+        ~MetaBB(); 
 
-        MetaInst* addInstruction(std::vector<InstType> ty) {
-            MetaInst* newInst = new MetaInst();
-            instList.push_back(newInst);
-            return newInst;
-        }
+        MetaInst* addInstruction(std::vector<InstType> ty);
 
-        void addInstruction(MetaInst* inst) {
-            instList.push_back(inst);
-        }
+        void addInstruction(MetaInst* inst);
 
-        void addNextBB(MetaBB* next) { successors.push_back(next); }
+        void addNextBB(MetaBB* next);
 
-        std::vector<MetaBB*> getNextBB() { return successors; }
+        std::vector<MetaBB*> getNextBB();
 
-        MetaBB* getNextBB(int index) { return successors[index]; }
+        MetaBB* getNextBB(int index);
 
-        void setEntry(MetaInst* inst) { entry = inst; }
+        void setEntry(MetaInst* inst);
 
-        MetaInst* getEntry() { return entry; }
+        MetaInst* getEntry();
 
-        void setTerminator(MetaInst* inst) { terminator = inst; }
+        void setTerminator(MetaInst* inst);
 
-        MetaInst* getTerminator() { return terminator; }
+        MetaInst* getTerminator();
 
 
     };
@@ -233,28 +216,18 @@ namespace MetaTrans {
 
         public:
 
-        void addConstant(MetaConstant* c) {
-            constants.insert(c);
-        }
+        void addConstant(MetaConstant* c);
         
-        void addArgument(MetaArgument* a) {
-            args.insert(a);
-        }
+        void addArgument(MetaArgument* a);
     
         // create a new bb at the end of bb list.
-        MetaBB* buildBB() {
-            MetaBB* newBB = new MetaBB(this);
-            bbs.push_back(newBB);
-            return newBB;
-        }
+        MetaBB* buildBB();
 
-        void setRoot(MetaBB* rootBB) {
-            root = rootBB;
-        }
+        void setRoot(MetaBB* rootBB);
 
-        std::vector<MetaBB*>::iterator begin() { return bbs.begin(); }
+        std::vector<MetaBB*>::iterator begin();
 
-        std::vector<MetaBB*>::iterator end() { return bbs.end(); }
+        std::vector<MetaBB*>::iterator end();
 
     };
 }
