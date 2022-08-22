@@ -17,65 +17,11 @@ using namespace llvm;
 
 namespace MetaTrans {
 
-    class MetaInst;
-    class MetaBB;
-    class MetaFunction;
-    struct MetaFunctionPass;
-
-
-    class MetaData {
-
-    };
-
-    // record offset in stack.
-    class MetaOffset : public MetaData {
-        private:
-        protected:
-            int offset;
-
-        public:
-            MetaOffset () : offset(0) { }
-
-            int getOffset();
-            void setOffset(int offs);
-    };
-
-    class MetaOperand {
-
-    };
-    
-
-    class MetaConstant : public MetaOperand {
-        private:
-        protected:
-            long value;
-
-    };
-
-
     enum DataType {
         INT,
         UINT,
         FLOAT,
         DOUBLE,
-    };
-
-    class MetaArgument : public MetaOperand {
-        private: 
-        protected:
-
-            int width;
-
-            int argIndex;
-
-            DataType type; 
-        
-        public:
-            MetaArgument();
-
-            MetaArgument(DataType ty); 
-
-            void setArgIndex(int i);
     };
 
     enum InstType {
@@ -104,6 +50,113 @@ namespace MetaTrans {
         ALLOCATION
     };
 
+    class MetaInst;
+    class MetaBB;
+    class MetaFunction;
+    struct MetaFunctionPass;
+
+
+    class MetaData {
+
+    };
+
+    // record offset in stack.
+    class MetaOffset : public MetaData {
+        private:
+        protected:
+            int offset;
+
+        public:
+            MetaOffset () : offset(0) { }
+
+            int getOffset();
+            void setOffset(int offs);
+    };
+
+    class FuncMetaData : MetaData {
+        private:
+        protected:
+
+            std::string funcName;
+            int argAmount;
+            DataType outputType;
+            MetaFunction* func;
+            
+        public:
+            FuncMetaData();
+
+            void setFunctionName(std::string name);
+            void setArgAmount(int amt);
+            void setOutputType(DataType type);
+            void setFunction(MetaFunction* mf);
+
+            std::string getFunctionName();
+            int getArgAmount();
+            DataType getOutputType();
+            MetaFunction* getFunction();
+
+    };
+
+    class InstMetaData : MetaData {
+        private:
+        protected:
+            MetaInst* inst;
+            int operandAmount;
+        public:
+            
+            InstMetaData();
+
+            void setInst(MetaInst* inst);
+            void setOperandAmount(int amt);
+
+            MetaInst* getInst();
+            int getOperandAmount();
+
+    };
+
+
+    class ConstMetaData : MetaData {
+        private:
+        protected:
+
+
+        public:
+
+    };
+
+
+
+    class MetaOperand {
+
+    };
+    
+
+    class MetaConstant : public MetaOperand {
+        private:
+        protected:
+            long value;
+
+    };
+
+
+
+    class MetaArgument : public MetaOperand {
+        private: 
+        protected:
+
+            int width;
+
+            int argIndex;
+
+            DataType type; 
+        
+        public:
+            MetaArgument();
+
+            MetaArgument(DataType ty); 
+
+            void setArgIndex(int i);
+    };
 
 
     class MetaInst : public MetaOperand {

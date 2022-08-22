@@ -294,12 +294,52 @@ namespace MetaTrans {
             return new MetaInst(ty);
     }
 
+//===-------------------------------------------------------------------------------===//
+/// Function Mata Data implementation.
+
+    FuncMetaData::FuncMetaData() { }
+
+    void FuncMetaData::setFunctionName(std::string name) { funcName = name; }
+
+    void FuncMetaData::setArgAmount(int amt) { argAmount = amt; }
+
+    void FuncMetaData::setOutputType(DataType type) { outputType = type; }
+    
+    void FuncMetaData::setFunction(MetaFunction* mf) { func = mf; }
+
+    std::string FuncMetaData::getFunctionName() { return funcName; }
+
+    DataType FuncMetaData::getOutputType() { return outputType; }
+
+    MetaFunction* FuncMetaData::getFunction() { return func; }
+    
+    int FuncMetaData::getArgAmount() { return argAmount; }
+    
+
+//===-------------------------------------------------------------------------------===//
+/// Instruction Mata Data implementation.
+
+    InstMetaData::InstMetaData() { }
+
+    void InstMetaData::setInst(MetaInst* inst) { this->inst = inst; }
+
+    void InstMetaData::setOperandAmount(int amt) { operandAmount = amt; }
+
+    MetaInst* InstMetaData::getInst() { return inst; }
+
+    int InstMetaData::getOperandAmount() { return operandAmount; }
+
+//===-------------------------------------------------------------------------------===//
+/// Meta Argument implementation.
 
     MetaArgument::MetaArgument() { }
 
     MetaArgument::MetaArgument(DataType ty) : type(ty) { }
 
     void MetaArgument::setArgIndex(int i) { argIndex = i; }
+
+//===-------------------------------------------------------------------------------===//
+/// Meta Instruction implementation.
 
     MetaInst::MetaInst() { }
 
@@ -339,6 +379,9 @@ namespace MetaTrans {
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
     }
+
+//===-------------------------------------------------------------------------------===//
+/// Meta Phi Instruction implementation.
 
     MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
 
@@ -385,6 +428,9 @@ namespace MetaTrans {
         return pair->second;
     }
 
+//===-------------------------------------------------------------------------------===//
+/// Meta Basic Block implementation.
+
     MetaBB::MetaBB(MetaFunction* f) : entry(nullptr), terminator(nullptr), parent(f) { }
 
     MetaBB::~MetaBB() {
@@ -417,6 +463,8 @@ namespace MetaTrans {
 
     MetaInst* MetaBB::getTerminator() { return terminator; }
 
+//===-------------------------------------------------------------------------------===//
+/// Meta Function implementation.
 
     void MetaFunction::addConstant(MetaConstant* c) {
         constants.insert(c);
