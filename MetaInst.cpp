@@ -56,8 +56,9 @@ namespace MetaTrans {
 
     };
     
-    
-    /* data */
+//===-------------------------------------------------------------------------------===//
+/// Meta Function pass implementation, Will be invoked by LLVM pass manager.
+
     MetaFunctionPass::MetaFunctionPass() : FunctionPass(MetaFunctionPass::ID) {
                     
     }
@@ -85,6 +86,7 @@ namespace MetaTrans {
         
         for (auto bb = mf.begin(); bb != mf.end(); ++bb) {
             outs() << "successor amount of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
+            printInstDependencyGraph(*bb);
         }
         
         outs() << "\n";
@@ -95,7 +97,7 @@ namespace MetaTrans {
         // create all meta basic block and instructions.
         for (auto bb = F.begin(); bb != F.end(); ++bb) {
             MetaBB* newBB = mf.buildBB();
-            bbMap.insert({&*bb, newBB});
+            assert(bbMap.insert({&*bb, newBB}).second);
             bool first_non_phi = true;
             for (auto i = bb->begin(); i != bb->end(); ++i) {
                 MetaInst* newInst = MetaInst::createMetaInst(getInstType(&*i));
@@ -104,7 +106,7 @@ namespace MetaTrans {
                     first_non_phi = false;
                 }
                 newBB->addInstruction(newInst);
-                instMap.insert({&*i, newInst});
+                assert(instMap.insert({&*i, newInst}).second);
 
                 // create all arg and constant.
                 for (auto op = i->op_begin(); op != i->op_end(); ++op) {
@@ -114,21 +116,21 @@ namespace MetaTrans {
                         if (pair != argMap.end()) break;
                         MetaArgument* metaArg = new MetaArgument();
                         mf.addArgument(metaArg);
-                        argMap.insert({arg, metaArg});
+                        assert(argMap.insert({arg, metaArg}).second);
                     }
                     else if (Constant* c = dyn_cast<Constant>(value)) {
                         auto pair = constantMap.find(c);
                         if (pair != constantMap.end()) break;
                         MetaConstant* metaCons = new MetaConstant();
                         mf.addConstant(metaCons);
-                        constantMap.insert({c, metaCons});
+                        assert(constantMap.insert({c, metaCons}).second);
                     }
                 }
             }
         }
     }
 
-    // determine the type of a instruction. referenced Instruction.h
+    // determine the type of a instruction. refer to Instruction.h
     std::vector<InstType> MetaFunctionPass::getInstType(Instruction* inst) {
         std::vector<InstType> ty;
         outs() << "type of this instruction is: " << inst->getOpcodeName() << "\n";
@@ -286,12 +288,23 @@ namespace MetaTrans {
             outs() << " real type: Operator";
         }
     }
-
-    MetaInst* MetaInst::createMetaInst(std::vector<InstType> ty) {
-        if (ty[0] == InstType::PHI)
-            return new MetaPhi(ty);
-        else 
-            return new MetaInst(ty);
+    
+    
+    void MetaFunctionPass::printInstDependencyGraph(MetaBB* bb) {
+        std::vector<MetaInst*> instList = bb->getInstList();
+        std::unordered_map<MetaOperand*, int> deg;
+        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
+            deg[*iter] = 0;
+        }
+        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
+            std::vector<MetaOperand*> operandList = (*iter)->getOperandList();
+            for (auto op_iter = operandList.begin(); op_iter != operandList.end(); ++op_iter) {
+                deg[*op_iter]++;
+            }
+        }
+        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
+            outs() << "degree of " << *iter << " is " << deg[*iter] << '\n';
+        } 
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -338,6 +351,7 @@ namespace MetaTrans {
 
     void MetaArgument::setArgIndex(int i) { argIndex = i; }
 
+
 //===-------------------------------------------------------------------------------===//
 /// Meta Instruction implementation.
 
@@ -349,6 +363,10 @@ namespace MetaTrans {
 
     void MetaInst::addOperand(MetaOperand* op) {
         operandList.push_back(op);
+    }
+
+    std::vector<MetaOperand*>& MetaInst::getOperandList() {
+        return operandList;
     }
 
     void MetaInst::processOperand(
@@ -378,6 +396,13 @@ namespace MetaTrans {
             }
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
+    }
+
+    MetaInst* MetaInst::createMetaInst(std::vector<InstType> ty) {
+        if (ty[0] == InstType::PHI)
+            return new MetaPhi(ty);
+        else 
+            return new MetaInst(ty);
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -462,6 +487,8 @@ namespace MetaTrans {
     void MetaBB::setTerminator(MetaInst* inst) { terminator = inst; }
 
     MetaInst* MetaBB::getTerminator() { return terminator; }
+
+    std::vector<MetaInst*>& MetaBB::getInstList() { return instList; }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.

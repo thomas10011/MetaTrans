@@ -167,12 +167,16 @@ namespace MetaTrans {
             std::vector<InstType> type;
             std::vector<MetaOperand*> operandList;
 
+            
+
         public:
             MetaInst();
 
             MetaInst(std::vector<InstType> ty); 
 
             void addOperand(MetaOperand* op);
+
+            std::vector<MetaOperand*>& getOperandList();
 
             virtual void processOperand (
                 Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
@@ -250,6 +254,7 @@ namespace MetaTrans {
 
         MetaInst* getTerminator();
 
+        std::vector<MetaInst*>& getInstList();
 
     };
 
@@ -303,6 +308,8 @@ namespace MetaTrans {
         std::vector<InstType> getInstType(Instruction* inst);
 
         void printType(Value* value);
+
+        void printInstDependencyGraph(MetaBB* bb);
     };
 }
 
