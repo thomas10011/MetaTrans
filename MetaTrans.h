@@ -18,7 +18,11 @@ using namespace llvm;
 namespace MetaTrans {
 
     enum DataType {
-        INT,
+        INT8,
+        INT16,
+        INT32,
+        INT64,
+        // necessary?
         UINT,
         FLOAT,
         DOUBLE,
@@ -178,6 +182,10 @@ namespace MetaTrans {
 
             std::vector<MetaOperand*>& getOperandList();
 
+            std::vector<MetaOperand*>::iterator op_begin();
+            
+            std::vector<MetaOperand*>::iterator op_end();
+
             virtual void processOperand (
                 Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
                 MetaFunctionPass& pass
@@ -283,9 +291,9 @@ namespace MetaTrans {
 
         void setRoot(MetaBB* rootBB);
 
-        std::vector<MetaBB*>::iterator begin();
+        std::vector<MetaBB*>::iterator bb_begin();
 
-        std::vector<MetaBB*>::iterator end();
+        std::vector<MetaBB*>::iterator bb_end();
 
     };
 
@@ -299,9 +307,15 @@ namespace MetaTrans {
         std::unordered_map<Constant*, MetaConstant*> constantMap;
         std::unordered_map<Argument*, MetaArgument*> argMap;
 
+        MetaFunction mf;
+
         MetaFunctionPass();
 
         bool runOnFunction(Function & F) override;
+
+        bool createMetaArg(Argument* arg);
+
+        bool createMetaConstant(Constant* c);
 
         void createMetaElements(Function& F, MetaFunction& mf);
 

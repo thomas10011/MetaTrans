@@ -67,7 +67,6 @@ namespace MetaTrans {
         
         outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
 
-        MetaFunction mf;
         createMetaElements(F, mf);
 
         // construct graph
@@ -84,12 +83,30 @@ namespace MetaTrans {
             }
         }
         
-        for (auto bb = mf.begin(); bb != mf.end(); ++bb) {
+        for (auto bb = mf.bb_begin(); bb != mf.bb_end(); ++bb) {
             outs() << "successor amount of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
             printInstDependencyGraph(*bb);
         }
         
         outs() << "\n";
+        return true;
+    }
+
+    bool MetaFunctionPass::createMetaArg(Argument* arg) {
+        auto pair = argMap.find(arg);
+        if (pair != argMap.end()) return false;
+        MetaArgument* metaArg = new MetaArgument();
+        mf.addArgument(metaArg);
+        assert(argMap.insert({arg, metaArg}).second);
+        return true;
+    }
+
+    bool MetaFunctionPass::createMetaConstant(Constant* c) {
+        auto pair = constantMap.find(c);
+        if (pair != constantMap.end()) return false;
+        MetaConstant* metaCons = new MetaConstant();
+        mf.addConstant(metaCons);
+        assert(constantMap.insert({c, metaCons}).second);
         return true;
     }
 
@@ -99,7 +116,9 @@ namespace MetaTrans {
             MetaBB* newBB = mf.buildBB();
             assert(bbMap.insert({&*bb, newBB}).second);
             bool first_non_phi = true;
+            outs() << "creating instructions in Basic Block " << *bb;
             for (auto i = bb->begin(); i != bb->end(); ++i) {
+                outs() << "instruction with type: " << i->getOpcodeName() << "\n";
                 MetaInst* newInst = MetaInst::createMetaInst(getInstType(&*i));
                 if (i->getOpcode() != Instruction::PHI && first_non_phi) {
                     newBB->setEntry(newInst);
@@ -112,18 +131,10 @@ namespace MetaTrans {
                 for (auto op = i->op_begin(); op != i->op_end(); ++op) {
                     Value* value = op->get();
                     if (Argument* arg = dyn_cast<Argument>(value)) {
-                        auto pair = argMap.find(arg);
-                        if (pair != argMap.end()) break;
-                        MetaArgument* metaArg = new MetaArgument();
-                        mf.addArgument(metaArg);
-                        assert(argMap.insert({arg, metaArg}).second);
+                        createMetaArg(arg);
                     }
                     else if (Constant* c = dyn_cast<Constant>(value)) {
-                        auto pair = constantMap.find(c);
-                        if (pair != constantMap.end()) break;
-                        MetaConstant* metaCons = new MetaConstant();
-                        mf.addConstant(metaCons);
-                        assert(constantMap.insert({c, metaCons}).second);
+                        createMetaConstant(c);
                     }
                 }
             }
@@ -133,7 +144,6 @@ namespace MetaTrans {
     // determine the type of a instruction. refer to Instruction.h
     std::vector<InstType> MetaFunctionPass::getInstType(Instruction* inst) {
         std::vector<InstType> ty;
-        outs() << "type of this instruction is: " << inst->getOpcodeName() << "\n";
         switch (inst->getOpcode()) {
             // Terminators
             case Instruction::Ret:   
@@ -357,23 +367,26 @@ namespace MetaTrans {
 
     MetaInst::MetaInst() { }
 
-    MetaInst::~MetaInst() { }
-
     MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) { }
+
+    MetaInst::~MetaInst() { }
 
     void MetaInst::addOperand(MetaOperand* op) {
         operandList.push_back(op);
     }
 
-    std::vector<MetaOperand*>& MetaInst::getOperandList() {
-        return operandList;
-    }
+    std::vector<MetaOperand*>& MetaInst::getOperandList() { return operandList; }
+
+    std::vector<MetaOperand*>::iterator MetaInst::op_begin() { return operandList.begin(); }
+
+    std::vector<MetaOperand*>::iterator MetaInst::op_end() { return operandList.end(); }
 
     void MetaInst::processOperand(
         Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
         MetaFunctionPass& pass
     ) {
-        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
+        unsigned num_op = curInst->getNumOperands();
+        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op, --num_op) {
             Value* value = op->get();
             pass.printType(value);
             if (Argument* arg = dyn_cast<Argument>(value)) {
@@ -396,6 +409,7 @@ namespace MetaTrans {
             }
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
+        assert(!num_op);
     }
 
     MetaInst* MetaInst::createMetaInst(std::vector<InstType> ty) {
@@ -512,9 +526,9 @@ namespace MetaTrans {
         root = rootBB;
     }
 
-    std::vector<MetaBB*>::iterator MetaFunction::begin() { return bbs.begin(); }
+    std::vector<MetaBB*>::iterator MetaFunction::bb_begin() { return bbs.begin(); }
 
-    std::vector<MetaBB*>::iterator MetaFunction::end() { return bbs.end(); }
+    std::vector<MetaBB*>::iterator MetaFunction::bb_end() { return bbs.end(); }
 }
 
 char MetaTrans::MetaFunctionPass::ID = 0;
