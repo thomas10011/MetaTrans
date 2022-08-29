@@ -1,4 +1,5 @@
 
+#include "llvm/Support/raw_ostream.h"
 #include "MetaTrans.h"
 
 
@@ -67,7 +68,7 @@ namespace MetaTrans {
         
         outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
 
-        createMetaElements(F, mf);
+        createMetaElements(F);
 
         // construct graph
         mf.setRoot(bbMap.find(&*F.begin())->second);
@@ -110,7 +111,7 @@ namespace MetaTrans {
         return true;
     }
 
-    void MetaFunctionPass::createMetaElements(Function& F, MetaFunction& mf) {
+    void MetaFunctionPass::createMetaElements(Function& F) {
         // create all meta basic block and instructions.
         for (auto bb = F.begin(); bb != F.end(); ++bb) {
             MetaBB* newBB = mf.buildBB();
@@ -119,13 +120,11 @@ namespace MetaTrans {
             outs() << "creating instructions in Basic Block " << *bb;
             for (auto i = bb->begin(); i != bb->end(); ++i) {
                 outs() << "instruction with type: " << i->getOpcodeName() << "\n";
-                MetaInst* newInst = MetaInst::createMetaInst(getInstType(&*i));
-                if (i->getOpcode() != Instruction::PHI && first_non_phi) {
-                    newBB->setEntry(newInst);
-                    first_non_phi = false;
-                }
-                newBB->addInstruction(newInst);
+                MetaInst* newInst = newBB->buildInstruction(getInstType(&*i));
                 assert(instMap.insert({&*i, newInst}).second);
+                if (first_non_phi && i->getOpcode() != Instruction::PHI) {
+                    newBB->setEntry(newInst); first_non_phi = false;
+                }
 
                 // create all arg and constant.
                 for (auto op = i->op_begin(); op != i->op_end(); ++op) {
@@ -478,8 +477,12 @@ namespace MetaTrans {
         }
     }
 
-    MetaInst* MetaBB::addInstruction(std::vector<InstType> ty) {
-        MetaInst* newInst = new MetaInst();
+    MetaInst* MetaBB::buildInstruction(std::vector<InstType> ty) {
+        MetaInst* newInst = nullptr;
+        if (ty[0] == InstType::PHI)
+            newInst = new MetaPhi(ty);
+        else 
+            newInst =  new MetaInst(ty);
         instList.push_back(newInst);
         return newInst;
     }

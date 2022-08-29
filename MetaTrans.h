@@ -2,7 +2,6 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -13,20 +12,19 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "MetaData.h"
+
 using namespace llvm;
 
 namespace MetaTrans {
 
-    enum DataType {
-        INT8,
-        INT16,
-        INT32,
-        INT64,
-        // necessary?
-        UINT,
-        FLOAT,
-        DOUBLE,
-    };
+    class MetaInst;
+
+    class MetaBB;
+
+    class MetaFunction;
+
+    struct MetaFunctionPass;
 
     enum InstType {
         // NONE represent a Non-Instruction operand.
@@ -54,96 +52,15 @@ namespace MetaTrans {
         ALLOCATION
     };
 
-    class MetaInst;
-    class MetaBB;
-    class MetaFunction;
-    struct MetaFunctionPass;
-
-
-    class MetaData {
-
-    };
-
-    // record offset in stack.
-    class MetaOffset : public MetaData {
-        private:
-        protected:
-            int offset;
-
-        public:
-            MetaOffset () : offset(0) { }
-
-            int getOffset();
-            void setOffset(int offs);
-    };
-
-    class FuncMetaData : MetaData {
-        private:
-        protected:
-
-            std::string funcName;
-            int argAmount;
-            DataType outputType;
-            MetaFunction* func;
-            
-        public:
-            FuncMetaData();
-
-            void setFunctionName(std::string name);
-            void setArgAmount(int amt);
-            void setOutputType(DataType type);
-            void setFunction(MetaFunction* mf);
-
-            std::string getFunctionName();
-            int getArgAmount();
-            DataType getOutputType();
-            MetaFunction* getFunction();
-
-    };
-
-    class InstMetaData : MetaData {
-        private:
-        protected:
-            MetaInst* inst;
-            int operandAmount;
-        public:
-            
-            InstMetaData();
-
-            void setInst(MetaInst* inst);
-            void setOperandAmount(int amt);
-
-            MetaInst* getInst();
-            int getOperandAmount();
-
-    };
-
-
-    class ConstMetaData : MetaData {
-        private:
-        protected:
-
-
-        public:
-
-    };
-
-
-
     class MetaOperand {
 
     };
-    
-
     class MetaConstant : public MetaOperand {
         private:
         protected:
             long value;
 
     };
-
-
-
     class MetaArgument : public MetaOperand {
         private: 
         protected:
@@ -161,8 +78,6 @@ namespace MetaTrans {
 
             void setArgIndex(int i);
     };
-
-
     class MetaInst : public MetaOperand {
         private:
         protected:
@@ -170,8 +85,6 @@ namespace MetaTrans {
             // a vector to indicate the real type of a instruction.
             std::vector<InstType> type;
             std::vector<MetaOperand*> operandList;
-
-            
 
         public:
             MetaInst();
@@ -194,12 +107,9 @@ namespace MetaTrans {
             static MetaInst* createMetaInst(std::vector<InstType> ty);
 
             virtual ~MetaInst();
-
-
     };
 
-
-    // represent a phi node.
+    /// represent a phi node.
     class MetaPhi : public MetaInst {
         private:
         protected:
@@ -220,7 +130,6 @@ namespace MetaTrans {
             MetaOperand* getValue(MetaBB* bb);
 
     };
-    
 
     class MetaBB {
         private:
@@ -244,7 +153,8 @@ namespace MetaTrans {
 
         ~MetaBB(); 
 
-        MetaInst* addInstruction(std::vector<InstType> ty);
+        // Build a new instruction and append to instList.
+        MetaInst* buildInstruction(std::vector<InstType> ty);
 
         void addInstruction(MetaInst* inst);
 
@@ -303,8 +213,11 @@ namespace MetaTrans {
 
         // record the reflection between primitive type and Meta type.
         std::unordered_map<BasicBlock*, MetaBB*> bbMap;
+
         std::unordered_map<Instruction*, MetaInst*> instMap;
+
         std::unordered_map<Constant*, MetaConstant*> constantMap;
+
         std::unordered_map<Argument*, MetaArgument*> argMap;
 
         MetaFunction mf;
@@ -317,7 +230,7 @@ namespace MetaTrans {
 
         bool createMetaConstant(Constant* c);
 
-        void createMetaElements(Function& F, MetaFunction& mf);
+        void createMetaElements(Function& F);
 
         std::vector<InstType> getInstType(Instruction* inst);
 
