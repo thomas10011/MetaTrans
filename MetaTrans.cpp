@@ -79,14 +79,13 @@ namespace MetaTrans {
             for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
                 // add this instruction to current basic block.
                 MetaInst* curInst = instMap.find(&*i)->second;
-                outs() << "going to print values..." << "\n";
                 curInst->processOperand(&*i, curBB, mf, *this);
             }
         }
         
         for (auto bb = mf.bb_begin(); bb != mf.bb_end(); ++bb) {
             outs() << "successor amount of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
-            printInstDependencyGraph(*bb);
+            MetaUtil::printInstDependencyGraph(*bb);
         }
         
         outs() << "\n";
@@ -136,6 +135,7 @@ namespace MetaTrans {
                         createMetaConstant(c);
                     }
                 }
+
             }
         }
     }
@@ -231,7 +231,7 @@ namespace MetaTrans {
             case Instruction::BitCast:
             case Instruction::AddrSpaceCast:
                 break;
-
+            
             // Other instructions...
             case Instruction::ICmp:
             case Instruction::FCmp:
@@ -269,8 +269,11 @@ namespace MetaTrans {
 
     } 
 
+//===-------------------------------------------------------------------------------===//
+/// Meta Util implementation.
+
     // this function is used to print the subclass of a Value in INSTRUCTION level.
-    void MetaFunctionPass::printType(Value* value) {
+    void MetaUtil::printValueType(Value* value) {
         outs() << "value address: " << value << ";";
         if (dyn_cast<Argument>(value)) { 
             outs() << " real type: Argument";
@@ -298,8 +301,7 @@ namespace MetaTrans {
         }
     }
     
-    
-    void MetaFunctionPass::printInstDependencyGraph(MetaBB* bb) {
+    void MetaUtil::printInstDependencyGraph(MetaBB* bb) {
         std::vector<MetaInst*> instList = bb->getInstList();
         std::unordered_map<MetaOperand*, int> deg;
         for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
@@ -314,6 +316,10 @@ namespace MetaTrans {
         for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
             outs() << "degree of " << *iter << " is " << deg[*iter] << '\n';
         } 
+    }
+
+    void MetaUtil::printInstOperand(Instruction* inst) {
+
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -352,6 +358,11 @@ namespace MetaTrans {
     int InstMetaData::getOperandAmount() { return operandAmount; }
 
 //===-------------------------------------------------------------------------------===//
+/// Meta Constant implementation.
+
+    MetaConstant::MetaConstant() { }
+
+//===-------------------------------------------------------------------------------===//
 /// Meta Argument implementation.
 
     MetaArgument::MetaArgument() { }
@@ -385,9 +396,10 @@ namespace MetaTrans {
         MetaFunctionPass& pass
     ) {
         unsigned num_op = curInst->getNumOperands();
+        outs() << "inst type: " << curInst->getOpcodeName() << "\n";
         for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op, --num_op) {
             Value* value = op->get();
-            pass.printType(value);
+            MetaUtil::printValueType(value);
             if (Argument* arg = dyn_cast<Argument>(value)) {
                 MetaArgument* metaArg = pass.argMap.find(arg)->second;
                 addOperand((MetaOperand*)metaArg);
@@ -451,7 +463,7 @@ namespace MetaTrans {
         
         for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
             Value* value = op->get();
-            pass.printType(value); 
+            MetaUtil::printValueType(value); 
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
     }

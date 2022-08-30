@@ -4,7 +4,7 @@
 namespace MetaTrans {
 
     class MetaInst;
-
+    
     class MetaFunction;
 
     enum DataType {
@@ -94,13 +94,13 @@ namespace MetaTrans {
 
     };
 
-
     class ConstMetaData : MetaData {
         private:
         protected:
 
-
         public:
+
+            ConstMetaData();
 
     };
 

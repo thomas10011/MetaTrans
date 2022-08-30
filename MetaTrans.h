@@ -17,7 +17,7 @@
 using namespace llvm;
 
 namespace MetaTrans {
-
+    
     class MetaInst;
 
     class MetaBB;
@@ -25,6 +25,7 @@ namespace MetaTrans {
     class MetaFunction;
 
     struct MetaFunctionPass;
+    
 
     enum InstType {
         // NONE represent a Non-Instruction operand.
@@ -53,14 +54,24 @@ namespace MetaTrans {
     };
 
     class MetaOperand {
-
+        private:
+        protected:
+        public:
+        
     };
+
     class MetaConstant : public MetaOperand {
         private:
         protected:
+
             long value;
 
+        public:
+            
+            MetaConstant();
+
     };
+    
     class MetaArgument : public MetaOperand {
         private: 
         protected:
@@ -77,6 +88,7 @@ namespace MetaTrans {
             MetaArgument(DataType ty); 
 
             void setArgIndex(int i);
+
     };
     class MetaInst : public MetaOperand {
         private:
@@ -84,7 +96,10 @@ namespace MetaTrans {
 
             // a vector to indicate the real type of a instruction.
             std::vector<InstType> type;
+
             std::vector<MetaOperand*> operandList;
+
+            InstMetaData metaData;
 
         public:
             MetaInst();
@@ -190,6 +205,8 @@ namespace MetaTrans {
         // CFG root
         MetaBB* root;
 
+        FuncMetaData metaData;
+
         public:
 
         void addConstant(MetaConstant* c);
@@ -211,7 +228,7 @@ namespace MetaTrans {
 
         static char ID;
 
-        // record the reflection between primitive type and Meta type.
+        // Auxiliary map, record the reflection between primitive type and Meta type.
         std::unordered_map<BasicBlock*, MetaBB*> bbMap;
 
         std::unordered_map<Instruction*, MetaInst*> instMap;
@@ -234,9 +251,18 @@ namespace MetaTrans {
 
         std::vector<InstType> getInstType(Instruction* inst);
 
-        void printType(Value* value);
+    };
 
-        void printInstDependencyGraph(MetaBB* bb);
+    class MetaUtil {
+        
+        public:
+            
+        void static printValueType(Value* value);
+
+        void static printInstDependencyGraph(MetaBB* bb);
+
+        void static printInstOperand(Instruction* inst);
+
     };
 }
 
