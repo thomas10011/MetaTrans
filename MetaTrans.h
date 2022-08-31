@@ -26,7 +26,6 @@ namespace MetaTrans {
 
     struct MetaFunctionPass;
     
-
     enum InstType {
         // NONE represent a Non-Instruction operand.
         NONE,
@@ -64,11 +63,33 @@ namespace MetaTrans {
         private:
         protected:
 
-            long value;
+            DataType type;
+
+            DataUnion value;
 
         public:
             
             MetaConstant();
+
+            MetaConstant(DataType ty);
+
+            void setDataType(DataType ty);
+
+            DataType getDataType();
+
+            DataUnion getValue();
+
+            void setValue(int8_t v);
+
+            void setValue(int16_t v);
+            
+            void setValue(int32_t v);
+
+            void setValue(int64_t v);
+
+            void setValue(float v);
+            
+            void setValue(double v);
 
     };
     
@@ -89,7 +110,14 @@ namespace MetaTrans {
 
             void setArgIndex(int i);
 
+            int getArgIndex();
+
+            void setArgType(DataType ty);
+
+            DataType getArgType();
+
     };
+
     class MetaInst : public MetaOperand {
         private:
         protected:
@@ -102,11 +130,14 @@ namespace MetaTrans {
             InstMetaData metaData;
 
         public:
+
             MetaInst();
 
             MetaInst(std::vector<InstType> ty); 
 
             void addOperand(MetaOperand* op);
+
+            int getOperandNum();
 
             std::vector<MetaOperand*>& getOperandList();
 
@@ -122,6 +153,7 @@ namespace MetaTrans {
             static MetaInst* createMetaInst(std::vector<InstType> ty);
 
             virtual ~MetaInst();
+
     };
 
     /// represent a phi node.
@@ -189,6 +221,12 @@ namespace MetaTrans {
 
         std::vector<MetaInst*>& getInstList();
 
+        int getInstNum();
+
+        std::vector<MetaInst*>::iterator inst_begin();
+
+        std::vector<MetaInst*>::iterator inst_end();
+
     };
 
     class MetaFunction {
@@ -198,21 +236,31 @@ namespace MetaTrans {
         // a function should contains a set of constants.
         std::unordered_set<MetaConstant*> constants;
         // arguments, as well.
-        std::unordered_set<MetaArgument*> args;
+        std::vector<MetaArgument*> args;
         // basic blocks.
         std::vector<MetaBB*> bbs;
 
         // CFG root
         MetaBB* root;
 
-        FuncMetaData metaData;
+        std::string funcName;
+
+        DataType outputType;
+        
+        int argNum;
 
         public:
 
         void addConstant(MetaConstant* c);
         
         void addArgument(MetaArgument* a);
-    
+
+        MetaArgument* getArgument(int index);
+
+        int getConstNum();
+
+        int getArgNum();
+
         // create a new bb at the end of bb list.
         MetaBB* buildBB();
 
@@ -222,6 +270,10 @@ namespace MetaTrans {
 
         std::vector<MetaBB*>::iterator bb_end();
 
+        std::vector<MetaArgument*>::iterator arg_begin();
+
+        std::vector<MetaArgument*>::iterator arg_end();
+    
     };
 
     struct MetaFunctionPass : FunctionPass {

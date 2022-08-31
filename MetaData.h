@@ -1,5 +1,5 @@
 #include <string>
-
+#include <cstdint>
 
 namespace MetaTrans {
 
@@ -16,6 +16,22 @@ namespace MetaTrans {
         UINT,
         FLOAT,
         DOUBLE,
+    };
+
+    union DataUnion {
+        
+        int8_t int_8_val;
+
+        int16_t int_16_val;
+
+        int32_t int_32_val;
+
+        int64_t int_64_val;
+
+        float float_val;
+
+        double double_val;
+        
     };
 
     class MetaData {
