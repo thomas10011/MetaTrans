@@ -304,8 +304,9 @@ namespace MetaTrans {
     void MetaUtil::printInstDependencyGraph(MetaBB* bb) {
         std::vector<MetaInst*> instList = bb->getInstList();
         std::unordered_map<MetaOperand*, int> deg;
+        std::unordered_map<MetaOperand*, int> op_num;
         for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
-            deg[*iter] = 0;
+            deg[*iter] = 0; op_num[*iter] = (*iter)->getOperandNum();
         }
         for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
             std::vector<MetaOperand*> operandList = (*iter)->getOperandList();
@@ -314,12 +315,62 @@ namespace MetaTrans {
             }
         }
         for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
-            outs() << "degree of " << *iter << " is " << deg[*iter] << '\n';
+            outs() << "degree of " << MetaUtil::typeToString((*iter)->getInstType()) << " is " << deg[*iter] << "; oprand number is " << op_num[*iter] << '\n';
         } 
+
     }
 
     void MetaUtil::printInstOperand(Instruction* inst) {
 
+    }
+
+    template<typename T>
+    std::string MetaUtil::typeToString(std::vector<T> type_vector) {
+        static_assert(
+            std::is_same<T, InstType>::value ||
+            std::is_same<T, DataType>::value ,
+            "Type of template not support!"
+        );
+        std::string s = "{ " + MetaUtil::toString(type_vector[0]);
+        for (int i = 1; i < type_vector.size(); i++) { s += ", " + type_vector[i]; }
+        s += " }";
+        return s;
+    }
+
+    std::string MetaUtil::toString(DataType type) {
+        switch (type) {
+            case DataType::INT8: return "INT8";
+            case DataType::INT16: return "INT16";
+            case DataType::INT32: return "INT32";
+            case DataType::INT64: return "INT64";
+            case DataType::FLOAT: return "FLOAT";
+            case DataType::DOUBLE: return "DOUBLE";
+        }
+    }
+
+    std::string MetaUtil::toString(InstType type) {
+        switch (type) {
+            case InstType::NONE: return "none";
+            case InstType::LOAD: return "load";
+            case InstType::STORE: return "store";
+            case InstType::COMPARE: return "compare";
+            case InstType::CALL: return "call";
+            case InstType::BRANCH: return "branch";
+            case InstType::JUMP: return "jump";
+            case InstType::PHI: return "phi";
+            case InstType::ADD: return "add";
+            case InstType::SUB: return "sub";
+            case InstType::MUL: return "mul";
+            case InstType::DIV: return "div";
+            case InstType::REMAINDER: return "remainder";
+            case InstType::AND: return "and";
+            case InstType::OR: return "or";
+            case InstType::XOR: return "xor";
+            case InstType::SHIFT: return "shift";
+            case InstType::NEG: return "neg";
+            case InstType::RET: return "ret";
+            case InstType::ALLOCATION: return "allocation";
+        }
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -429,6 +480,8 @@ namespace MetaTrans {
     }
 
     int MetaInst::getOperandNum() { return operandList.size(); }
+
+    std::vector<InstType> MetaInst::getInstType() { return type; }
 
     std::vector<MetaOperand*>& MetaInst::getOperandList() { return operandList; }
 

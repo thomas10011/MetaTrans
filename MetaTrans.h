@@ -139,6 +139,8 @@ namespace MetaTrans {
 
             int getOperandNum();
 
+            std::vector<InstType> getInstType();
+
             std::vector<MetaOperand*>& getOperandList();
 
             std::vector<MetaOperand*>::iterator op_begin();
@@ -314,6 +316,13 @@ namespace MetaTrans {
         void static printInstDependencyGraph(MetaBB* bb);
 
         void static printInstOperand(Instruction* inst);
+        
+        template<typename T>
+        std::string static typeToString(std::vector<T> type_vector);
+
+        std::string static toString(DataType type);
+
+        std::string static toString(InstType type);
 
     };
 }
