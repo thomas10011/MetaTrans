@@ -24,8 +24,10 @@ namespace MetaTrans {
 
     class MetaFunction;
 
+    class MetaFunctionBuilder;   
+
     struct MetaFunctionPass;
-    
+
     enum InstType {
         // NONE represent a Non-Instruction operand.
         NONE,
@@ -147,11 +149,6 @@ namespace MetaTrans {
             
             std::vector<MetaOperand*>::iterator op_end();
 
-            virtual void processOperand (
-                Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
-                MetaFunctionPass& pass
-            );
-
             static MetaInst* createMetaInst(std::vector<InstType> ty);
 
             virtual ~MetaInst();
@@ -168,11 +165,6 @@ namespace MetaTrans {
         public:
 
             MetaPhi(std::vector<InstType> ty); 
-
-            virtual void processOperand (
-                Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
-                MetaFunctionPass& pass
-            ) override;
 
             void addValue(MetaBB* bb, MetaOperand* op);
 
@@ -278,34 +270,59 @@ namespace MetaTrans {
     
     };
 
+    /// An simple implementation of Builder Pattern.
+    /// This class is used to create Instruction Graph for each Function. 
+    class MetaFunctionBuilder {
+        protected:
+
+            Function* F;
+
+            MetaFunction* mf;
+
+            // Auxiliary map, record the reflection between primitive type and Meta type.
+            std::unordered_map<BasicBlock*, MetaBB*> bbMap;
+
+            std::unordered_map<Instruction*, MetaInst*> instMap;
+
+            std::unordered_map<Constant*, MetaConstant*> constantMap;
+
+            std::unordered_map<Argument*, MetaArgument*> argMap;
+
+            void clearMaps();
+
+            bool createMetaArg(Argument* arg);
+
+            bool createMetaConstant(Constant* c);
+
+            void createMetaElements(Function* F);
+
+            void processOperand(MetaInst* inst, Instruction* curInst, MetaBB* curBB);
+
+            void processOperand(MetaPhi* inst, PHINode* curInst, MetaBB* curBB);
+
+        public:
+            
+            MetaFunctionBuilder();
+
+            MetaFunctionBuilder& setFunction(Function* F);
+
+            MetaFunction* build();
+
+    };
     struct MetaFunctionPass : FunctionPass {
 
         static char ID;
 
-        // Auxiliary map, record the reflection between primitive type and Meta type.
-        std::unordered_map<BasicBlock*, MetaBB*> bbMap;
+        MetaFunctionBuilder builder;
 
-        std::unordered_map<Instruction*, MetaInst*> instMap;
-
-        std::unordered_map<Constant*, MetaConstant*> constantMap;
-
-        std::unordered_map<Argument*, MetaArgument*> argMap;
-
-        MetaFunction mf;
+        std::vector<MetaFunction*> metaFuncs;
 
         MetaFunctionPass();
 
         bool runOnFunction(Function & F) override;
 
-        bool createMetaArg(Argument* arg);
-
-        bool createMetaConstant(Constant* c);
-
-        void createMetaElements(Function& F);
-
-        std::vector<InstType> getInstType(Instruction* inst);
-
     };
+
 
     class MetaUtil {
         
@@ -318,12 +335,13 @@ namespace MetaTrans {
         void static printInstOperand(Instruction* inst);
         
         template<typename T>
-        std::string static typeToString(std::vector<T> type_vector);
+        std::string static typeVecToString(std::vector<T> type_vector);
 
         std::string static toString(DataType type);
 
         std::string static toString(InstType type);
 
+        std::vector<InstType> static getInstType(Instruction* inst);
     };
 }
 

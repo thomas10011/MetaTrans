@@ -65,61 +65,45 @@ namespace MetaTrans {
     }
 
     bool MetaFunctionPass::runOnFunction(Function & F) {
-        
+        MetaFunction* metaFunc = builder
+                                    .setFunction(&F)
+                                    .build();
         outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
-
-        createMetaElements(F);
-
-        // construct graph
-        mf.setRoot(bbMap.find(&*F.begin())->second);
-        for (Function::iterator bb = F.begin(); bb != F.end(); ++bb) {
-            // we create graph for each basic block
-            MetaBB* curBB = bbMap.find(&*bb)->second;
-            
-            for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
-                // add this instruction to current basic block.
-                MetaInst* curInst = instMap.find(&*i)->second;
-                curInst->processOperand(&*i, curBB, mf, *this);
-            }
-        }
-        
-        for (auto bb = mf.bb_begin(); bb != mf.bb_end(); ++bb) {
-            outs() << "successor amount of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
-            MetaUtil::printInstDependencyGraph(*bb);
-        }
-        
-        outs() << "\n";
+        metaFuncs.push_back(metaFunc);
         return true;
     }
 
-    bool MetaFunctionPass::createMetaArg(Argument* arg) {
+//===-------------------------------------------------------------------------------===//
+/// Meta Function Builder implementation.
+
+    bool MetaFunctionBuilder::createMetaArg(Argument* arg) {
         auto pair = argMap.find(arg);
         if (pair != argMap.end()) return false;
         MetaArgument* metaArg = new MetaArgument();
-        mf.addArgument(metaArg);
+        mf->addArgument(metaArg);
         assert(argMap.insert({arg, metaArg}).second);
         return true;
     }
 
-    bool MetaFunctionPass::createMetaConstant(Constant* c) {
+    bool MetaFunctionBuilder::createMetaConstant(Constant* c) {
         auto pair = constantMap.find(c);
         if (pair != constantMap.end()) return false;
         MetaConstant* metaCons = new MetaConstant();
-        mf.addConstant(metaCons);
+        mf->addConstant(metaCons);
         assert(constantMap.insert({c, metaCons}).second);
         return true;
     }
 
-    void MetaFunctionPass::createMetaElements(Function& F) {
+    void MetaFunctionBuilder::createMetaElements( Function* F) {
         // create all meta basic block and instructions.
-        for (auto bb = F.begin(); bb != F.end(); ++bb) {
-            MetaBB* newBB = mf.buildBB();
+        for (auto bb = F->begin(); bb != F->end(); ++bb) {
+            MetaBB* newBB = mf->buildBB();
             assert(bbMap.insert({&*bb, newBB}).second);
             bool first_non_phi = true;
             outs() << "creating instructions in Basic Block " << *bb;
             for (auto i = bb->begin(); i != bb->end(); ++i) {
                 outs() << "instruction with type: " << i->getOpcodeName() << "\n";
-                MetaInst* newInst = newBB->buildInstruction(getInstType(&*i));
+                MetaInst* newInst = newBB->buildInstruction(MetaUtil::getInstType(&*i));
                 assert(instMap.insert({&*i, newInst}).second);
                 if (first_non_phi && i->getOpcode() != Instruction::PHI) {
                     newBB->setEntry(newInst); first_non_phi = false;
@@ -140,8 +124,215 @@ namespace MetaTrans {
         }
     }
 
+    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mf(nullptr) { }
+
+    void MetaFunctionBuilder::clearMaps() {
+        bbMap.clear();
+        instMap.clear();
+        constantMap.clear();
+        argMap.clear();
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::setFunction(Function* F) {
+        clearMaps();
+        this->F = F;
+        this->mf = new MetaFunction();
+        return *this;
+    }
+
+    MetaFunction* MetaFunctionBuilder::build() {
+
+        createMetaElements(F);
+
+        // construct graph
+        mf->setRoot(bbMap.find(&*(F->begin()))->second);
+        for (Function::iterator bb = F->begin(); bb != F->end(); ++bb) {
+            // we create graph for each basic block
+            MetaBB* curBB = bbMap.find(&*bb)->second;
+            
+            for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
+                // add this instruction to current basic block.
+                MetaInst* curInst = instMap.find(&*i)->second;
+                processOperand(curInst, &*i, curBB);
+            }
+        }
+        
+        for (auto bb = mf->bb_begin(); bb != mf->bb_end(); ++bb) {
+            outs() << "successor amount of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
+            MetaUtil::printInstDependencyGraph(*bb);
+        }
+        
+        outs() << "\n";
+        return mf;
+    }
+
+    void MetaFunctionBuilder::processOperand(MetaPhi* inst, PHINode* phi, MetaBB* curBB) {
+        outs() << "processing meta phi node's operands..." << "\n";
+        for (auto bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
+            Value* value = phi->getIncomingValueForBlock(*bb);
+            MetaOperand* op = nullptr;
+            if (Argument* arg = dyn_cast<Argument>(value)) {
+                op = (MetaOperand*)argMap.find(arg)->second;
+            }
+            else if (Constant* c = dyn_cast<Constant>(value)) {
+                op = (MetaOperand*)constantMap.find(c)->second;
+            }
+            else if (Instruction* i = dyn_cast<Instruction>(value)) {
+                op = (MetaOperand*)instMap.find(i)->second;
+            }
+            assert(op);
+            inst->addValue(bbMap.find(*bb)->second, op);
+            outs() << "basic block: "<< bb << "; value: " << value << "; ";
+        }
+        outs() << "\n";
+        
+        for (auto op = phi->op_begin(); op != phi->op_end(); ++op) {
+            Value* value = op->get();
+            MetaUtil::printValueType(value); 
+            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
+        }
+    }
+
+    void MetaFunctionBuilder::processOperand(MetaInst* inst, Instruction* curInst, MetaBB* curBB) {
+        if (auto phi = dyn_cast<PHINode>(curInst)) {
+            processOperand(inst, phi, curBB); return;
+        }
+        unsigned num_op = curInst->getNumOperands();
+        outs() << "inst type: " << curInst->getOpcodeName() << "\n";
+        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op, --num_op) {
+            Value* value = op->get();
+            MetaUtil::printValueType(value);
+            if (Argument* arg = dyn_cast<Argument>(value)) {
+                MetaArgument* metaArg =argMap.find(arg)->second;
+                inst->addOperand((MetaOperand*)metaArg);
+            }
+            // create CFG here.
+            else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
+                auto it = bbMap.find(bb);
+                curBB->addNextBB(it->second);
+                curBB->setTerminator(inst);
+            }
+            else if (Constant* c = dyn_cast<Constant>(value)) {
+                MetaConstant* metaCons = constantMap.find(c)->second;
+                inst->addOperand((MetaOperand*)metaCons);
+            }
+            else if (Instruction* i = dyn_cast<Instruction>(value)) {
+                MetaInst* usedInst = instMap.find(i)->second;
+                inst->addOperand((MetaOperand*)usedInst);
+            }
+            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
+        }
+        assert(!num_op);
+    }
+
+//===-------------------------------------------------------------------------------===//
+/// Meta Util implementation.
+
+    // this function is used to print the subclass of a Value in INSTRUCTION level.
+    void MetaUtil::printValueType(Value* value) {
+        outs() << "value address: " << value << ";";
+        if (dyn_cast<Argument>(value)) { 
+            outs() << " real type: Argument";
+        }
+        else if (dyn_cast<BasicBlock>(value)) {
+            outs() << " real type: BasicBlock";
+        }
+        else if (dyn_cast<InlineAsm>(value)) {
+            outs() << " real type: nlineAsm";
+        }
+        else if (dyn_cast<MetadataAsValue>(value)) {
+            outs() << " real type: MetadataAsValue";
+        }
+        else if (dyn_cast<Constant>(value)) {
+            outs() << " real type: Constant";
+        }
+        else if (dyn_cast<MemoryAccess>(value)) {
+            outs() << " real type: MemoryAccess";
+        }
+        else if (dyn_cast<Instruction>(value)) {
+            outs() << " real type: Instruction";
+        }
+        else if (dyn_cast<Operator>(value)) {
+            outs() << " real type: Operator";
+        }
+    }
+    
+    void MetaUtil::printInstDependencyGraph(MetaBB* bb) {
+        std::vector<MetaInst*> instList = bb->getInstList();
+        std::unordered_map<MetaOperand*, int> deg;
+        std::unordered_map<MetaOperand*, int> op_num;
+        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
+            deg[*iter] = 0; op_num[*iter] = (*iter)->getOperandNum();
+        }
+        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
+            std::vector<MetaOperand*> operandList = (*iter)->getOperandList();
+            for (auto op_iter = operandList.begin(); op_iter != operandList.end(); ++op_iter) {
+                deg[*op_iter]++;
+            }
+        }
+        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
+            outs() << "degree of " << MetaUtil::typeVecToString((*iter)->getInstType()) \
+            << " is " << deg[*iter] << "; oprand number is " << op_num[*iter] << '\n';
+        } 
+
+    }
+
+    void MetaUtil::printInstOperand(Instruction* inst) {
+
+    }
+
+    template<typename T>
+    std::string MetaUtil::typeVecToString(std::vector<T> type_vector) {
+        static_assert(
+            std::is_same<T, InstType>::value ||
+            std::is_same<T, DataType>::value ,
+            "Type of template not support!"
+        );
+        std::string s = "{ " + MetaUtil::toString(type_vector[0]);
+        for (unsigned i = 1u; i < type_vector.size(); i++) { s += ", " + MetaUtil::toString(type_vector[i]); }
+        s += " }";
+        return s;
+    }
+
+    std::string MetaUtil::toString(DataType type) {
+        switch (type) {
+            case DataType::INT8: return "INT8";
+            case DataType::INT16: return "INT16";
+            case DataType::INT32: return "INT32";
+            case DataType::INT64: return "INT64";
+            case DataType::UINT: return "UINT";
+            case DataType::FLOAT: return "FLOAT";
+            case DataType::DOUBLE: return "DOUBLE";
+        }
+    }
+
+    std::string MetaUtil::toString(InstType type) {
+        switch (type) {
+            case InstType::NONE: return "none";
+            case InstType::LOAD: return "load";
+            case InstType::STORE: return "store";
+            case InstType::COMPARE: return "compare";
+            case InstType::CALL: return "call";
+            case InstType::BRANCH: return "branch";
+            case InstType::JUMP: return "jump";
+            case InstType::PHI: return "phi";
+            case InstType::ADD: return "add";
+            case InstType::SUB: return "sub";
+            case InstType::MUL: return "mul";
+            case InstType::DIV: return "div";
+            case InstType::REMAINDER: return "remainder";
+            case InstType::AND: return "and";
+            case InstType::OR: return "or";
+            case InstType::XOR: return "xor";
+            case InstType::SHIFT: return "shift";
+            case InstType::NEG: return "neg";
+            case InstType::RET: return "ret";
+            case InstType::ALLOCATION: return "allocation";
+        }
+    }
+
     // determine the type of a instruction. refer to Instruction.h
-    std::vector<InstType> MetaFunctionPass::getInstType(Instruction* inst) {
+    std::vector<InstType> MetaUtil::getInstType(Instruction* inst) {
         std::vector<InstType> ty;
         switch (inst->getOpcode()) {
             // Terminators
@@ -270,110 +461,6 @@ namespace MetaTrans {
     } 
 
 //===-------------------------------------------------------------------------------===//
-/// Meta Util implementation.
-
-    // this function is used to print the subclass of a Value in INSTRUCTION level.
-    void MetaUtil::printValueType(Value* value) {
-        outs() << "value address: " << value << ";";
-        if (dyn_cast<Argument>(value)) { 
-            outs() << " real type: Argument";
-        }
-        else if (dyn_cast<BasicBlock>(value)) {
-            outs() << " real type: BasicBlock";
-        }
-        else if (dyn_cast<InlineAsm>(value)) {
-            outs() << " real type: nlineAsm";
-        }
-        else if (dyn_cast<MetadataAsValue>(value)) {
-            outs() << " real type: MetadataAsValue";
-        }
-        else if (dyn_cast<Constant>(value)) {
-            outs() << " real type: Constant";
-        }
-        else if (dyn_cast<MemoryAccess>(value)) {
-            outs() << " real type: MemoryAccess";
-        }
-        else if (dyn_cast<Instruction>(value)) {
-            outs() << " real type: Instruction";
-        }
-        else if (dyn_cast<Operator>(value)) {
-            outs() << " real type: Operator";
-        }
-    }
-    
-    void MetaUtil::printInstDependencyGraph(MetaBB* bb) {
-        std::vector<MetaInst*> instList = bb->getInstList();
-        std::unordered_map<MetaOperand*, int> deg;
-        std::unordered_map<MetaOperand*, int> op_num;
-        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
-            deg[*iter] = 0; op_num[*iter] = (*iter)->getOperandNum();
-        }
-        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
-            std::vector<MetaOperand*> operandList = (*iter)->getOperandList();
-            for (auto op_iter = operandList.begin(); op_iter != operandList.end(); ++op_iter) {
-                deg[*op_iter]++;
-            }
-        }
-        for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
-            outs() << "degree of " << MetaUtil::typeToString((*iter)->getInstType()) << " is " << deg[*iter] << "; oprand number is " << op_num[*iter] << '\n';
-        } 
-
-    }
-
-    void MetaUtil::printInstOperand(Instruction* inst) {
-
-    }
-
-    template<typename T>
-    std::string MetaUtil::typeToString(std::vector<T> type_vector) {
-        static_assert(
-            std::is_same<T, InstType>::value ||
-            std::is_same<T, DataType>::value ,
-            "Type of template not support!"
-        );
-        std::string s = "{ " + MetaUtil::toString(type_vector[0]);
-        for (int i = 1; i < type_vector.size(); i++) { s += ", " + type_vector[i]; }
-        s += " }";
-        return s;
-    }
-
-    std::string MetaUtil::toString(DataType type) {
-        switch (type) {
-            case DataType::INT8: return "INT8";
-            case DataType::INT16: return "INT16";
-            case DataType::INT32: return "INT32";
-            case DataType::INT64: return "INT64";
-            case DataType::FLOAT: return "FLOAT";
-            case DataType::DOUBLE: return "DOUBLE";
-        }
-    }
-
-    std::string MetaUtil::toString(InstType type) {
-        switch (type) {
-            case InstType::NONE: return "none";
-            case InstType::LOAD: return "load";
-            case InstType::STORE: return "store";
-            case InstType::COMPARE: return "compare";
-            case InstType::CALL: return "call";
-            case InstType::BRANCH: return "branch";
-            case InstType::JUMP: return "jump";
-            case InstType::PHI: return "phi";
-            case InstType::ADD: return "add";
-            case InstType::SUB: return "sub";
-            case InstType::MUL: return "mul";
-            case InstType::DIV: return "div";
-            case InstType::REMAINDER: return "remainder";
-            case InstType::AND: return "and";
-            case InstType::OR: return "or";
-            case InstType::XOR: return "xor";
-            case InstType::SHIFT: return "shift";
-            case InstType::NEG: return "neg";
-            case InstType::RET: return "ret";
-            case InstType::ALLOCATION: return "allocation";
-        }
-    }
-
-//===-------------------------------------------------------------------------------===//
 /// Function Mata Data implementation.
 
     FuncMetaData::FuncMetaData() { }
@@ -489,38 +576,6 @@ namespace MetaTrans {
 
     std::vector<MetaOperand*>::iterator MetaInst::op_end() { return operandList.end(); }
 
-    void MetaInst::processOperand (
-        Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
-        MetaFunctionPass& pass
-    ) {
-        unsigned num_op = curInst->getNumOperands();
-        outs() << "inst type: " << curInst->getOpcodeName() << "\n";
-        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op, --num_op) {
-            Value* value = op->get();
-            MetaUtil::printValueType(value);
-            if (Argument* arg = dyn_cast<Argument>(value)) {
-                MetaArgument* metaArg = pass.argMap.find(arg)->second;
-                addOperand((MetaOperand*)metaArg);
-            }
-            // create CFG here.
-            else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
-                auto it = pass.bbMap.find(bb);
-                curBB->addNextBB(it->second);
-                curBB->setTerminator(this);
-            }
-            else if (Constant* c = dyn_cast<Constant>(value)) {
-                MetaConstant* metaCons = pass.constantMap.find(c)->second;
-                addOperand((MetaOperand*)metaCons);
-            }
-            else if (Instruction* inst = dyn_cast<Instruction>(value)) {
-                MetaInst* usedInst = pass.instMap.find(inst)->second;
-                addOperand((MetaOperand*)usedInst);
-            }
-            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
-        }
-        assert(!num_op);
-    }
-
     MetaInst* MetaInst::createMetaInst(std::vector<InstType> ty) {
         if (ty[0] == InstType::PHI)
             return new MetaPhi(ty);
@@ -533,38 +588,6 @@ namespace MetaTrans {
 
     MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
 
-    void MetaPhi::processOperand(
-        Instruction* curInst, MetaBB* curBB, MetaFunction& f, 
-        MetaFunctionPass& pass
-    ) {
-        // invoke parent class's method first.
-        MetaInst::processOperand(curInst, curBB, f, pass);
-        outs() << "processing meta phi node's operands..." << "\n";
-        auto phi = dyn_cast<PHINode>(curInst);
-        for (auto bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
-            Value* value = phi->getIncomingValueForBlock(*bb);
-            MetaOperand* op = nullptr;
-            if (Argument* arg = dyn_cast<Argument>(value)) {
-                op = (MetaOperand*)pass.argMap.find(arg)->second;
-            }
-            else if (Constant* c = dyn_cast<Constant>(value)) {
-                op = (MetaOperand*)pass.constantMap.find(c)->second;
-            }
-            else if (Instruction* i = dyn_cast<Instruction>(value)) {
-                op = (MetaOperand*)pass.instMap.find(i)->second;
-            }
-            assert(op);
-            addValue(pass.bbMap.find(*bb)->second, op);
-            outs() << "basic block: "<< bb << "; value: " << value << "; ";
-        }
-        outs() << "\n";
-        
-        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
-            Value* value = op->get();
-            MetaUtil::printValueType(value); 
-            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
-        }
-    }
 
     void MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
         bbValueMap.insert({bb, op});
