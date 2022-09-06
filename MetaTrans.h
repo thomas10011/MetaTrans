@@ -197,19 +197,19 @@ namespace MetaTrans {
         // Build a new instruction and append to instList.
         MetaInst* buildInstruction(std::vector<InstType> ty);
 
-        void addInstruction(MetaInst* inst);
+        MetaBB& addInstruction(MetaInst* inst);
 
-        void addNextBB(MetaBB* next);
+        MetaBB& addNextBB(MetaBB* next);
+
+        MetaBB& setEntry(MetaInst* inst);
+
+        MetaBB& setTerminator(MetaInst* inst);
 
         std::vector<MetaBB*> getNextBB();
 
         MetaBB* getNextBB(int index);
 
-        void setEntry(MetaInst* inst);
-
         MetaInst* getEntry();
-
-        void setTerminator(MetaInst* inst);
 
         MetaInst* getTerminator();
 
@@ -277,7 +277,7 @@ namespace MetaTrans {
 
             Function* F;
 
-            MetaFunction* mf;
+            MetaFunction* mF;
 
             // Auxiliary map, record the reflection between primitive type and Meta type.
             std::unordered_map<BasicBlock*, MetaBB*> bbMap;
@@ -288,13 +288,11 @@ namespace MetaTrans {
 
             std::unordered_map<Argument*, MetaArgument*> argMap;
 
-            void clearMaps();
+            MetaFunctionBuilder& clearAuxMaps();
 
-            bool createMetaArg(Argument* arg);
-
-            bool createMetaConstant(Constant* c);
-
-            void createMetaElements(Function* F);
+            MetaFunctionBuilder& buildGraph();
+            
+            MetaFunctionBuilder& buildMetaElements();
 
             void processOperand(MetaInst* inst, Instruction* curInst, MetaBB* curBB);
 
@@ -328,20 +326,25 @@ namespace MetaTrans {
         
         public:
             
-        void static printValueType(Value* value);
+        static void printValueType(Value* value);
 
-        void static printInstDependencyGraph(MetaBB* bb);
+        static void printInstDependencyGraph(MetaBB* bb);
 
-        void static printInstOperand(Instruction* inst);
+        static void printInstOperand(Instruction* inst);
         
         template<typename T>
-        std::string static typeVecToString(std::vector<T> type_vector);
+        static std::string typeVecToString(std::vector<T> type_vector);
 
-        std::string static toString(DataType type);
+        static std::string toString(DataType type);
 
-        std::string static toString(InstType type);
+        static std::string toString(InstType type);
 
-        std::vector<InstType> static getInstType(Instruction* inst);
+        static std::vector<InstType> getInstType(Instruction* inst);
+
+        /// if a value not exist in the map, create it by default constructor.
+        template<typename K, typename V>
+        static V* createValue(K* key, std::unordered_map<K*, V*>& map);
+        
     };
 }
 

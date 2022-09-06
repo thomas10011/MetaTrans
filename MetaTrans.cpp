@@ -4,58 +4,6 @@
 
 
 namespace MetaTrans { 
-
-    template<class T>
-    class MetaVertex {
-        private:
-        protected:
-            std::vector<MetaVertex<T>*> adjacency;
-            T* data;
-
-        public:
-            /*
-             * create a null vertex
-             */
-            MetaVertex() {
-
-            }
-
-            MetaVertex(T* t) {
-                data = t;
-            }
-
-            void addAdjacency(MetaVertex<T>* next) {
-                adjacency.push_back(next);
-            }
-
-            T* getData() {
-                return data;
-            }
-    };
-
-
-    template<class T>
-    class MetaGraph {
-        private:
-        protected:
-            std::vector<MetaVertex<T>*> vertex;
-
-        public:
-            MetaGraph() {
-
-            }
-
-            MetaVertex<T>* addVertex(T* data) {
-                MetaVertex<T>* ptr = new MetaVertex<T>(data);
-                vertex.push_back(ptr);
-                return ptr;
-            }
-
-            void addEdge(MetaVertex<T>* from, MetaVertex<T>* to) {
-                from->addAdjacency(to);
-            }
-
-    };
     
 //===-------------------------------------------------------------------------------===//
 /// Meta Function pass implementation, Will be invoked by LLVM pass manager.
@@ -65,10 +13,10 @@ namespace MetaTrans {
     }
 
     bool MetaFunctionPass::runOnFunction(Function & F) {
+        outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
         MetaFunction* metaFunc = builder
                                     .setFunction(&F)
                                     .build();
-        outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
         metaFuncs.push_back(metaFunc);
         return true;
     }
@@ -76,28 +24,10 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function Builder implementation.
 
-    bool MetaFunctionBuilder::createMetaArg(Argument* arg) {
-        auto pair = argMap.find(arg);
-        if (pair != argMap.end()) return false;
-        MetaArgument* metaArg = new MetaArgument();
-        mf->addArgument(metaArg);
-        assert(argMap.insert({arg, metaArg}).second);
-        return true;
-    }
-
-    bool MetaFunctionBuilder::createMetaConstant(Constant* c) {
-        auto pair = constantMap.find(c);
-        if (pair != constantMap.end()) return false;
-        MetaConstant* metaCons = new MetaConstant();
-        mf->addConstant(metaCons);
-        assert(constantMap.insert({c, metaCons}).second);
-        return true;
-    }
-
-    void MetaFunctionBuilder::createMetaElements( Function* F) {
+    MetaFunctionBuilder& MetaFunctionBuilder::buildMetaElements() {
         // create all meta basic block and instructions.
         for (auto bb = F->begin(); bb != F->end(); ++bb) {
-            MetaBB* newBB = mf->buildBB();
+            MetaBB* newBB = mF->buildBB();
             assert(bbMap.insert({&*bb, newBB}).second);
             bool first_non_phi = true;
             outs() << "creating instructions in Basic Block " << *bb;
@@ -112,40 +42,49 @@ namespace MetaTrans {
                 // create all arg and constant.
                 for (auto op = i->op_begin(); op != i->op_end(); ++op) {
                     Value* value = op->get();
-                    if (Argument* arg = dyn_cast<Argument>(value)) {
-                        createMetaArg(arg);
+                    // Ugly, but works.
+                    if (Argument* a = dyn_cast<Argument>(value)) {
+                        if (MetaArgument* mA = MetaUtil::createValue(a, argMap))
+                            mF->addArgument(mA);
                     }
                     else if (Constant* c = dyn_cast<Constant>(value)) {
-                        createMetaConstant(c);
+                        if (MetaConstant* mC = MetaUtil::createValue(c, constantMap))
+                            mF->addConstant(mC);
                     }
                 }
 
             }
         }
+        return *this;
     }
 
-    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mf(nullptr) { }
+    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr) { }
 
-    void MetaFunctionBuilder::clearMaps() {
+    MetaFunctionBuilder& MetaFunctionBuilder::clearAuxMaps() {
         bbMap.clear();
         instMap.clear();
         constantMap.clear();
         argMap.clear();
+        return *this;
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::setFunction(Function* F) {
-        clearMaps();
         this->F = F;
-        this->mf = new MetaFunction();
+        clearAuxMaps();
         return *this;
     }
 
     MetaFunction* MetaFunctionBuilder::build() {
+        mF = new MetaFunction();
+        (*this)
+            .buildMetaElements()
+            .buildGraph();
+        return mF;
+    }
 
-        createMetaElements(F);
-
+    MetaFunctionBuilder& MetaFunctionBuilder::buildGraph() {
         // construct graph
-        mf->setRoot(bbMap.find(&*(F->begin()))->second);
+        mF->setRoot(bbMap.find(&*(F->begin()))->second);
         for (Function::iterator bb = F->begin(); bb != F->end(); ++bb) {
             // we create graph for each basic block
             MetaBB* curBB = bbMap.find(&*bb)->second;
@@ -157,13 +96,12 @@ namespace MetaTrans {
             }
         }
         
-        for (auto bb = mf->bb_begin(); bb != mf->bb_end(); ++bb) {
-            outs() << "successor amount of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
+        for (auto bb = mF->bb_begin(); bb != mF->bb_end(); ++bb) {
+            outs() << "successor number of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
             MetaUtil::printInstDependencyGraph(*bb);
         }
-        
         outs() << "\n";
-        return mf;
+        return *this;
     }
 
     void MetaFunctionBuilder::processOperand(MetaPhi* inst, PHINode* phi, MetaBB* curBB) {
@@ -209,8 +147,9 @@ namespace MetaTrans {
             // create CFG here.
             else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
                 auto it = bbMap.find(bb);
-                curBB->addNextBB(it->second);
-                curBB->setTerminator(inst);
+                (*curBB)
+                    .addNextBB(it->second)
+                    .setTerminator(inst);
             }
             else if (Constant* c = dyn_cast<Constant>(value)) {
                 MetaConstant* metaCons = constantMap.find(c)->second;
@@ -459,6 +398,13 @@ namespace MetaTrans {
         return ty;
 
     } 
+    
+    template<typename K, typename V>
+    V* MetaUtil::createValue(K* key, std::unordered_map<K*, V*>& map) {
+        auto pair = map.find(key);
+        if (pair != map.end()) return nullptr;
+        return map[key] = new V();
+    }
 
 //===-------------------------------------------------------------------------------===//
 /// Function Mata Data implementation.
@@ -620,21 +566,31 @@ namespace MetaTrans {
         return newInst;
     }
 
-    void MetaBB::addInstruction(MetaInst* inst) {
+    MetaBB& MetaBB::addInstruction(MetaInst* inst) {
         instList.push_back(inst);
+        return *this;
     }
 
-    void MetaBB::addNextBB(MetaBB* next) { successors.push_back(next); }
+    MetaBB& MetaBB::addNextBB(MetaBB* next) {
+        successors.push_back(next);
+        return *this;
+    }
+
+    MetaBB& MetaBB::setEntry(MetaInst* inst) {
+        entry = inst;
+        return *this;
+    }
+
+    MetaBB& MetaBB::setTerminator(MetaInst* inst) {
+        terminator = inst;
+        return *this;
+    }
 
     std::vector<MetaBB*> MetaBB::getNextBB() { return successors; }
 
     MetaBB* MetaBB::getNextBB(int index) { return successors[index]; }
 
-    void MetaBB::setEntry(MetaInst* inst) { entry = inst; }
-
     MetaInst* MetaBB::getEntry() { return entry; }
-
-    void MetaBB::setTerminator(MetaInst* inst) { terminator = inst; }
 
     MetaInst* MetaBB::getTerminator() { return terminator; }
 
