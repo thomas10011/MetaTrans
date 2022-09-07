@@ -57,16 +57,12 @@ namespace MetaTrans {
         // construct graph
         mF->setRoot(bbMap.find(&*(F->begin()))->second);
         for (Function::iterator bb = F->begin(); bb != F->end(); ++bb) {
-            // we create graph for each basic block
-            MetaBB* curBB = bbMap.find(&*bb)->second;
-            
             for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
                 // add this instruction to current basic block.
-                MetaInst* curInst = instMap.find(&*i)->second;
-                processOperand(curInst, &*i, curBB);
+                copyDependencies(&*i);
             }
         }
-        
+        // print some info   
         for (auto bb = mF->bb_begin(); bb != mF->bb_end(); ++bb) {
             outs() << "successor number of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
             MetaUtil::printInstDependencyGraph(*bb);
@@ -87,7 +83,11 @@ namespace MetaTrans {
                 .createMetaInst(*i, *newBB)
                 .createMetaOperand(*i);
             if (first_non_phi && i->getOpcode() != Instruction::PHI) {
-                newBB->setEntry(instMap[&*i]); first_non_phi = false;
+                // first non phi and parent both set once.
+                (*newBB)
+                    .setEntry(instMap[&*i])
+                    .setParent(&f);
+                first_non_phi = false;
             }
         }
         return *this;
@@ -95,6 +95,7 @@ namespace MetaTrans {
     
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaInst(Instruction& i, MetaBB& b) {
         MetaInst* newInst = b.buildInstruction(MetaUtil::getInstType(i));
+        newInst->setParent(&b);
         assert(instMap.insert({&i, newInst}).second);
         return *this;
     }
@@ -116,7 +117,8 @@ namespace MetaTrans {
         return *this;
     }
 
-    void MetaFunctionBuilder::processOperand(MetaPhi* inst, PHINode* phi, MetaBB* curBB) {
+    void MetaFunctionBuilder::copyDependencies(PHINode* phi) {
+        MetaPhi* inst = (MetaPhi*)instMap[phi];
         outs() << "processing meta phi node's operands..." << "\n";
         for (auto bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
             Value* value = phi->getIncomingValueForBlock(*bb);
@@ -143,13 +145,14 @@ namespace MetaTrans {
         }
     }
 
-    void MetaFunctionBuilder::processOperand(MetaInst* inst, Instruction* curInst, MetaBB* curBB) {
-        if (auto phi = dyn_cast<PHINode>(curInst)) {
-            processOperand(inst, phi, curBB); return;
-        }
-        unsigned num_op = curInst->getNumOperands();
+    void MetaFunctionBuilder::copyDependencies(Instruction* curInst) {
+        MetaInst* inst = instMap[curInst];
+        // deal with phi node particularly.
+        if (auto phi = dyn_cast<PHINode>(curInst)) { copyDependencies(phi); }
+
+        MetaBB* curBB = inst->getParent();
         outs() << "inst type: " << curInst->getOpcodeName() << "\n";
-        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op, --num_op) {
+        for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
             Value* value = op->get();
             MetaUtil::printValueType(value);
             if (Argument* arg = dyn_cast<Argument>(value)) {
@@ -173,7 +176,7 @@ namespace MetaTrans {
             }
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
-        assert(!num_op);
+
     }
 
 }

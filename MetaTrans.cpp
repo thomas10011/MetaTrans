@@ -108,11 +108,18 @@ namespace MetaTrans {
 
     MetaInst::~MetaInst() { }
 
+    MetaInst& MetaInst::setParent(MetaBB* bb) {
+        parent = bb;
+        return *this;
+    }
+
     void MetaInst::addOperand(MetaOperand* op) {
         operandList.push_back(op);
     }
 
     int MetaInst::getOperandNum() { return operandList.size(); }
+
+    MetaBB* MetaInst::getParent() { return parent; }
 
     std::vector<InstType> MetaInst::getInstType() { return type; }
 
@@ -133,7 +140,6 @@ namespace MetaTrans {
 /// Meta Phi Instruction implementation.
 
     MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
-
 
     void MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
         bbValueMap.insert({bb, op});
@@ -186,6 +192,11 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaBB& MetaBB::setParent(MetaFunction* mF) {
+        parent = mF;
+        return *this;
+    }
+
     std::vector<MetaBB*> MetaBB::getNextBB() { return successors; }
 
     MetaBB* MetaBB::getNextBB(int index) { return successors[index]; }
@@ -197,6 +208,8 @@ namespace MetaTrans {
     std::vector<MetaInst*>& MetaBB::getInstList() { return instList; }
 
     int MetaBB::getInstNum() { return instList.size(); }
+
+    MetaFunction* MetaBB::getParent() { return parent; }
 
     std::vector<MetaInst*>::iterator MetaBB::inst_begin() { return instList.begin(); }
 

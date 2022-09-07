@@ -126,6 +126,8 @@ namespace MetaTrans {
         private:
         protected:
 
+            MetaBB* parent;
+
             // a vector to indicate the real type of a instruction.
             std::vector<InstType> type;
 
@@ -139,9 +141,13 @@ namespace MetaTrans {
 
             MetaInst(std::vector<InstType> ty); 
 
+            MetaInst& setParent(MetaBB* bb);
+
             void addOperand(MetaOperand* op);
 
             int getOperandNum();
+
+            MetaBB* getParent();
 
             std::vector<InstType> getInstType();
 
@@ -182,13 +188,15 @@ namespace MetaTrans {
             
             // point to next BB if exists.
             std::vector<MetaBB*> successors;
-            // possibly a phi node.
+
+            // first non phi instruction.
             MetaInst* entry;
+
             // each bb end with a terminator.
             MetaInst* terminator;
             
             // record parent scope
-            const MetaFunction* parent;
+            MetaFunction* parent;
 
         public:
 
@@ -207,6 +215,8 @@ namespace MetaTrans {
 
             MetaBB& setTerminator(MetaInst* inst);
 
+            MetaBB& setParent(MetaFunction* mF);
+
             std::vector<MetaBB*> getNextBB();
 
             MetaBB* getNextBB(int index);
@@ -214,6 +224,8 @@ namespace MetaTrans {
             MetaInst* getEntry();
 
             MetaInst* getTerminator();
+
+            MetaFunction* getParent();
 
             std::vector<MetaInst*>& getInstList();
 
@@ -244,6 +256,8 @@ namespace MetaTrans {
             DataType outputType;
             
             int argNum;
+
+            int stackSize;
 
         public:
 

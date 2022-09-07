@@ -39,9 +39,10 @@ namespace MetaTrans {
             // create meta operand for an llvm instruction.
             MetaFunctionBuilder& createMetaOperand(Instruction& i);
 
-            void processOperand(MetaInst* inst, Instruction* curInst, MetaBB* curBB);
+            // copy instruction dependencies from LLVM IR.
+            void copyDependencies(Instruction* curInst);
 
-            void processOperand(MetaPhi* inst, PHINode* curInst, MetaBB* curBB);
+            void copyDependencies(PHINode* curInst);
 
         public:
             
