@@ -52,7 +52,8 @@ namespace MetaTrans {
         NEG,
         RET,
         // represent allocation for a data.
-        ALLOCATION
+        ALLOCATION,
+        EXCEPTION
     };
 
     class MetaOperand {

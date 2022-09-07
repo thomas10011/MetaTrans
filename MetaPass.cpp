@@ -21,36 +21,10 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function Builder implementation.
 
-    MetaFunctionBuilder& MetaFunctionBuilder::buildMetaElements() {
-        // create all meta basic block and instructions.
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaElements() {
+        // create all meta basic block and instructions recursively.
         for (auto bb = F->begin(); bb != F->end(); ++bb) {
-            MetaBB* newBB = mF->buildBB();
-            assert(bbMap.insert({&*bb, newBB}).second);
-            bool first_non_phi = true;
-            outs() << "creating instructions in Basic Block " << *bb;
-            for (auto i = bb->begin(); i != bb->end(); ++i) {
-                outs() << "instruction with type: " << i->getOpcodeName() << "\n";
-                MetaInst* newInst = newBB->buildInstruction(MetaUtil::getInstType(&*i));
-                assert(instMap.insert({&*i, newInst}).second);
-                if (first_non_phi && i->getOpcode() != Instruction::PHI) {
-                    newBB->setEntry(newInst); first_non_phi = false;
-                }
-
-                // create all arg and constant.
-                for (auto op = i->op_begin(); op != i->op_end(); ++op) {
-                    Value* value = op->get();
-                    // Ugly, but works.
-                    if (Argument* a = dyn_cast<Argument>(value)) {
-                        if (MetaArgument* mA = MetaUtil::createValue(a, argMap))
-                            mF->addArgument(mA);
-                    }
-                    else if (Constant* c = dyn_cast<Constant>(value)) {
-                        if (MetaConstant* mC = MetaUtil::createValue(c, constantMap))
-                            mF->addConstant(mC);
-                    }
-                }
-
-            }
+            (*this).createMetaBB(*bb, *mF);
         }
         return *this;
     }
@@ -74,7 +48,7 @@ namespace MetaTrans {
     MetaFunction* MetaFunctionBuilder::build() {
         mF = new MetaFunction();
         (*this)
-            .buildMetaElements()
+            .createMetaElements()
             .buildGraph();
         return mF;
     }
@@ -98,6 +72,47 @@ namespace MetaTrans {
             MetaUtil::printInstDependencyGraph(*bb);
         }
         outs() << "\n";
+        return *this;
+    }
+    
+
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b, MetaFunction& f) {
+        outs() << "creating instructions in Basic Block " << b;
+        MetaBB* newBB = f.buildBB();
+        assert(bbMap.insert({&b, newBB}).second);
+        bool first_non_phi = true;
+        for (auto i = b.begin(); i != b.end(); ++i) {
+            outs() << "instruction with type: " << i->getOpcodeName() << "\n";
+            (*this)
+                .createMetaInst(*i, *newBB)
+                .createMetaOperand(*i);
+            if (first_non_phi && i->getOpcode() != Instruction::PHI) {
+                newBB->setEntry(instMap[&*i]); first_non_phi = false;
+            }
+        }
+        return *this;
+    }
+    
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaInst(Instruction& i, MetaBB& b) {
+        MetaInst* newInst = b.buildInstruction(MetaUtil::getInstType(i));
+        assert(instMap.insert({&i, newInst}).second);
+        return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaOperand(Instruction& i) {
+        // create all arg and constant.
+        for (auto op = i.op_begin(); op != i.op_end(); ++op) {
+            Value* value = op->get();
+            // Ugly, but works.
+            if (Argument* a = dyn_cast<Argument>(value)) {
+                if (MetaArgument* mA = MetaUtil::createValue(a, argMap))
+                    mF->addArgument(mA);
+            }
+            else if (Constant* c = dyn_cast<Constant>(value)) {
+                if (MetaConstant* mC = MetaUtil::createValue(c, constantMap))
+                    mF->addConstant(mC);
+            }
+        }
         return *this;
     }
 

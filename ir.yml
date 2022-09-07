@@ -1,0 +1,96 @@
+Ret:   
+  - BRANCH
+Br:
+  - BRANCH
+Switch:
+  - BRANCH
+IndirectBr:
+  - BRANCH
+Invoke:
+  - BRANCH
+Resume:
+  - EXCEPTION
+Unreachable:
+  - HINT
+CleanupRet:
+  - EXCEPTION
+CatchRet:
+  - EXCEPTION
+CatchPad:
+  - EXCEPTION
+CatchSwitch:
+  - EXCEPTION
+CallBr:
+  - BRANCH
+FNeg:
+  - NEG
+Add:
+  - ADD
+FAdd:
+  - ADD
+Sub:
+  - SUB
+FSub:
+  - SUB
+Mul:
+  - MUL
+FMul:
+  - MUL
+UDiv:
+  - DIV
+SDiv:
+  - DIV
+FDiv:
+  - DIV
+URem:
+  - REMAINDER
+SRem:
+  - REMAINDER
+FRem:
+  - REMAINDER
+And:
+  - AND
+Or:
+  - OR
+Xor:
+  - XOR
+Alloca:
+  - ALLOCATION
+Load:
+  - LOAD
+Store:
+  - STORE
+AtomicCmpXchg:
+AtomicRMW:
+Fence:
+GetElementPtr:
+Trunc:
+ZExt:
+SExt:
+FPTrunc:
+FPExt:
+FPToUI:
+FPToSI:
+UIToFP:
+SIToFP:
+IntToPtr:
+PtrToInt:
+BitCast:
+AddrSpaceCast:
+ICmp:
+FCmp:
+PHI:
+Select:
+Call:
+Shl:
+LShr:
+AShr:
+VAArg:
+ExtractElement:
+InsertElement:
+ShuffleVector:
+ExtractValue:
+InsertValue:
+LandingPad:
+CleanupPad:
+Freeze:

@@ -25,9 +25,19 @@ namespace MetaTrans {
 
             MetaFunctionBuilder& clearAuxMaps();
 
+            // build denpendency graph between instructions.
             MetaFunctionBuilder& buildGraph();
             
-            MetaFunctionBuilder& buildMetaElements();
+            MetaFunctionBuilder& createMetaElements();
+            
+            // create a meta bb correspond to a llvm bb insde a meta function.
+            MetaFunctionBuilder& createMetaBB(BasicBlock& b, MetaFunction& f);
+
+            // create a meta instruction correspond to a llvm instruction inside a meta bb. 
+            MetaFunctionBuilder& createMetaInst(Instruction& i, MetaBB& b);
+
+            // create meta operand for an llvm instruction.
+            MetaFunctionBuilder& createMetaOperand(Instruction& i);
 
             void processOperand(MetaInst* inst, Instruction* curInst, MetaBB* curBB);
 

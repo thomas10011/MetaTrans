@@ -108,13 +108,13 @@ namespace MetaTrans {
             case InstType::NEG: return "neg";
             case InstType::RET: return "ret";
             case InstType::ALLOCATION: return "allocation";
+            case InstType::EXCEPTION: return "exception";
         }
     }
 
-    // determine the type of a instruction. refer to Instruction.h
-    std::vector<InstType> MetaUtil::getInstType(Instruction* inst) {
+    std::vector<InstType> MetaUtil::getInstType(Instruction& inst) {
         std::vector<InstType> ty;
-        switch (inst->getOpcode()) {
+        switch (inst.getOpcode()) {
             // Terminators
             case Instruction::Ret:   
             case Instruction::Br:
@@ -238,6 +238,6 @@ namespace MetaTrans {
 
         return ty;
 
-    } 
+   }
 
 }
