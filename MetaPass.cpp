@@ -6,7 +6,7 @@ namespace MetaTrans {
 /// Meta Function pass implementation, Will be invoked by LLVM pass manager.
 
     MetaFunctionPass::MetaFunctionPass() : FunctionPass(MetaFunctionPass::ID) {
-        YamlUtil::test();
+        auto typeMap = YamlUtil::parseMapConfig("ir.yml", MetaFunctionPass::str_inst_map);
     }
 
     bool MetaFunctionPass::runOnFunction(Function & F) {
@@ -17,6 +17,75 @@ namespace MetaTrans {
         metaFuncs.push_back(metaFunc);
         return true;
     }
+
+    char MetaFunctionPass::ID = 0;
+
+    std::unordered_map<std::string, unsigned>
+    MetaFunctionPass::str_inst_map = {
+        { "Ret",             Instruction::Ret                   },
+        { "Br",              Instruction::Br                    },
+        { "Switch",          Instruction::Switch                },
+        { "IndirectBr",      Instruction::IndirectBr            },
+        { "Invoke",          Instruction::Invoke                },
+        { "Resume",          Instruction::Resume                },
+        { "Unreachable",     Instruction::Unreachable           },
+        { "CleanupRet",      Instruction::CleanupRet            },
+        { "CatchRet",        Instruction::CatchRet              },
+        { "CatchPad",        Instruction::CatchPad              },
+        { "CatchSwitch",     Instruction::CatchSwitch           },
+        { "CallBr",          Instruction::CallBr                },
+        { "FNeg",            Instruction::FNeg                  },
+        { "Add",             Instruction::Add                   },
+        { "FAdd",            Instruction::FAdd                  },
+        { "Sub",             Instruction::Sub                   },
+        { "FSub",            Instruction::FSub                  },
+        { "Mul",             Instruction::Mul                   },
+        { "FMul",            Instruction::FMul                  },
+        { "UDiv",            Instruction::UDiv                  },
+        { "SDiv",            Instruction::SDiv                  },
+        { "FDiv",            Instruction::FDiv                  },
+        { "URem",            Instruction::URem                  },
+        { "SRem",            Instruction::SRem                  },
+        { "FRem",            Instruction::FRem                  },
+        { "And",             Instruction::And                   },
+        { "Or",              Instruction::Or                    },
+        { "Xor",             Instruction::Xor                   },
+        { "Alloca",          Instruction::Alloca                },
+        { "Load",            Instruction::Load                  },
+        { "Store",           Instruction::Store                 },
+        { "AtomicCmpXchg",   Instruction::AtomicCmpXchg         },
+        { "AtomicRMW",       Instruction::AtomicRMW             },
+        { "Fence",           Instruction::Fence                 },
+        { "GetElementPtr",   Instruction::GetElementPtr         },
+        { "Trunc",           Instruction::Trunc                 },
+        { "ZExt",            Instruction::ZExt                  },
+        { "SExt",            Instruction::SExt                  },
+        { "FPTrunc",         Instruction::FPTrunc               },
+        { "FPExt",           Instruction::FPExt                 },
+        { "FPToUI",          Instruction::FPToUI                },
+        { "UIToFP",          Instruction::UIToFP                },
+        { "SIToFP",          Instruction::SIToFP                },
+        { "IntToPtr",        Instruction::IntToPtr              },
+        { "PtrToInt",        Instruction::PtrToInt              },
+        { "BitCast",         Instruction::BitCast               },
+        { "AddrSpaceCast",   Instruction::AddrSpaceCast         },
+        { "ICmp",            Instruction::ICmp                  },
+        { "FCmp",            Instruction::FCmp                  },
+        { "PHI",             Instruction::PHI                   },
+        { "Select",          Instruction::Select                },
+        { "Call",            Instruction::Call                  },
+        { "Shl",             Instruction::Shl                   },
+        { "LShr",            Instruction::LShr                  },
+        { "VAArg",           Instruction::VAArg                 },
+        { "ExtractElement",  Instruction::ExtractElement        },
+        { "InsertElement",   Instruction::InsertElement         },
+        { "ShuffleVector",    Instruction::ShuffleVector          },
+        { "ExtractValue",    Instruction::ExtractValue          },
+        { "InsertValue",     Instruction::InsertValue           },
+        { "LandingPad",      Instruction::LandingPad            },
+        { "CleanupPad",      Instruction::CleanupPad            },
+        { "Freeze",          Instruction::Freeze                }
+    };
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Function Builder implementation.
@@ -181,7 +250,6 @@ namespace MetaTrans {
 
 }
 
-char MetaTrans::MetaFunctionPass::ID = 0;
 
 static RegisterPass<MetaTrans::MetaFunctionPass> X("meta-trans", "MetaTrans Pass",
                              false /* Only looks at CFG */,

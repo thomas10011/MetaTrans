@@ -30,8 +30,6 @@ namespace MetaTrans {
     struct MetaFunctionPass;
 
     enum InstType {
-        // NONE represent a Non-Instruction operand.
-        NONE,
         LOAD,
         STORE,
         COMPARE,
@@ -53,7 +51,15 @@ namespace MetaTrans {
         RET,
         // represent allocation for a data.
         ALLOCATION,
-        EXCEPTION
+        ADDRESSING,
+        EXCEPTION,
+        SWAP,
+        MIN,
+        MAX,
+        SQRT,
+        FENCE,
+        CONVERT,
+        HINT
     };
 
     class MetaOperand {
@@ -105,18 +111,25 @@ namespace MetaTrans {
 
             int argIndex;
 
+            int offset;
+
             DataType type; 
         
         public:
+
             MetaArgument();
 
             MetaArgument(DataType ty); 
 
-            void setArgIndex(int i);
+            MetaArgument& setArgIndex(int i);
+
+            MetaArgument& setOffset(int o);
+
+            MetaArgument& setArgType(DataType ty);
 
             int getArgIndex();
 
-            void setArgType(DataType ty);
+            int getOffest();
 
             DataType getArgType();
 
@@ -143,7 +156,7 @@ namespace MetaTrans {
 
             MetaInst& setParent(MetaBB* bb);
 
-            void addOperand(MetaOperand* op);
+            MetaInst& addOperand(MetaOperand* op);
 
             int getOperandNum();
 
@@ -156,8 +169,15 @@ namespace MetaTrans {
             std::vector<MetaOperand*>::iterator op_begin();
             
             std::vector<MetaOperand*>::iterator op_end();
+                
+            // return true if has same type with i.
+            bool hasSameType(MetaInst* i);
+            
+            // return true if ty is in type vector.
+            bool isType(InstType ty);
 
-            static MetaInst* createMetaInst(std::vector<InstType> ty);
+            // return trie of this instruction only has single type amd same with ty.
+            bool isSingleType(InstType ty);
 
             virtual ~MetaInst();
 
@@ -242,7 +262,7 @@ namespace MetaTrans {
         protected:
 
             // a function should contains a set of constants.
-            std::unordered_set<MetaConstant*> constants;
+            std::vector<MetaConstant*> constants;
             // arguments, as well.
             std::vector<MetaArgument*> args;
             // basic blocks.
@@ -261,9 +281,11 @@ namespace MetaTrans {
 
         public:
 
-            void addConstant(MetaConstant* c);
+            MetaFunction& addConstant(MetaConstant* c);
             
-            void addArgument(MetaArgument* a);
+            MetaFunction& addArgument(MetaArgument* a);
+
+            MetaFunction& setRoot(MetaBB* rootBB);
 
             MetaArgument* getArgument(int index);
 
@@ -274,11 +296,13 @@ namespace MetaTrans {
             // create a new bb at the end of bb list.
             MetaBB* buildBB();
 
-            void setRoot(MetaBB* rootBB);
-
             std::vector<MetaBB*>::iterator bb_begin();
 
             std::vector<MetaBB*>::iterator bb_end();
+
+            std::vector<MetaConstant*>::iterator const_begin();
+
+            std::vector<MetaConstant*>::iterator const_end();
 
             std::vector<MetaArgument*>::iterator arg_begin();
 

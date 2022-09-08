@@ -10,8 +10,32 @@ using namespace llvm;
 namespace MetaTrans {
 
     class YamlUtil {
+        protected:
+
+            static std::unordered_map<std::string, InstType> str_inst_type_map;
+
         public:
             static int test();
+
+            template<class T>
+            static std::unordered_map<T, std::vector<InstType>>* parseMapConfig(
+                std::string filePath,
+                std::unordered_map<std::string, T> keyMap
+            ) {
+                auto        map  = new std::unordered_map<T, std::vector<InstType>>(); 
+                YAML::Node  node = YAML::Load(filePath);
+
+                for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
+                    T                       key = keyMap[it->first.as<std::string>()];
+                    std::vector<InstType>   value;
+                    for (auto tmp : it->second) {
+                        value.push_back(str_inst_type_map[tmp.as<std::string>()]);
+                    }
+                    (*map)[key] = value; 
+                }
+
+                return map;
+            }
 
     };
 

@@ -58,6 +58,12 @@ namespace MetaTrans {
 
         static char ID;
 
+        static std::unordered_map<std::string, unsigned int> str_inst_map;
+
+        // singleton type map.
+        // Providing a map from LLVM Instruction type to TIR Instruction type.
+        std::unordered_map<unsigned, InstType>* typeMap;
+
         MetaFunctionBuilder builder;
 
         std::vector<MetaFunction*> metaFuncs;

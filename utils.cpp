@@ -11,12 +11,60 @@ namespace MetaTrans {
         std::cout << "sex:" << config["sex"].as<std::string>() << std::endl;
         std::cout << "age:" << config["age"].as<int>() << std::endl;
 
-        for (auto foo : config["skills"]) {
-            std::cout << foo.first.as<std::string>() << ":" << foo.second << std::endl;
+        // for (auto foo : config["skills"]) {
+        //     std::cout << foo.first.as<std::string>() << ":" << foo.second << std::endl;
+        // }
+
+        for (YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
+            if (it->second.Type() == YAML::NodeType::Scalar) {
+                std::cout << it->second.as<std::string>() << std::endl;
+            }
+            else if (it->second.Type() == YAML::NodeType::Sequence) {
+                for (auto v : it->second) {
+                    std::cout << v << "....\n";
+                }
+            }
+            else if (it->second.Type() == YAML::NodeType::Map) {
+
+            }
         }
+
+        // YamlUtil::parseMapConfig("test.yaml");
 
         return 0;
     }
+
+    std::unordered_map<std::string, InstType>
+    YamlUtil::str_inst_type_map = {
+        { "LOAD",           InstType::LOAD       },
+        { "STORE",          InstType::STORE      },
+        { "COMPARE",        InstType::COMPARE    },
+        { "CALL",           InstType::CALL       },
+        { "BRANCH",         InstType::BRANCH     },
+        { "JUMP",           InstType::JUMP       },
+        { "PHI",            InstType::PHI        },
+        { "ADD",            InstType::ADD        },
+        { "SUB",            InstType::SUB        },
+        { "MUL",            InstType::MUL        },
+        { "DIV",            InstType::DIV        },
+        { "REMAINDER",      InstType::REMAINDER  },
+        { "AND",            InstType::AND        },
+        { "OR",             InstType::OR         },
+        { "XOR",            InstType::XOR        },
+        { "SHIFT",          InstType::SHIFT      },
+        { "NEG",            InstType::NEG        },
+        { "RET",            InstType::RET        },
+        { "ALLOCATION",     InstType::ALLOCATION },
+        { "ADDRESSING",     InstType::ADDRESSING },
+        { "EXCEPTION",      InstType::EXCEPTION  },
+        { "SWAP",           InstType::SWAP       },
+        { "MIN",            InstType::MIN        },
+        { "MAX",            InstType::MAX        },
+        { "SQRT",           InstType::SQRT       },
+        { "FENCE",          InstType::FENCE      },
+        { "CONVERT",        InstType::CONVERT    },
+        { "HINT",           InstType::HINT       },
+    };
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Util implementation.
@@ -88,7 +136,6 @@ namespace MetaTrans {
 
     std::string MetaUtil::toString(InstType type) {
         switch (type) {
-            case InstType::NONE: return "none";
             case InstType::LOAD: return "load";
             case InstType::STORE: return "store";
             case InstType::COMPARE: return "compare";
@@ -108,7 +155,15 @@ namespace MetaTrans {
             case InstType::NEG: return "neg";
             case InstType::RET: return "ret";
             case InstType::ALLOCATION: return "allocation";
+            case InstType::ADDRESSING: return "addressing";
             case InstType::EXCEPTION: return "exception";
+            case InstType::SWAP: return "swap";
+            case InstType::MIN: return "min";
+            case InstType::MAX: return "max";
+            case InstType::SQRT: return "sqrt";
+            case InstType::FENCE: return "fence";
+            case InstType::CONVERT: return "convert";
+            case InstType::HINT: return "hint";
         }
     }
 

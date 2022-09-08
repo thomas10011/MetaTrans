@@ -91,11 +91,24 @@ namespace MetaTrans {
 
     MetaArgument::MetaArgument(DataType ty) : type(ty) { }
 
-    void MetaArgument::setArgIndex(int i) { argIndex = i; }
+    MetaArgument& MetaArgument::setArgIndex(int i) {
+        argIndex = i;
+        return *this;
+    }
+
+    MetaArgument& MetaArgument::setOffset(int o) {
+        offset = o;
+        return *this;
+    }
+    
+    MetaArgument& MetaArgument::setArgType(DataType ty) {
+        type = ty;
+        return *this;
+    }
 
     int MetaArgument::getArgIndex() { return argIndex; }
 
-    void MetaArgument::setArgType(DataType ty) { type = ty; }
+    int MetaArgument::getOffest() { return offset; }
 
     DataType MetaArgument::getArgType() { return type; }
 
@@ -113,8 +126,9 @@ namespace MetaTrans {
         return *this;
     }
 
-    void MetaInst::addOperand(MetaOperand* op) {
+    MetaInst& MetaInst::addOperand(MetaOperand* op) {
         operandList.push_back(op);
+        return *this;
     }
 
     int MetaInst::getOperandNum() { return operandList.size(); }
@@ -129,11 +143,20 @@ namespace MetaTrans {
 
     std::vector<MetaOperand*>::iterator MetaInst::op_end() { return operandList.end(); }
 
-    MetaInst* MetaInst::createMetaInst(std::vector<InstType> ty) {
-        if (ty[0] == InstType::PHI)
-            return new MetaPhi(ty);
-        else 
-            return new MetaInst(ty);
+    bool MetaInst::hasSameType(MetaInst* i) {
+        int64_t ty = 0;
+        for (InstType t : type) ty |= (1 << t);
+        for (InstType t : i->getInstType()) ty ^= (1 << t);
+        return ty == 0;
+    }
+
+    bool MetaInst::isType(InstType ty) {
+        for (InstType t : type) if (t == ty) return true;
+        return false;
+    }
+
+    bool MetaInst::isSingleType(InstType ty) {
+        return type.size() == 1 && type[0] == ty;
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -218,12 +241,19 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.
 
-    void MetaFunction::addConstant(MetaConstant* c) {
-        constants.insert(c);
+    MetaFunction& MetaFunction::addConstant(MetaConstant* c) {
+        constants.push_back(c);
+        return *this;
     }
     
-    void MetaFunction::addArgument(MetaArgument* a) {
+    MetaFunction& MetaFunction::addArgument(MetaArgument* a) {
         args.push_back(a);
+        return *this;
+    }
+
+    MetaFunction& MetaFunction::setRoot(MetaBB* rootBB) {
+        root = rootBB;
+        return *this;
     }
 
     int MetaFunction::getArgNum() { return args.size(); }
@@ -239,13 +269,13 @@ namespace MetaTrans {
         return newBB;
     }
 
-    void MetaFunction::setRoot(MetaBB* rootBB) {
-        root = rootBB;
-    }
-
     std::vector<MetaBB*>::iterator MetaFunction::bb_begin() { return bbs.begin(); }
 
     std::vector<MetaBB*>::iterator MetaFunction::bb_end() { return bbs.end(); }
+
+    std::vector<MetaConstant*>::iterator MetaFunction::const_begin() { return constants.begin(); }
+
+    std::vector<MetaConstant*>::iterator MetaFunction::const_end() { return constants.end(); }
 
     std::vector<MetaArgument*>::iterator MetaFunction::arg_begin() { return args.begin(); }
 
