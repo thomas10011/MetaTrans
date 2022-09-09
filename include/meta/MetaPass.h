@@ -14,6 +14,8 @@ namespace MetaTrans {
 
             MetaFunction* mF;
 
+            std::unordered_map<unsigned, std::vector<InstType>>* typeMap;
+
             // Auxiliary map, record the reflection between primitive type and Meta type.
             std::unordered_map<BasicBlock*, MetaBB*> bbMap;
 
@@ -50,6 +52,8 @@ namespace MetaTrans {
 
             MetaFunctionBuilder& setFunction(Function* F);
 
+            MetaFunctionBuilder& setTypeMap(std::unordered_map<unsigned, std::vector<InstType>>* typeMap);
+
             MetaFunction* build();
 
     };
@@ -62,7 +66,7 @@ namespace MetaTrans {
 
         // singleton type map.
         // Providing a map from LLVM Instruction type to TIR Instruction type.
-        std::unordered_map<unsigned, InstType>* typeMap;
+        std::unordered_map<unsigned, std::vector<InstType>>* typeMap;
 
         MetaFunctionBuilder builder;
 

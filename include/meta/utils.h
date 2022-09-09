@@ -16,16 +16,17 @@ namespace MetaTrans {
 
         public:
             static int test();
-
+            
+            // parse config file.
+            // return a map between ASM / IR to TIR.
             template<class T>
             static std::unordered_map<T, std::vector<InstType>>* parseMapConfig(
                 std::string filePath,
                 std::unordered_map<std::string, T> keyMap
             ) {
-                auto        map  = new std::unordered_map<T, std::vector<InstType>>(); 
-                YAML::Node  node = YAML::Load(filePath);
-
-                for (YAML::const_iterator it = node.begin(); it != node.end(); ++it) {
+                auto        map   = new std::unordered_map<T, std::vector<InstType>>(); 
+                YAML::Node  config = YAML::LoadFile(filePath);
+                for (YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
                     T                       key = keyMap[it->first.as<std::string>()];
                     std::vector<InstType>   value;
                     for (auto tmp : it->second) {
@@ -33,7 +34,11 @@ namespace MetaTrans {
                     }
                     (*map)[key] = value; 
                 }
-
+                if (DebugFlag) {
+                    std::cout << "loading config file: " << filePath << "\n";
+                    std::cout << "size of configs is: " << config.size() << "\n";
+                    std::cout << "size of key map: " << keyMap.size() << "\n";
+                }
                 return map;
             }
 

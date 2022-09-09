@@ -6,13 +6,14 @@ namespace MetaTrans {
 /// Meta Function pass implementation, Will be invoked by LLVM pass manager.
 
     MetaFunctionPass::MetaFunctionPass() : FunctionPass(MetaFunctionPass::ID) {
-        auto typeMap = YamlUtil::parseMapConfig("ir.yml", MetaFunctionPass::str_inst_map);
+        typeMap = YamlUtil::parseMapConfig("ir.yml", MetaFunctionPass::str_inst_map);
     }
 
     bool MetaFunctionPass::runOnFunction(Function & F) {
         outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
         MetaFunction* metaFunc = builder
                                     .setFunction(&F)
+                                    .setTypeMap(typeMap)
                                     .build();
         metaFuncs.push_back(metaFunc);
         return true;
@@ -63,6 +64,7 @@ namespace MetaTrans {
         { "FPTrunc",         Instruction::FPTrunc               },
         { "FPExt",           Instruction::FPExt                 },
         { "FPToUI",          Instruction::FPToUI                },
+        { "FPToSI",          Instruction::FPToSI                },
         { "UIToFP",          Instruction::UIToFP                },
         { "SIToFP",          Instruction::SIToFP                },
         { "IntToPtr",        Instruction::IntToPtr              },
@@ -76,6 +78,7 @@ namespace MetaTrans {
         { "Call",            Instruction::Call                  },
         { "Shl",             Instruction::Shl                   },
         { "LShr",            Instruction::LShr                  },
+        { "AShr",            Instruction::AShr                  },
         { "VAArg",           Instruction::VAArg                 },
         { "ExtractElement",  Instruction::ExtractElement        },
         { "InsertElement",   Instruction::InsertElement         },
@@ -111,6 +114,11 @@ namespace MetaTrans {
     MetaFunctionBuilder& MetaFunctionBuilder::setFunction(Function* F) {
         this->F = F;
         clearAuxMaps();
+        return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::setTypeMap(std::unordered_map<unsigned, std::vector<InstType>>* typeMap) {
+        this->typeMap = typeMap;
         return *this;
     }
 
@@ -163,7 +171,7 @@ namespace MetaTrans {
     }
     
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaInst(Instruction& i, MetaBB& b) {
-        MetaInst* newInst = b.buildInstruction(MetaUtil::getInstType(i));
+        MetaInst* newInst = b.buildInstruction((*typeMap)[i.getOpcode()]);
         newInst->setParent(&b);
         assert(instMap.insert({&i, newInst}).second);
         return *this;

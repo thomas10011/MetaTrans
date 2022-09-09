@@ -6,15 +6,15 @@ namespace MetaTrans {
 /// Yaml Util implementation.
 
     int YamlUtil::test() {
-        YAML::Node config = YAML::LoadFile("test.yaml");
-        std::cout << "name:" << config["name"].as<std::string>() << std::endl;
-        std::cout << "sex:" << config["sex"].as<std::string>() << std::endl;
-        std::cout << "age:" << config["age"].as<int>() << std::endl;
+        YAML::Node config = YAML::LoadFile("ir.yaml");
+        // std::cout << "name:" << config["name"].as<std::string>() << std::endl;
+        // std::cout << "sex:" << config["sex"].as<std::string>() << std::endl;
+        // std::cout << "age:" << config["age"].as<int>() << std::endl;
 
         // for (auto foo : config["skills"]) {
         //     std::cout << foo.first.as<std::string>() << ":" << foo.second << std::endl;
         // }
-
+        std::cout << "test file config size: " << config.size() << std::endl;
         for (YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
             if (it->second.Type() == YAML::NodeType::Scalar) {
                 std::cout << it->second.as<std::string>() << std::endl;

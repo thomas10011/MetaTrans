@@ -63,28 +63,49 @@ Store:
 AtomicCmpXchg:
 AtomicRMW:
 Fence:
+  - FENCE
 GetElementPtr:
 Trunc:
+  - CONVERT
 ZExt:
+  - CONVERT
 SExt:
+  - CONVERT
 FPTrunc:
+  - CONVERT
 FPExt:
+  - CONVERT
 FPToUI:
+  - CONVERT
 FPToSI:
+  - CONVERT
 UIToFP:
+  - CONVERT
 SIToFP:
+  - CONVERT
 IntToPtr:
+  - CONVERT
 PtrToInt:
+  - CONVERT
 BitCast:
+  - CONVERT
 AddrSpaceCast:
+  - CONVERT
 ICmp:
+  - COMPARE
 FCmp:
+  - COMPARE
 PHI:
+  - PHI
 Select:
 Call:
+  - CALL
 Shl:
+  - SHIFT
 LShr:
+  - SHIFT
 AShr:
+  - SHIFT
 VAArg:
 ExtractElement:
 InsertElement:
@@ -92,5 +113,7 @@ ShuffleVector:
 ExtractValue:
 InsertValue:
 LandingPad:
+  - EXCEPTION
 CleanupPad:
+  - EXCEPTION
 Freeze:
