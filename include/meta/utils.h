@@ -35,9 +35,9 @@ namespace MetaTrans {
                     (*map)[key] = value; 
                 }
                 if (DebugFlag) {
-                    std::cout << "loading config file: " << filePath << "\n";
-                    std::cout << "size of configs is: " << config.size() << "\n";
-                    std::cout << "size of key map: " << keyMap.size() << "\n";
+                    std::cout << "loading config file: " << filePath        << "\n";
+                    std::cout << "size of configs is: " << config  .size() << "\n";
+                    std::cout << "size of key map: "   << keyMap .size() << "\n";
                 }
                 return map;
             }

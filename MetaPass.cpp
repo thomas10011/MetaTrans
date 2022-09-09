@@ -96,18 +96,18 @@ namespace MetaTrans {
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaElements() {
         // create all meta basic block and instructions recursively.
         for (auto bb = F->begin(); bb != F->end(); ++bb) {
-            (*this).createMetaBB(*bb, *mF);
+            (*this).createMetaBB(*bb);
         }
         return *this;
     }
 
-    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr) { }
+    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr), typeMap(nullptr) { }
 
     MetaFunctionBuilder& MetaFunctionBuilder::clearAuxMaps() {
-        bbMap.clear();
-        instMap.clear();
-        constantMap.clear();
-        argMap.clear();
+        bbMap       .clear();
+        instMap     .clear();
+        constantMap .clear();
+        argMap      .clear();
         return *this;
     }
 
@@ -149,23 +149,22 @@ namespace MetaTrans {
     }
     
 
-    MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b, MetaFunction& f) {
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b) {
         outs() << "creating instructions in Basic Block " << b;
-        MetaBB* newBB = f.buildBB();
-        assert(bbMap.insert({&b, newBB}).second);
-        bool first_non_phi = true;
+        MetaBB& newBB = *(mF->buildBB());
+        assert(bbMap.insert({&b, &newBB}).second);
+        bool find_non_phi = false;
         for (auto i = b.begin(); i != b.end(); ++i) {
             outs() << "instruction with type: " << i->getOpcodeName() << "\n";
             (*this)
-                .createMetaInst(*i, *newBB)
+                .createMetaInst(*i, newBB)
                 .createMetaOperand(*i);
-            if (first_non_phi && i->getOpcode() != Instruction::PHI) {
-                // first non phi and parent both set once.
-                (*newBB)
-                    .setEntry(instMap[&*i])
-                    .setParent(&f);
-                first_non_phi = false;
-            }
+            if (find_non_phi || i->getOpcode() == Instruction::PHI) continue;
+            // first non phi and parent both set once.
+            newBB
+                .setEntry(instMap[&*i])
+                .setParent(mF);
+            find_non_phi = true;
         }
         return *this;
     }
@@ -194,23 +193,30 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaOperand* MetaFunctionBuilder::findMetaOperand(Value* value) {
+        if (Argument* arg = dyn_cast<Argument>(value)) {
+            return (MetaOperand*)argMap[arg];
+        }
+        else if (Constant* c = dyn_cast<Constant>(value)) {
+            return (MetaOperand*)constantMap[c];
+        }
+        else if (Instruction* i = dyn_cast<Instruction>(value)) {
+            return (MetaOperand*)instMap[i];
+        }
+        else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
+            return (MetaOperand*)bbMap[bb];
+        }
+        return nullptr;
+    }
+
     void MetaFunctionBuilder::copyDependencies(PHINode* phi) {
         MetaPhi* inst = (MetaPhi*)instMap[phi];
-        outs() << "processing meta phi node's operands..." << "\n";
+        outs() << "copying phi node chain ..." << "\n";
         for (auto bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
             Value* value = phi->getIncomingValueForBlock(*bb);
-            MetaOperand* op = nullptr;
-            if (Argument* arg = dyn_cast<Argument>(value)) {
-                op = (MetaOperand*)argMap.find(arg)->second;
-            }
-            else if (Constant* c = dyn_cast<Constant>(value)) {
-                op = (MetaOperand*)constantMap.find(c)->second;
-            }
-            else if (Instruction* i = dyn_cast<Instruction>(value)) {
-                op = (MetaOperand*)instMap.find(i)->second;
-            }
+            MetaOperand* op = findMetaOperand(value);
             assert(op);
-            inst->addValue(bbMap.find(*bb)->second, op);
+            inst->addValue(bbMap[*bb], op);
             outs() << "basic block: "<< bb << "; value: " << value << "; ";
         }
         outs() << "\n";
@@ -232,25 +238,14 @@ namespace MetaTrans {
         for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
             Value* value = op->get();
             MetaUtil::printValueType(value);
-            if (Argument* arg = dyn_cast<Argument>(value)) {
-                MetaArgument* metaArg =argMap.find(arg)->second;
-                inst->addOperand((MetaOperand*)metaArg);
-            }
             // create CFG here.
-            else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
-                auto it = bbMap.find(bb);
+            if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
                 (*curBB)
-                    .addNextBB(it->second)
+                    .addNextBB(bbMap[bb])
                     .setTerminator(inst);
             }
-            else if (Constant* c = dyn_cast<Constant>(value)) {
-                MetaConstant* metaCons = constantMap.find(c)->second;
-                inst->addOperand((MetaOperand*)metaCons);
-            }
-            else if (Instruction* i = dyn_cast<Instruction>(value)) {
-                MetaInst* usedInst = instMap.find(i)->second;
-                inst->addOperand((MetaOperand*)usedInst);
-            }
+            MetaOperand* metaOp = findMetaOperand(value);
+            inst->addOperand(metaOp);
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
 

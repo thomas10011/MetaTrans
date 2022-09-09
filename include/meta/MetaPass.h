@@ -14,47 +14,49 @@ namespace MetaTrans {
 
             MetaFunction* mF;
 
-            std::unordered_map<unsigned, std::vector<InstType>>* typeMap;
+            std::unordered_map<unsigned, std::vector<InstType>>*    typeMap;
 
             // Auxiliary map, record the reflection between primitive type and Meta type.
-            std::unordered_map<BasicBlock*, MetaBB*> bbMap;
+            std::unordered_map<BasicBlock*, MetaBB*>                bbMap;
 
-            std::unordered_map<Instruction*, MetaInst*> instMap;
+            std::unordered_map<Instruction*, MetaInst*>             instMap;
 
-            std::unordered_map<Constant*, MetaConstant*> constantMap;
+            std::unordered_map<Constant*, MetaConstant*>            constantMap;
 
-            std::unordered_map<Argument*, MetaArgument*> argMap;
+            std::unordered_map<Argument*, MetaArgument*>            argMap;
 
-            MetaFunctionBuilder& clearAuxMaps();
-
+            MetaFunctionBuilder&    clearAuxMaps                    ();
+                                                                    
             // build denpendency graph between instructions.
-            MetaFunctionBuilder& buildGraph();
+            MetaFunctionBuilder&    buildGraph                      ();
             
-            MetaFunctionBuilder& createMetaElements();
+            MetaFunctionBuilder&    createMetaElements              ();
             
             // create a meta bb correspond to a llvm bb insde a meta function.
-            MetaFunctionBuilder& createMetaBB(BasicBlock& b, MetaFunction& f);
+            MetaFunctionBuilder&    createMetaBB                    (BasicBlock& b);
 
             // create a meta instruction correspond to a llvm instruction inside a meta bb. 
-            MetaFunctionBuilder& createMetaInst(Instruction& i, MetaBB& b);
+            MetaFunctionBuilder&    createMetaInst                  (Instruction& i, MetaBB& b);
 
             // create meta operand for an llvm instruction.
-            MetaFunctionBuilder& createMetaOperand(Instruction& i);
+            MetaFunctionBuilder&    createMetaOperand               (Instruction& i);
+
+            MetaOperand*            findMetaOperand                  (Value* v);
 
             // copy instruction dependencies from LLVM IR.
-            void copyDependencies(Instruction* curInst);
+            void                    copyDependencies                (Instruction* curInst);
 
-            void copyDependencies(PHINode* curInst);
+            void                    copyDependencies                (PHINode* curInst);
 
         public:
             
-            MetaFunctionBuilder();
+                                    MetaFunctionBuilder             ();
 
-            MetaFunctionBuilder& setFunction(Function* F);
+            MetaFunctionBuilder&    setFunction                     (Function* F);
 
-            MetaFunctionBuilder& setTypeMap(std::unordered_map<unsigned, std::vector<InstType>>* typeMap);
+            MetaFunctionBuilder&    setTypeMap                      (std::unordered_map<unsigned, std::vector<InstType>>* typeMap);
 
-            MetaFunction* build();
+            MetaFunction*           build                           ();
 
     };
 
