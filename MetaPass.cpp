@@ -93,14 +93,6 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function Builder implementation.
 
-    MetaFunctionBuilder& MetaFunctionBuilder::createMetaElements() {
-        // create all meta basic block and instructions recursively.
-        for (auto bb = F->begin(); bb != F->end(); ++bb) {
-            (*this).createMetaBB(*bb);
-        }
-        return *this;
-    }
-
     MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr), typeMap(nullptr) { }
 
     MetaFunctionBuilder& MetaFunctionBuilder::clearAuxMaps() {
@@ -123,11 +115,30 @@ namespace MetaTrans {
     }
 
     MetaFunction* MetaFunctionBuilder::build() {
-        mF = new MetaFunction();
         (*this)
-            .createMetaElements()
-            .buildGraph();
+            .buildMetaFunction()
+            .buildMetaElements()
+            .buildGraph()
+            .buildMetaData();
         return mF;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::buildMetaFunction() {
+        mF = new MetaFunction();
+        (*mF)
+            .setStackSize(0)
+            .setFunctionName(F->getName().str())
+            .setReturnType(MetaUtil::extractDataType(*(F->getReturnType()))) // TODO 修改为适配器模式
+            ;
+        return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::buildMetaElements() {
+        // create all meta basic block and instructions recursively.
+        for (auto bb = F->begin(); bb != F->end(); ++bb) {
+            (*this).createMetaBB(*bb);
+        }
+        return *this;
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::buildGraph() {
@@ -147,7 +158,49 @@ namespace MetaTrans {
         outs() << "\n";
         return *this;
     }
-    
+
+    MetaFunctionBuilder& MetaFunctionBuilder::buildMetaData() {
+        (*this)
+            .fillArgMetaData()
+            .fillInstMetaData()
+            .fillBBMetaData()
+            .fillFuncMetaData();
+        return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::fillArgMetaData() {
+        int index = 0, offset = 0; 
+        for (auto it = F->arg_begin(); it != F->arg_end(); ++it) {
+            MetaArgument& arg = *argMap[&(*it)];
+            arg
+                .setArgIndex(index++)
+                .setOffset(offset)
+                .setArgType(MetaUtil::extractDataType(*(it->getType())))
+                .setWidth(MetaUtil::extractDataWidth(*(it->getType())))
+                ;
+            offset += arg.getWidth();
+        }
+        
+        
+        return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::fillInstMetaData() {
+
+
+        return *this;
+    }
+
+
+    MetaFunctionBuilder& MetaFunctionBuilder::fillBBMetaData() {
+
+        return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::fillFuncMetaData() {
+
+        return *this;
+    }
 
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b) {
         outs() << "creating instructions in Basic Block " << b;
@@ -203,9 +256,6 @@ namespace MetaTrans {
         else if (Instruction* i = dyn_cast<Instruction>(value)) {
             return (MetaOperand*)instMap[i];
         }
-        else if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
-            return (MetaOperand*)bbMap[bb];
-        }
         return nullptr;
     }
 
@@ -244,8 +294,10 @@ namespace MetaTrans {
                     .addNextBB(bbMap[bb])
                     .setTerminator(inst);
             }
-            MetaOperand* metaOp = findMetaOperand(value);
-            inst->addOperand(metaOp);
+
+            if (MetaOperand* metaOp = findMetaOperand(value))
+                inst->addOperand(metaOp);
+
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
 

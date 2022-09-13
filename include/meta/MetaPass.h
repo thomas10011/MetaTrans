@@ -26,11 +26,23 @@ namespace MetaTrans {
             std::unordered_map<Argument*, MetaArgument*>            argMap;
 
             MetaFunctionBuilder&    clearAuxMaps                    ();
+
+            MetaFunctionBuilder&    buildMetaFunction               ();
+            
+            MetaFunctionBuilder&    buildMetaElements               ();
                                                                     
             // build denpendency graph between instructions.
             MetaFunctionBuilder&    buildGraph                      ();
-            
-            MetaFunctionBuilder&    createMetaElements              ();
+
+            MetaFunctionBuilder&    buildMetaData                   ();
+
+            MetaFunctionBuilder&    fillFuncMetaData                 ();
+
+            MetaFunctionBuilder&    fillBBMetaData                   ();
+
+            MetaFunctionBuilder&    fillInstMetaData                 ();
+
+            MetaFunctionBuilder&    fillArgMetaData                  ();
             
             // create a meta bb correspond to a llvm bb insde a meta function.
             MetaFunctionBuilder&    createMetaBB                    (BasicBlock& b);

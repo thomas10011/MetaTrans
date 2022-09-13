@@ -71,7 +71,9 @@ namespace MetaTrans {
 
             static std::string toString(InstType type);
 
-            static std::vector<InstType> getInstType(Instruction& inst);
+            static DataType extractDataType(Type& dataType);
+
+            static int extractDataWidth(Type& dataType);
 
             /// if a value not exist in the map, create it by default constructor.
             template<typename K, typename V>

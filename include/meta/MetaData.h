@@ -8,14 +8,9 @@ namespace MetaTrans {
     class MetaFunction;
 
     enum DataType {
-        INT8,
-        INT16,
-        INT32,
-        INT64,
-        // necessary?
-        UINT,
+        VOID,
+        INT,
         FLOAT,
-        DOUBLE,
     };
 
     union DataUnion {

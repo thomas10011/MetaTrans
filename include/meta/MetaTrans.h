@@ -66,7 +66,15 @@ namespace MetaTrans {
         private:
         protected:
         public:
+
+        virtual bool isMetaConstant();
         
+        virtual bool isMetaArgument();
+
+        virtual bool isMetaInst();
+        
+        virtual ~MetaOperand();
+
     };
 
     class MetaConstant : public MetaOperand {
@@ -80,6 +88,8 @@ namespace MetaTrans {
         public:
             
             MetaConstant();
+
+            virtual ~MetaConstant();
 
             MetaConstant(DataType ty);
 
@@ -101,6 +111,8 @@ namespace MetaTrans {
             
             void setValue(double v);
 
+            virtual bool isMetaConstant() override;
+
     };
     
     class MetaArgument : public MetaOperand {
@@ -119,6 +131,8 @@ namespace MetaTrans {
 
             MetaArgument();
 
+            ~MetaArgument();
+
             MetaArgument(DataType ty); 
 
             MetaArgument& setArgIndex(int i);
@@ -127,12 +141,17 @@ namespace MetaTrans {
 
             MetaArgument& setArgType(DataType ty);
 
+            MetaArgument& setWidth(int w);
+
             int getArgIndex();
 
             int getOffest();
 
+            int getWidth();
+
             DataType getArgType();
 
+            virtual bool isMetaArgument() override;
     };
 
     class MetaInst : public MetaOperand {
@@ -151,6 +170,8 @@ namespace MetaTrans {
         public:
 
             MetaInst();
+
+            virtual ~MetaInst();
 
             MetaInst(std::vector<InstType> ty); 
 
@@ -179,7 +200,7 @@ namespace MetaTrans {
             // return trie of this instruction only has single type amd same with ty.
             bool isSingleType(InstType ty);
 
-            virtual ~MetaInst();
+            virtual bool isMetaInst() override;
 
     };
 
@@ -273,13 +294,15 @@ namespace MetaTrans {
 
             std::string funcName;
 
-            DataType outputType;
+            DataType returnType;
             
-            int argNum;
-
             int stackSize;
 
+            int argNum;
+
         public:
+
+            MetaFunction();
 
             MetaFunction& addConstant(MetaConstant* c);
             
@@ -287,11 +310,23 @@ namespace MetaTrans {
 
             MetaFunction& setRoot(MetaBB* rootBB);
 
+            MetaFunction& setFunctionName(std::string name);
+
+            MetaFunction& setStackSize(int s);
+
+            MetaFunction& setReturnType(DataType ty);
+
+            MetaFunction& expandStackSize(int s);
+
             MetaArgument* getArgument(int index);
+
+            std::string getFunctionName();
 
             int getConstNum();
 
             int getArgNum();
+
+            DataType getReturnType();
 
             // create a new bb at the end of bb list.
             MetaBB* buildBB();

@@ -124,13 +124,9 @@ namespace MetaTrans {
 
     std::string MetaUtil::toString(DataType type) {
         switch (type) {
-            case DataType::INT8:   return "INT8"  ;
-            case DataType::INT16:  return "INT16" ;
-            case DataType::INT32:  return "INT32" ;
-            case DataType::INT64:  return "INT64" ;
-            case DataType::UINT:   return "UINT"  ;
+            case DataType::INT:    return "INT"   ;
             case DataType::FLOAT:  return "FLOAT" ;
-            case DataType::DOUBLE: return "DOUBLE";
+            case DataType::VOID:   return "VOID"  ;
         }
     }
 
@@ -165,6 +161,81 @@ namespace MetaTrans {
             case InstType::CONVERT:    return "convert"   ;
             case InstType::HINT:       return "hint"      ;
         }
+    }
+
+    DataType MetaUtil::extractDataType(Type& dataType) {
+        switch (dataType.getTypeID())
+        {
+            case Type::HalfTyID:
+            case Type::BFloatTyID:
+            case Type::FloatTyID:
+            case Type::DoubleTyID:
+            case Type::X86_FP80TyID:
+            case Type::FP128TyID:
+            case Type::PPC_FP128TyID:
+                return DataType::FLOAT;
+            case Type::VoidTyID:
+                return DataType::VOID;
+            case Type::LabelTyID:
+            case Type::MetadataTyID:
+            case Type::X86_MMXTyID:
+            case Type::X86_AMXTyID:
+            case Type::TokenTyID:
+                break;
+            case Type::IntegerTyID:
+                return DataType::INT;
+            case Type::FunctionTyID:
+            case Type::PointerTyID:
+            case Type::StructTyID:
+            case Type::ArrayTyID:
+            case Type::FixedVectorTyID:
+            case Type::ScalableVectorTyID:
+                break;
+            default:
+                break;
+        }
+        // TODO
+        return DataType::VOID;
+    }
+
+
+    int MetaUtil::extractDataWidth(Type& dataType) {
+        // TODO
+        switch (dataType.getTypeID())
+        {
+            case Type::HalfTyID:
+            case Type::BFloatTyID:
+                return 16;
+            case Type::FloatTyID:
+                return 32;
+            case Type::DoubleTyID:
+                return 64;
+            case Type::X86_FP80TyID:
+                return 80;
+            case Type::FP128TyID:
+                return 128;
+            case Type::PPC_FP128TyID:
+                return 128;
+            case Type::VoidTyID:
+            case Type::LabelTyID:
+            case Type::MetadataTyID:
+            case Type::X86_MMXTyID:
+            case Type::X86_AMXTyID:
+            case Type::TokenTyID:
+                break;
+            case Type::IntegerTyID:
+                return dataType.getIntegerBitWidth();
+            case Type::FunctionTyID:
+            case Type::PointerTyID:
+            case Type::StructTyID:
+            case Type::ArrayTyID:
+            case Type::FixedVectorTyID:
+            case Type::ScalableVectorTyID:
+                break;
+            default:
+                break;
+        }
+        return 0;
     }
 
 }
