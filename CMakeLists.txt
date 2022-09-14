@@ -4,9 +4,11 @@ include_directories(include)
 link_directories(lib)
 
 add_llvm_library( LLVMMetaTrans MODULE
+  Filter.cpp
+  MetaFilter.cpp
   MetaPass.cpp
   MetaTrans.cpp
-  utils.cpp
+  Utils.cpp
 
   PLUGIN_TOOL
   opt

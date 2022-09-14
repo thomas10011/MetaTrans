@@ -1,14 +1,22 @@
 #pragma once
 
+#include "meta/Filter.h"
 #include "meta/MetaTrans.h"
-#include "meta/utils.h"
+#include "meta/Utils.h"
 
 namespace MetaTrans {
     
     /// An simple implementation of Builder Pattern.
     /// This class is used to create Instruction Graph for each Function. 
-    class MetaFunctionBuilder {
+    class MetaFunctionBuilder : public FilterTarget {
+
         protected:
+
+            friend class MetaArgFilter;
+            friend class MetaConstantFilter;
+            friend class MetaInstFilter;
+            friend class MetaBBFilter;
+            friend class MetaFuncFilter;
 
             Function* F;
 
@@ -25,6 +33,8 @@ namespace MetaTrans {
 
             std::unordered_map<Argument*, MetaArgument*>            argMap;
 
+            FilterManager                                           filterManager;
+
             MetaFunctionBuilder&    clearAuxMaps                    ();
 
             MetaFunctionBuilder&    buildMetaFunction               ();
@@ -34,15 +44,8 @@ namespace MetaTrans {
             // build denpendency graph between instructions.
             MetaFunctionBuilder&    buildGraph                      ();
 
+            // use responsibility pattern to create meta data.
             MetaFunctionBuilder&    buildMetaData                   ();
-
-            MetaFunctionBuilder&    fillFuncMetaData                 ();
-
-            MetaFunctionBuilder&    fillBBMetaData                   ();
-
-            MetaFunctionBuilder&    fillInstMetaData                 ();
-
-            MetaFunctionBuilder&    fillArgMetaData                  ();
             
             // create a meta bb correspond to a llvm bb insde a meta function.
             MetaFunctionBuilder&    createMetaBB                    (BasicBlock& b);

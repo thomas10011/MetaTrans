@@ -1,4 +1,5 @@
 #include "meta/MetaPass.h"
+#include "meta/MetaFilter.h"
 
 namespace MetaTrans {
     
@@ -93,7 +94,15 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function Builder implementation.
 
-    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr), typeMap(nullptr) { }
+    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr), typeMap(nullptr) {
+        filterManager
+            .addFilter(new MetaArgFilter())
+            .addFilter(new MetaConstantFilter())
+            .addFilter(new MetaInstFilter())
+            .addFilter(new MetaBBFilter())
+            .addFilter(new MetaFuncFilter())
+            ;
+    }
 
     MetaFunctionBuilder& MetaFunctionBuilder::clearAuxMaps() {
         bbMap       .clear();
@@ -160,45 +169,8 @@ namespace MetaTrans {
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaData() {
-        (*this)
-            .fillArgMetaData()
-            .fillInstMetaData()
-            .fillBBMetaData()
-            .fillFuncMetaData();
-        return *this;
-    }
-
-    MetaFunctionBuilder& MetaFunctionBuilder::fillArgMetaData() {
-        int index = 0, offset = 0; 
-        for (auto it = F->arg_begin(); it != F->arg_end(); ++it) {
-            MetaArgument& arg = *argMap[&(*it)];
-            arg
-                .setArgIndex(index++)
-                .setOffset(offset)
-                .setArgType(MetaUtil::extractDataType(*(it->getType())))
-                .setWidth(MetaUtil::extractDataWidth(*(it->getType())))
-                ;
-            offset += arg.getWidth();
-        }
-        
-        
-        return *this;
-    }
-
-    MetaFunctionBuilder& MetaFunctionBuilder::fillInstMetaData() {
-
-
-        return *this;
-    }
-
-
-    MetaFunctionBuilder& MetaFunctionBuilder::fillBBMetaData() {
-
-        return *this;
-    }
-
-    MetaFunctionBuilder& MetaFunctionBuilder::fillFuncMetaData() {
-
+        outs() << "invoke filter manager" << "\n";
+        filterManager.filter(*this);
         return *this;
     }
 

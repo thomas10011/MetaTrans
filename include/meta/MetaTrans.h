@@ -126,6 +126,8 @@ namespace MetaTrans {
             int offset;
 
             DataType type; 
+
+            MetaFunction* parent;
         
         public:
 
@@ -143,6 +145,8 @@ namespace MetaTrans {
 
             MetaArgument& setWidth(int w);
 
+            MetaArgument& setParent(MetaFunction* f);
+
             int getArgIndex();
 
             int getOffest();
@@ -150,6 +154,8 @@ namespace MetaTrans {
             int getWidth();
 
             DataType getArgType();
+
+            MetaFunction* getParent();
 
             virtual bool isMetaArgument() override;
     };

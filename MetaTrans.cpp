@@ -1,8 +1,5 @@
-
 #include "llvm/Support/raw_ostream.h"
 #include "meta/MetaTrans.h"
-
-
 
 namespace MetaTrans { 
     
@@ -128,6 +125,11 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaArgument& MetaArgument::setParent(MetaFunction* f) {
+        parent = f;
+        return *this;
+    }
+
     int MetaArgument::getArgIndex() { return argIndex; }
 
     int MetaArgument::getOffest() { return offset; }
@@ -135,6 +137,8 @@ namespace MetaTrans {
     int MetaArgument::getWidth() { return width; }
 
     DataType MetaArgument::getArgType() { return type; }
+
+    MetaFunction* MetaArgument::getParent() { return parent; }
 
     bool MetaArgument::isMetaArgument() { return true; }
 
