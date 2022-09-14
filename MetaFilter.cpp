@@ -26,10 +26,7 @@ namespace MetaTrans {
 
     void MetaConstantFilter::doFilter(FilterTarget& target, FilterChain& chain) {
         MetaFunctionBuilder& builder = dynamic_cast<MetaFunctionBuilder&>(target);
-        
         // do something
-
-
 
         chain.doFilter(target);
     }
@@ -37,7 +34,7 @@ namespace MetaTrans {
     void MetaInstFilter::doFilter(FilterTarget& target, FilterChain& chain) {
         MetaFunctionBuilder& builder = dynamic_cast<MetaFunctionBuilder&>(target);
         
-        // do something
+        // TODO - scan alloca inst and add statck size in meta function.
 
 
         chain.doFilter(target);
@@ -45,18 +42,29 @@ namespace MetaTrans {
 
     void MetaBBFilter::doFilter(FilterTarget& target, FilterChain& chain) {
         MetaFunctionBuilder& builder = dynamic_cast<MetaFunctionBuilder&>(target);
-        
-        // do something
-
-
+        for (auto it = builder.F->begin(); it != builder.F->end(); ++it) {
+            BasicBlock& b  = *it;
+            MetaBB&     mB = *(builder.bbMap[&b]);
+            assert(b.getFirstNonPHI());
+            mB
+                .setEntry(builder.instMap[b.getFirstNonPHI()])
+                .setParent(builder.mF);
+        }
         chain.doFilter(target);
     }
 
     void MetaFuncFilter::doFilter(FilterTarget& target, FilterChain& chain) {
         MetaFunctionBuilder& builder = dynamic_cast<MetaFunctionBuilder&>(target);
-        
-        // do something
 
+        Function&       func     = *(builder.F);
+        MetaFunction&   metaFunc = *(builder.mF);
+
+        metaFunc
+            .setStackSize(0)
+            .setRoot(builder.bbMap[&*(func.begin())])
+            .setFunctionName(func.getName().str())
+            .setReturnType(MetaUtil::extractDataType(*(func.getReturnType()))) // TODO 修改为适配器模式
+            ;
 
         chain.doFilter(target);
     }

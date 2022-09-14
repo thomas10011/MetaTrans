@@ -134,11 +134,6 @@ namespace MetaTrans {
 
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaFunction() {
         mF = new MetaFunction();
-        (*mF)
-            .setStackSize(0)
-            .setFunctionName(F->getName().str())
-            .setReturnType(MetaUtil::extractDataType(*(F->getReturnType()))) // TODO 修改为适配器模式
-            ;
         return *this;
     }
 
@@ -151,8 +146,7 @@ namespace MetaTrans {
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::buildGraph() {
-        // construct graph
-        mF->setRoot(bbMap.find(&*(F->begin()))->second);
+        outs() << "creating edges in graph..." << "\n";
         for (Function::iterator bb = F->begin(); bb != F->end(); ++bb) {
             for (BasicBlock::iterator i = bb->begin(); i != bb->end(); ++i) {
                 // add this instruction to current basic block.
@@ -169,7 +163,6 @@ namespace MetaTrans {
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaData() {
-        outs() << "invoke filter manager" << "\n";
         filterManager.filter(*this);
         return *this;
     }
@@ -178,18 +171,11 @@ namespace MetaTrans {
         outs() << "creating instructions in Basic Block " << b;
         MetaBB& newBB = *(mF->buildBB());
         assert(bbMap.insert({&b, &newBB}).second);
-        bool find_non_phi = false;
         for (auto i = b.begin(); i != b.end(); ++i) {
             outs() << "instruction with type: " << i->getOpcodeName() << "\n";
             (*this)
                 .createMetaInst(*i, newBB)
                 .createMetaOperand(*i);
-            if (find_non_phi || i->getOpcode() == Instruction::PHI) continue;
-            // first non phi and parent both set once.
-            newBB
-                .setEntry(instMap[&*i])
-                .setParent(mF);
-            find_non_phi = true;
         }
         return *this;
     }
