@@ -35,6 +35,7 @@ namespace MetaTrans {
         MetaFunctionBuilder& builder = dynamic_cast<MetaFunctionBuilder&>(target);
         
         // TODO - scan alloca inst and add statck size in meta function.
+        // Problem - if compile with -o3 then ir may have no alloca instruction.
 
 
         chain.doFilter(target);
