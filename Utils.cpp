@@ -1,4 +1,5 @@
 #include "meta/Utils.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace MetaTrans {
 

@@ -75,7 +75,7 @@ namespace MetaTrans {
 
     };
 
-    struct MetaFunctionPass : FunctionPass {
+    struct MetaFunctionPass : public llvm::FunctionPass {
 
         static char ID;
 

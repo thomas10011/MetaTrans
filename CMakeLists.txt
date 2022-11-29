@@ -1,4 +1,3 @@
-SET(CMAKE_CXX_COMPILER "/opt/BinaryTranslation/llvm-13.0.1/bin/clang++")
 
 include_directories(include)
 link_directories(lib)

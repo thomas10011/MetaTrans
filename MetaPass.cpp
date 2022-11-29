@@ -1,6 +1,8 @@
 #include "meta/MetaPass.h"
 #include "meta/MetaFilter.h"
 
+using namespace llvm;
+
 namespace MetaTrans {
     
 //===-------------------------------------------------------------------------------===//
