@@ -1,5 +1,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include "meta/MetaTrans.h"
+#include "meta/MetaUtils.h"
 
 namespace MetaTrans { 
     
@@ -41,6 +42,10 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Operand implementation.
 
+    MetaOperand& MetaOperand::setID(int id) { this->id = id; return* this; }
+
+    int MetaOperand::getID() { return id; }
+
     bool MetaOperand::isMetaConstant() { return false; }
 
     bool MetaOperand::isMetaArgument() { return false; }
@@ -48,6 +53,8 @@ namespace MetaTrans {
     bool MetaOperand::isMetaInst() { return false; }
 
     MetaOperand::~MetaOperand() { }
+
+    std::string MetaOperand::toString() { return "Operand"; }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Constant implementation.
@@ -151,6 +158,17 @@ namespace MetaTrans {
 
     MetaInst::~MetaInst() { }
 
+    MetaInst& MetaInst::setInstType(std::vector<InstType> ty) {
+        type = ty;
+        return *this;
+    }
+
+    MetaInst& MetaInst::setInstType(InstType ty) {
+        std::vector<InstType> tmp(1, ty);
+        type = tmp;
+        return *this;
+    }
+
     MetaInst& MetaInst::setParent(MetaBB* bb) {
         parent = bb;
         return *this;
@@ -191,13 +209,52 @@ namespace MetaTrans {
 
     bool MetaInst::isMetaInst() { return true; }
 
+    bool MetaInst::isMetaPhi() { return false; }
+
+    std::string MetaInst::toString() {
+        std::string opList = operandList.size() == 0 ? "[]" : "[";
+        for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        opList[opList.length() - 1] = ']';
+        std::string str = "";
+        return str + "{" + "\"id\":" + std::to_string(id) + ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," + "\"operandList\":" + opList + "}";
+    }
+
+    void MetaInst::addColor(int c, int t) { colors.insert(ColorData(c,t)); }
+
+    std::set<ColorData>& MetaInst::getColors() { return colors; }
+
+    bool MetaInst::hasColor(int c) {
+        for(auto & each : colors) {
+            if (each.color == c) return true;
+        }
+        return false;
+    }
+
 //===-------------------------------------------------------------------------------===//
 /// Meta Phi Instruction implementation.
 
+    MetaPhi::MetaPhi() {
+        type.push_back(InstType::PHI);
+        MetaInst(type);
+    }
     MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
 
-    void MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
+    MetaPhi& MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
         bbValueMap.insert({bb, op});
+        return *this;
+    }
+
+    bool MetaPhi::equals(MetaPhi* phi) {
+        if (bbValueMap.size() != phi->getMapSize()) return false;
+        for (auto it = bbValueMap.begin(); it != bbValueMap.end(); ++it) {
+            MetaBB* key = it->first;
+            if (this->getValue(key) != phi->getValue(key)) return false;
+        }
+        return true;
+    }
+
+    int MetaPhi::getMapSize() {
+        return bbValueMap.size();
     }
 
     MetaOperand* MetaPhi::getValue(MetaBB* bb) {
@@ -205,6 +262,38 @@ namespace MetaTrans {
         if (pair == bbValueMap.end()) return nullptr;
         return pair->second;
     }
+
+    std::unordered_map<MetaBB*, MetaOperand*>::iterator MetaPhi::begin() {
+        return bbValueMap.begin();
+    }
+
+    std::unordered_map<MetaBB*, MetaOperand*>::iterator MetaPhi::end() {
+        return bbValueMap.end();
+    }
+
+    bool MetaPhi::isMetaPhi() { return true; }
+
+    std::string MetaPhi::toString() {
+
+        std::string opList = operandList.size() == 0 ? "[]" : "[";
+        for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        opList[opList.length() - 1] = ']';
+        
+        std::string phiMapStr = bbValueMap.size() == 0 ? "{}" : "[";
+        for (auto pair = bbValueMap.begin(); pair != bbValueMap.end(); ++pair) {
+            phiMapStr = phiMapStr + "\"" + std::to_string(pair->first->getID()) + "\":" + std::to_string(pair->second->getID());
+        }
+        phiMapStr[phiMapStr.length() - 1] = ']'; 
+
+        std::string str = "";
+        return str + 
+            "{" + "\"id\":" + std::to_string(id) + 
+            ",\"isMetaPhi\":true,\"type\":" + MetaUtil::toString(type) + 
+            ",\"operandList\":" + opList + 
+            ",\"bbValueMap\":" + phiMapStr +
+            "}";
+    }
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Basic Block implementation.
@@ -225,6 +314,27 @@ namespace MetaTrans {
             newInst =  new MetaInst(ty);
         instList.push_back(newInst);
         return newInst;
+    }
+
+    MetaInst* MetaBB::buildInstruction() {
+        MetaInst* newInst = new MetaInst();
+        instList.push_back(newInst);
+        return newInst;
+    }
+
+    MetaPhi* MetaBB::buildPhi(bool insertAtHead) {
+        MetaPhi* newPhi = new MetaPhi();
+        addPhi(newPhi, insertAtHead);
+        return newPhi;
+    }
+
+    MetaBB& MetaBB::addPhi(MetaPhi* phi, bool insertAtHead) {
+        auto it = instList.begin();
+        if(!insertAtHead) {
+            while ((*it)->isMetaPhi()) ++it;
+        }
+        instList.insert(it, (MetaInst*)phi);
+        return *this;
     }
 
     MetaBB& MetaBB::addInstruction(MetaInst* inst) {
@@ -252,6 +362,8 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaBB& MetaBB::setID(int id) { this->id = id; return* this; }
+
     std::vector<MetaBB*> MetaBB::getNextBB() { return successors; }
 
     MetaBB* MetaBB::getNextBB(int index) { return successors[index]; }
@@ -266,9 +378,29 @@ namespace MetaTrans {
 
     MetaFunction* MetaBB::getParent() { return parent; }
 
+    int MetaBB::getID() { return id; }
+
     std::vector<MetaInst*>::iterator MetaBB::inst_begin() { return instList.begin(); }
 
     std::vector<MetaInst*>::iterator MetaBB::inst_end() { return instList.end(); }
+
+    std::string MetaBB::toString() {
+
+        std::string instListStr = instList.empty() ? "[]" : "[";
+        for (MetaInst* inst : instList) instListStr = instListStr + inst->toString() + ",";
+        instListStr[instListStr.length() - 1] = ']';
+
+        std::string sucStr = successors.empty() ? "[]" : "[";
+        for (MetaBB* suc : successors) sucStr = sucStr + std::to_string(suc->getID()) + ",";
+        sucStr[sucStr.length() - 1] = ']'; 
+
+        std::string bbStr = "";
+
+        return bbStr + "{"
+            "\"instList\":" + instListStr + "," +
+            "\"successors\":" + sucStr + 
+            "}";
+    }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.
@@ -328,6 +460,10 @@ namespace MetaTrans {
         bbs.push_back(newBB);
         return newBB;
     }
+
+    std::vector<MetaBB*>::iterator MetaFunction::begin() { return bb_begin(); }
+
+    std::vector<MetaBB*>::iterator MetaFunction::end() { return bb_end(); }
 
     std::vector<MetaBB*>::iterator MetaFunction::bb_begin() { return bbs.begin(); }
 

@@ -1,5 +1,4 @@
-#include "meta/Utils.h"
-#include "llvm/Support/raw_ostream.h"
+#include "meta/MetaUtils.h"
 
 namespace MetaTrans {
 
@@ -164,6 +163,16 @@ namespace MetaTrans {
         }
     }
 
+    std::string MetaUtil::toString(std::vector<InstType> type) {
+        if (type.size() == 0) return "[]";
+
+        std::string str = "[";
+        for (InstType t : type) { str = str + "\"" + MetaUtil::toString(t) + "\"" + ","; }
+        str[str.length() - 1] = ']';
+
+        return str;
+    }
+
     DataType MetaUtil::extractDataType(Type& dataType) {
         switch (dataType.getTypeID())
         {
@@ -238,5 +247,67 @@ namespace MetaTrans {
         }
         return 0;
     }
+
+    void MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth) {
+        inst->addColor(color, type);
+        for(int i = -1; i < depth; i++) {std::cout << "  ";}
+        printf("%x(%d) ", inst, color);
+        std::vector<InstType> types = inst->getInstType();
+        for(int i = 0; i < types.size(); i++) {
+            std::cout << InstTypeName[types[i]] << ", ";
+        }
+        printf(" -> \n");
+        if(!inst->isType(InstType::LOAD) && !inst->isType(InstType::PHI)) { // Paint until `load` or `phi` or no upstream instruction
+            std::vector<MetaOperand*> ops = inst->getOperandList();
+            for(int i = 0; i < ops.size(); i++) {
+                if(ops[i]->isMetaInst()) {
+                    paintInsColorRecursive((MetaInst*)(ops[i]), color, type, depth + 1);
+                }
+            }
+        }else {
+            return;
+        }
+    }
+    
+    void MetaUtil::paintColor(MetaFunction* mF, int startColor) {
+        std::vector<std::string> name = {"Data Compute", "Addressing", "Control Flow"};
+        std::cout << "\n\n<<== Coloring TIR for CFG: " << " ==>>" << "\n";
+        for_each(mF->bb_begin(), mF->bb_end(), [&] (MetaBB* bb) {
+            std::cout << "-- Coloring Meta BB: " << " --" << "\n";
+            for_each(bb->inst_begin(), bb->inst_end(), [&] (MetaInst* inst) { 
+                if (!inst->isMetaPhi())
+                    if(inst->isType(InstType::STORE)){
+                        std::vector<MetaOperand*> ops = inst->getOperandList();
+                        std::cout << "IsStore " << ops.size() <<  std::endl;
+                        for(int i = 0; i < ops.size(); i++) {
+                            if(ops[i]->isMetaInst()) {
+                                inst->addColor(startColor, i);
+                                printf("Color: %d, Type: %s\n", startColor, name[i].c_str());
+                                printf("%x(%d) STORE,  -> \n", inst, startColor);
+                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, i, 0);
+                                startColor++;
+                            }
+                        }
+                    }else if(inst->isType(InstType::BRANCH)){
+                        std::cout << "IsBranch" << std::endl;
+                        std::vector<MetaOperand*> ops = inst->getOperandList();
+                        for(int i = 0; i < ops.size(); i++) {
+                            if(ops[i]->isMetaInst()) {
+                                inst->addColor(startColor, 2);
+                                printf("Color: %d, Type: Control Flow\n", startColor);
+                                printf("%x(%d) BRANCH,  -> \n", inst, startColor);
+                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 2, 0);
+                                startColor++;
+                            }
+                        }
+                    }
+                else {
+                    // TODO
+                }
+            });
+        });
+        std::cout << "\n\n<<== Coloring TIR for CFG End! " << " ==>>" << "\n";
+    }
+
 
 }

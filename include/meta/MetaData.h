@@ -13,6 +13,16 @@ namespace MetaTrans {
         FLOAT,
     };
 
+    typedef struct ColorData{
+        int color;
+        int type; // 0 data computing 1 addressing 2 control flow
+        explicit ColorData(const int& c, const int& t) : color(c), type(t) { }
+        bool operator <(const ColorData& obj) const {
+            return color < obj.color;
+        }
+    } ColorData;
+
+
     union DataUnion {
         
         int8_t int_8_val;

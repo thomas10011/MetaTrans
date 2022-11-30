@@ -117,3 +117,6 @@ LandingPad:
 CleanupPad:
   - EXCEPTION
 Freeze:
+GetElementPtr:
+  - MUL
+  - ADD

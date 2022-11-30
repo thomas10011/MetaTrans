@@ -90,7 +90,8 @@ namespace MetaTrans {
         { "InsertValue",     Instruction::InsertValue           },
         { "LandingPad",      Instruction::LandingPad            },
         { "CleanupPad",      Instruction::CleanupPad            },
-        { "Freeze",          Instruction::Freeze                }
+        { "Freeze",          Instruction::Freeze                },
+        { "GetElementPtr",   Instruction::GetElementPtr         }
     };
 
 //===-------------------------------------------------------------------------------===//

@@ -65,15 +65,24 @@ namespace MetaTrans {
     class MetaOperand {
         private:
         protected:
+
+            int id;
+
         public:
 
-        virtual bool isMetaConstant();
-        
-        virtual bool isMetaArgument();
+            MetaOperand& setID(int id);
 
-        virtual bool isMetaInst();
-        
-        virtual ~MetaOperand();
+            int getID();
+
+            virtual bool isMetaConstant();
+            
+            virtual bool isMetaArgument();
+
+            virtual bool isMetaInst();
+            
+            virtual ~MetaOperand();
+
+            virtual std::string toString();
 
     };
 
@@ -173,6 +182,8 @@ namespace MetaTrans {
 
             InstMetaData metaData;
 
+            std::set<ColorData> colors; // color, type(0 data computing 1 addressing 3 control flow)
+
         public:
 
             MetaInst();
@@ -180,6 +191,10 @@ namespace MetaTrans {
             virtual ~MetaInst();
 
             MetaInst(std::vector<InstType> ty); 
+
+            MetaInst& setInstType(std::vector<InstType> ty);
+
+            MetaInst& setInstType(InstType ty);
 
             MetaInst& setParent(MetaBB* bb);
 
@@ -206,7 +221,17 @@ namespace MetaTrans {
             // return trie of this instruction only has single type amd same with ty.
             bool isSingleType(InstType ty);
 
-            virtual bool isMetaInst() override;
+            bool virtual isMetaInst() override;
+
+            std::string virtual toString() override;
+
+            bool virtual isMetaPhi();
+
+            void addColor(int c, int t);
+
+            std::set<ColorData>& getColors();
+
+            bool hasColor(int c);
 
     };
 
@@ -221,15 +246,30 @@ namespace MetaTrans {
 
             MetaPhi(std::vector<InstType> ty); 
 
-            void addValue(MetaBB* bb, MetaOperand* op);
+            MetaPhi();
+
+            MetaPhi& addValue(MetaBB* bb, MetaOperand* op);
+
+            bool equals(MetaPhi* phi);
 
             MetaOperand* getValue(MetaBB* bb);
 
+            int getMapSize();
+
+            std::unordered_map<MetaBB*, MetaOperand*>::iterator begin();
+
+            std::unordered_map<MetaBB*, MetaOperand*>::iterator end();
+
+            bool virtual isMetaPhi() override;
+
+            std::string virtual toString() override;
     };
 
     class MetaBB {
         private:
         protected:
+
+            int id;
 
             std::vector<MetaInst*> instList;
             
@@ -254,6 +294,12 @@ namespace MetaTrans {
             // Build a new instruction and append to instList.
             MetaInst* buildInstruction(std::vector<InstType> ty);
 
+            MetaInst* buildInstruction();
+
+            MetaPhi* buildPhi(bool insertAtHead = false);
+
+            MetaBB& addPhi(MetaPhi* phi, bool insertAtHead = false);
+
             MetaBB& addInstruction(MetaInst* inst);
 
             MetaBB& addNextBB(MetaBB* next);
@@ -263,6 +309,8 @@ namespace MetaTrans {
             MetaBB& setTerminator(MetaInst* inst);
 
             MetaBB& setParent(MetaFunction* mF);
+
+            MetaBB& setID(int id);
 
             std::vector<MetaBB*> getNextBB();
 
@@ -274,9 +322,13 @@ namespace MetaTrans {
 
             MetaFunction* getParent();
 
+            int getID();
+
             std::vector<MetaInst*>& getInstList();
 
             int getInstNum();
+
+            std::string toString();
 
             std::vector<MetaInst*>::iterator inst_begin();
 
@@ -336,6 +388,10 @@ namespace MetaTrans {
 
             // create a new bb at the end of bb list.
             MetaBB* buildBB();
+
+            std::vector<MetaBB*>::iterator begin();
+
+            std::vector<MetaBB*>::iterator end();
 
             std::vector<MetaBB*>::iterator bb_begin();
 
