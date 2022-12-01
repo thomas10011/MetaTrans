@@ -54,7 +54,7 @@ namespace MetaTrans {
 
     MetaOperand::~MetaOperand() { }
 
-    std::string MetaOperand::toString() { return "Operand"; }
+    std::string MetaOperand::toString() { return "\"Operand\""; }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Constant implementation.
@@ -279,11 +279,11 @@ namespace MetaTrans {
         for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
         opList[opList.length() - 1] = ']';
         
-        std::string phiMapStr = bbValueMap.size() == 0 ? "{}" : "[";
+        std::string phiMapStr = bbValueMap.size() == 0 ? "{}" : "{";
         for (auto pair = bbValueMap.begin(); pair != bbValueMap.end(); ++pair) {
-            phiMapStr = phiMapStr + "\"" + std::to_string(pair->first->getID()) + "\":" + std::to_string(pair->second->getID());
+            phiMapStr = phiMapStr + "\"" + std::to_string(pair->first->getID()) + "\":" + std::to_string(pair->second->getID()) + ",";
         }
-        phiMapStr[phiMapStr.length() - 1] = ']'; 
+        phiMapStr[phiMapStr.length() - 1] = '}'; 
 
         std::string str = "";
         return str + 
@@ -380,6 +380,10 @@ namespace MetaTrans {
 
     int MetaBB::getID() { return id; }
 
+    std::vector<MetaInst*>::iterator MetaBB::begin() { return inst_begin(); }
+
+    std::vector<MetaInst*>::iterator MetaBB::end() { return inst_end(); }
+
     std::vector<MetaInst*>::iterator MetaBB::inst_begin() { return instList.begin(); }
 
     std::vector<MetaInst*>::iterator MetaBB::inst_end() { return instList.end(); }
@@ -396,7 +400,10 @@ namespace MetaTrans {
 
         std::string bbStr = "";
 
-        return bbStr + "{"
+        return bbStr + "{" +
+            "\"id\":" + std::to_string(id) + "," +
+            "\"entry\":" + (entry == nullptr ? "null" : std::to_string(entry->getID())) + "," +
+            "\"terminator\":" + (terminator == nullptr ? "null" : std::to_string(terminator->getID())) + "," +
             "\"instList\":" + instListStr + "," +
             "\"successors\":" + sucStr + 
             "}";
@@ -459,6 +466,37 @@ namespace MetaTrans {
         MetaBB* newBB = new MetaBB(this);
         bbs.push_back(newBB);
         return newBB;
+    }
+
+    std::string MetaFunction::toString() {
+        std::string funcStr = "{";
+
+        std::string bbStr = bbs.empty() ? "[]" : "[";
+        for (MetaBB* bb : bbs) {
+            bbStr = bbStr + bb->toString() + ",";
+        }
+        bbStr[bbStr.length() - 1] = ']';
+
+        std::string constStr = constants.empty() ? "[]" : "[";
+        for (MetaConstant* constant : constants) {
+            constStr = constStr + constant->toString() + ",";
+        }
+        constStr[constStr.length() - 1] = ']'; 
+
+        std::string argStr = args.empty() ? "[]" : "[";
+        for (MetaArgument* arg : args) {
+            argStr = argStr + arg->toString() + ",";
+        }
+        argStr[argStr.length() - 1] = ']';
+        
+        return funcStr +
+            "\"funcName\":" + "\"" + funcName + "\"" + ","
+            "\"rootBB\":" + std::to_string(root->getID()) + ","
+            "\"returnType\":" + "\"" + MetaUtil::toString(returnType) + "\"" + ","
+            "\"arguments\":" + argStr + "," +
+            "\"constants\":" + constStr + "," +
+            "\"basicBlocks\":" + bbStr +
+            "}";
     }
 
     std::vector<MetaBB*>::iterator MetaFunction::begin() { return bb_begin(); }

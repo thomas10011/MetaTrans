@@ -19,6 +19,7 @@ namespace MetaTrans {
                                     .setTypeMap(typeMap)
                                     .build();
         metaFuncs.push_back(metaFunc);
+        std::cout << metaFunc->toString() << std::endl;
         return true;
     }
 
