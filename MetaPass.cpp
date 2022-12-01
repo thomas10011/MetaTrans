@@ -105,6 +105,7 @@ namespace MetaTrans {
             .addFilter(new MetaInstFilter())
             .addFilter(new MetaBBFilter())
             .addFilter(new MetaFuncFilter())
+            .addFilter(new MetaIDFilter())
             ;
     }
 

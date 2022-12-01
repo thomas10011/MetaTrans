@@ -17,6 +17,7 @@ namespace MetaTrans {
             friend class MetaInstFilter;
             friend class MetaBBFilter;
             friend class MetaFuncFilter;
+            friend class MetaIDFilter;
 
             Function* F;
 

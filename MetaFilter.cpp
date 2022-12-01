@@ -69,4 +69,31 @@ namespace MetaTrans {
 
         chain.doFilter(target);
     }
+
+    void MetaIDFilter::doFilter(FilterTarget& target, FilterChain& chain) {
+        MetaFunctionBuilder&                        builder     =   dynamic_cast<MetaFunctionBuilder&>(target);
+        MetaFunction&                               metaFunc    =   *(builder.mF);
+
+        // set id fro each meta basic block and meta operand.
+        int operand_id = 0, bb_id = 0;
+
+        for (auto const_iter = metaFunc.const_begin(); const_iter != metaFunc.const_end(); ++const_iter) {
+            (**const_iter).setID(operand_id++);
+        }
+
+        for (auto arg_iter = metaFunc.arg_begin(); arg_iter != metaFunc.arg_end(); ++arg_iter) {
+            (**arg_iter).setID(operand_id++);
+        }
+
+        for (auto bb_iter = metaFunc.begin(); bb_iter != metaFunc.end(); ++bb_iter) {
+            MetaBB& bb = **bb_iter;
+            bb.setID(bb_id++);
+            for (auto inst_iter = bb.begin(); inst_iter != bb.end(); ++inst_iter) {
+                (**inst_iter).setID(operand_id++);
+            }
+        }
+
+        chain.doFilter(target);
+
+    }
 }

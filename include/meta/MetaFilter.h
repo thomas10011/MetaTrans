@@ -43,4 +43,11 @@ namespace MetaTrans {
 
     };
 
+    class MetaIDFilter : public Filter {
+
+        public:
+
+            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+
+    };
 }
