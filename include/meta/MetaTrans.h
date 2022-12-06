@@ -5,6 +5,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/IR/DerivedUser.h"
 #include "llvm/Analysis/MemorySSA.h"
 #include "llvm/IR/InlineAsm.h"
@@ -16,7 +17,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-using namespace llvm;
 
 namespace MetaTrans {
     
@@ -95,33 +95,43 @@ namespace MetaTrans {
 
             DataUnion value;
 
+            MetaFunction* parent;
+
         public:
             
             MetaConstant();
+
+            MetaConstant(MetaFunction* p);
 
             virtual ~MetaConstant();
 
             MetaConstant(DataType ty);
 
-            void setDataType(DataType ty);
+            MetaConstant& setDataType(DataType ty);
 
             DataType getDataType();
 
             DataUnion getValue();
 
-            void setValue(int8_t v);
+            MetaFunction* getParent();
 
-            void setValue(int16_t v);
+            MetaConstant& setValue(int8_t v);
+
+            MetaConstant& setValue(int16_t v);
             
-            void setValue(int32_t v);
+            MetaConstant& setValue(int32_t v);
 
-            void setValue(int64_t v);
+            MetaConstant& setValue(int64_t v);
 
-            void setValue(float v);
+            MetaConstant& setValue(float v);
             
-            void setValue(double v);
+            MetaConstant& setValue(double v);
 
+            MetaConstant& setParent(MetaFunction* p);
+            
             virtual bool isMetaConstant() override;
+
+            std::string virtual toString() override;
 
     };
     
@@ -142,6 +152,8 @@ namespace MetaTrans {
         public:
 
             MetaArgument();
+
+            MetaArgument(MetaFunction* p);
 
             ~MetaArgument();
 
@@ -197,9 +209,13 @@ namespace MetaTrans {
 
             MetaInst& setInstType(InstType ty);
 
+            MetaInst& addInstType(InstType ty);
+
             MetaInst& setParent(MetaBB* bb);
 
             MetaInst& addOperand(MetaOperand* op);
+
+            virtual MetaInst& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
 
             int getOperandNum();
 
@@ -251,6 +267,8 @@ namespace MetaTrans {
 
             MetaPhi& addValue(MetaBB* bb, MetaOperand* op);
 
+            
+
             bool equals(MetaPhi* phi);
 
             MetaOperand* getValue(MetaBB* bb);
@@ -262,6 +280,8 @@ namespace MetaTrans {
             std::unordered_map<MetaBB*, MetaOperand*>::iterator end();
 
             bool virtual isMetaPhi() override;
+
+            virtual MetaInst& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) override;
 
             std::string virtual toString() override;
     };
@@ -288,7 +308,13 @@ namespace MetaTrans {
 
         public:
 
-            MetaBB(MetaFunction* f);
+            MetaBB();
+
+            MetaBB(MetaFunction* parent);
+
+            MetaBB(std::string JSON);
+
+            MetaBB(MetaFunction* parent, std::string JSON);
 
             ~MetaBB(); 
 
@@ -312,6 +338,8 @@ namespace MetaTrans {
             MetaBB& setParent(MetaFunction* mF);
 
             MetaBB& setID(int id);
+
+            MetaBB& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
 
             std::vector<MetaBB*> getNextBB();
 
@@ -367,6 +395,8 @@ namespace MetaTrans {
 
             MetaFunction();
 
+            MetaFunction(std::string JSON);
+
             MetaFunction& addConstant(MetaConstant* c);
             
             MetaFunction& addArgument(MetaArgument* a);
@@ -393,6 +423,10 @@ namespace MetaTrans {
 
             // create a new bb at the end of bb list.
             MetaBB* buildBB();
+
+            MetaArgument* buildArgument();
+
+            MetaConstant* buildConstant();
 
             std::string toString();
 

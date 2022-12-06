@@ -1,4 +1,5 @@
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/JSON.h"
 #include "meta/MetaTrans.h"
 #include "meta/MetaUtils.h"
 
@@ -59,54 +60,78 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Constant implementation.
 
-    MetaConstant::MetaConstant() { }
-    
+    MetaConstant::MetaConstant() : parent(nullptr) { }
+
+    MetaConstant::MetaConstant(MetaFunction* p) : parent(p) { }
+
     MetaConstant::~MetaConstant() { }
 
     MetaConstant::MetaConstant(DataType ty) : type(ty) { }
 
-    void MetaConstant::setDataType(DataType ty) { type = ty; }
+    MetaConstant& MetaConstant::setDataType(DataType ty) { type = ty; }
 
     DataType MetaConstant::getDataType() { return type; }
 
     DataUnion MetaConstant::getValue() { return value; }
 
-    void MetaConstant::setValue(int8_t v) {
-        if (type != DataType::INT) return;
+    MetaFunction* MetaConstant::getParent() { return parent; }
+
+    MetaConstant& MetaConstant::setValue(int8_t v) {
+        if (type != DataType::INT) return *this;
         value.int_8_val = v; 
+        return *this;
     }
 
-    void MetaConstant::setValue(int16_t v) {
-        if (type != DataType::INT) return;
+    MetaConstant& MetaConstant::setValue(int16_t v) {
+        if (type != DataType::INT) return *this;
         value.int_16_val = v; 
+        return *this;
     }
     
-    void MetaConstant::setValue(int32_t v) { 
-        if (type != DataType::INT) return;
+    MetaConstant& MetaConstant::setValue(int32_t v) { 
+        if (type != DataType::INT) return *this;
         value.int_32_val = v; 
+        return *this;
     }
 
-    void MetaConstant::setValue(int64_t v) { 
-        if (type != DataType::INT) return;
+    MetaConstant& MetaConstant::setValue(int64_t v) { 
+        if (type != DataType::INT) return *this;
         value.int_64_val = v; 
+        return *this;
     }
 
-    void MetaConstant::setValue(float v) {
-        if (type != DataType::FLOAT) return;
+    MetaConstant& MetaConstant::setValue(float v) {
+        if (type != DataType::FLOAT) return *this;
         value.float_val = v; 
+        return *this;
     }
     
-    void MetaConstant::setValue(double v) { 
-        if (type != DataType::FLOAT) return;
+    MetaConstant& MetaConstant::setValue(double v) { 
+        if (type != DataType::FLOAT) return *this;
         value.double_val = v; 
+        return *this;
+    }
+
+    MetaConstant& MetaConstant::setParent(MetaFunction* p) { 
+        parent = p;
+        return *this;
     }
 
     bool MetaConstant::isMetaConstant() { return true; }
+
+    std::string MetaConstant::toString() {
+        std::string str = "";
+        return str + "{" 
+            + "\"id\":" + std::to_string(id) +
+            "}";
+    }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Argument implementation.
 
     MetaArgument::MetaArgument() { }
+
+    MetaArgument::MetaArgument(MetaFunction* p) : parent(p) { }
 
     MetaArgument::~MetaArgument() { }
 
@@ -169,6 +194,11 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaInst& MetaInst::addInstType(InstType ty) {
+        type.push_back(ty);
+        return *this;
+    }
+
     MetaInst& MetaInst::setParent(MetaBB* bb) {
         parent = bb;
         return *this;
@@ -176,6 +206,17 @@ namespace MetaTrans {
 
     MetaInst& MetaInst::addOperand(MetaOperand* op) {
         operandList.push_back(op);
+        return *this;
+    }
+
+    MetaInst& MetaInst::buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+        json::Array& ops = *(JSON["type"].getAsArray());
+        
+        for (int i = 0; i < ops.size(); ++i) {
+            std::string op = ops[i].getAsString().getValue().str();
+            addInstType(MetaUtil::stringToInstType(op));
+        }
+
         return *this;
     }
 
@@ -294,11 +335,32 @@ namespace MetaTrans {
             "}";
     }
 
+    MetaInst& MetaPhi::buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+        json::Object kv = *(JSON["bbValueMap"].getAsObject());
+        for (auto iter = kv.begin(); iter != kv.end(); ++iter) {
+            int key = std::stoi(iter->first.str());
+            int val = iter->second.getAsInteger().getValue();
+            bbValueMap[tempBBMap[key]] = tempOperandMap[val];
+        }
+        return *this;
+    }
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Basic Block implementation.
 
+    
+    MetaBB::MetaBB() : entry(nullptr), terminator(nullptr), parent(nullptr) { }
+
     MetaBB::MetaBB(MetaFunction* f) : entry(nullptr), terminator(nullptr), parent(f) { }
+
+    MetaBB::MetaBB(std::string JSON) {
+
+    }
+
+    MetaBB::MetaBB(MetaFunction* parent, std::string JSON) : parent(parent) {
+
+    }
 
     MetaBB::~MetaBB() {
         for (auto inst : instList) {
@@ -364,6 +426,40 @@ namespace MetaTrans {
 
     MetaBB& MetaBB::setID(int id) { this->id = id; return* this; }
 
+    MetaBB& MetaBB::buildFromJSON(json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+
+        json::Array& insts = *(JSON["instList"].getAsArray());
+
+        for (auto iter = insts.begin(); iter != insts.end(); ++iter) {
+            int64_t inst_id = (*iter).getAsObject()->getInteger("id").getValue();
+            bool isMetaPhi = (*iter).getAsObject()->getBoolean("isMetaPhi").getValue();
+            MetaInst& newInst = isMetaPhi ? *buildPhi(true) : *buildInstruction();
+            tempOperandMap[inst_id] = &newInst;
+            // 构建 Meta Instruction
+            newInst
+                .setParent(this)
+                .setID(inst_id)
+                ;
+        }
+
+        for (int i = 0; i < insts.size(); ++i) {
+            json::Object& inst = *(insts[i].getAsObject());
+            json::Array& ops = *(inst.getArray("operandList"));
+            
+            // 连上 Meta Instruction 之间的边
+            for (int j = 0; j < ops.size(); ++j) {
+                int64_t op_id = ops[j].getAsInteger().getValue();
+                instList[i]->addOperand(tempOperandMap[op_id]);
+            }
+            instList[i]->buildFromJSON(*(insts[i].getAsObject()), tempBBMap, tempOperandMap);
+        }
+
+        (*this)
+            .setEntry((MetaInst*)tempOperandMap[JSON["entry"].getAsInteger().getValue()])
+            .setTerminator((MetaInst*)tempOperandMap[JSON["terminator"].getAsInteger().getValue()])
+            ;
+    }
+
     std::vector<MetaBB*> MetaBB::getNextBB() { return successors; }
 
     MetaBB* MetaBB::getNextBB(int index) { return successors[index]; }
@@ -411,6 +507,78 @@ namespace MetaTrans {
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.
+
+    MetaFunction::MetaFunction(std::string JSON) {
+        llvm::Expected<json::Value> expect = json::parse(JSON);
+        if (expect.takeError()) {
+            std::cout << "parse function json error!" << "\n";
+            return;
+        }
+
+        // TODO: 构建 constants 和 arguments!
+        // TODO: 为 Instruction 和 constants, arguments 之间构建依赖!
+
+        json::Object& object = *(expect.get().getAsObject());
+        json::Array& blocks =  *(object["basicBlocks"].getAsArray());
+        json::Array& arguments = *(object["arguments"].getAsArray());
+        json::Array& constants = *(object["constants"].getAsArray());
+
+        std::unordered_map<int64_t, MetaOperand*> tempOperandMap;
+        std::unordered_map<int64_t, MetaBB*> tempBBMap;
+
+        // 构建 Meta Argument
+        for (auto iter = arguments.begin(); iter != arguments.end(); ++iter) {
+            MetaArgument& newArg = *buildArgument();
+            int64_t arg_id = (*iter).getAsObject()->getInteger("id").getValue();
+            tempOperandMap[arg_id] = &newArg;
+            newArg
+                .setParent(this)
+                .setID(arg_id)
+                ;
+        }
+
+        // 构建 Meta Constant
+        for (auto iter = constants.begin(); iter != constants.end(); ++iter) {
+            MetaConstant& newConst = *buildConstant();
+            int64_t constant_id = (*iter).getAsObject()->getInteger("id").getValue();
+            tempOperandMap[constant_id] = &newConst;
+            newConst
+                .setParent(this)
+                .setID(constant_id)
+                ;
+        }
+
+        // 构建 Meta BB
+        for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
+            MetaBB& newBB = *buildBB();
+            int64_t bbID = (*iter).getAsObject()->getInteger("id").getValue();
+            tempBBMap[bbID] = &newBB;
+            newBB
+                .setParent(this)
+                .setID(bbID)
+                ;
+        }
+
+        for (int i = 0; i < blocks.size(); ++i) {
+            json::Object& block = *(blocks[i].getAsObject());
+            json::Array& suc = *(block.getArray("successors"));
+            // 连上 Meta BB 之间的边
+            for (int j = 0; j < suc.size(); ++j) {
+                int64_t suc_id = suc[j].getAsInteger().getValue();
+                assert(tempBBMap[suc_id]);
+                bbs[i]->addNextBB(tempBBMap[suc_id]);
+            }
+            // 递归构建 Meta BB
+            bbs[i]->buildFromJSON(*(blocks[i].getAsObject()), tempBBMap, tempOperandMap);
+        }
+
+        (*this)
+            .setRoot(tempBBMap[object["rootBB"].getAsInteger().getValue()])
+            .setFunctionName(object["funcName"].getAsString().getValue().str())
+            .setStackSize(object["stackSize"].getAsInteger().getValue())
+            .setReturnType(MetaUtil::stringToDataType(object["returnType"].getAsString().getValue().str()))
+            ;
+    }
 
     MetaFunction::MetaFunction() : stackSize(0), argNum(0) {
 
@@ -468,6 +636,18 @@ namespace MetaTrans {
         return newBB;
     }
 
+    MetaArgument* MetaFunction::buildArgument() {
+        MetaArgument* newArg = new MetaArgument(this);
+        args.push_back(newArg);
+        return newArg;
+    }
+
+    MetaConstant* MetaFunction::buildConstant() {
+        MetaConstant* newConst = new MetaConstant(this);
+        constants.push_back(newConst);
+        return newConst;
+    }
+
     std::string MetaFunction::toString() {
         std::string funcStr = "{";
 
@@ -490,9 +670,10 @@ namespace MetaTrans {
         argStr[argStr.length() - 1] = ']';
         
         return funcStr +
-            "\"funcName\":" + "\"" + funcName + "\"" + ","
-            "\"rootBB\":" + std::to_string(root->getID()) + ","
-            "\"returnType\":" + "\"" + MetaUtil::toString(returnType) + "\"" + ","
+            "\"funcName\":" + "\"" + funcName + "\"" + "," +
+            "\"stackSize\":" + std::to_string(stackSize) + "," +
+            "\"rootBB\":" + std::to_string(root->getID()) + "," +
+            "\"returnType\":" + "\"" + MetaUtil::toString(returnType) + "\"" + "," +
             "\"arguments\":" + argStr + "," +
             "\"constants\":" + constStr + "," +
             "\"basicBlocks\":" + bbStr +

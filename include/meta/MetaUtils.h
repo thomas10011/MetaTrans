@@ -13,11 +13,11 @@ namespace MetaTrans {
     static std::vector<std::string> InstTypeName = {"LOAD", "STORE", "COMPARE", "CALL", "BRANCH", "JUMP", "PHI", "ADD", "SUB", "MUL", "DIV", "REMAINDER", "AND", "OR", "XOR", "SHIFT", "NEG", "RET", "ALLOCATION", "ADDRESSING", "EXCEPTION", "SWAP", "MIN", "MAX", "SQRT", "FENCE", "CONVERT", "HINT"};
 
     class YamlUtil {
-        protected:
+
+        public:
 
             static std::unordered_map<std::string, InstType> str_inst_type_map;
 
-        public:
             static int test();
             
             // parse config file.
@@ -113,7 +113,13 @@ namespace MetaTrans {
 
             static std::string toString(DataType type);
 
+            static DataType stringToDataType(std::string str);
+
             static std::string toString(InstType type);
+
+            static std::string upper(std::string s);
+
+            static InstType stringToInstType(std::string str);
 
             static std::string toString(std::vector<InstType> type);
 

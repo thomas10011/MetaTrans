@@ -130,6 +130,23 @@ namespace MetaTrans {
         }
     }
 
+    DataType MetaUtil::stringToDataType(std::string str) {
+        if (str == "INT" ) return DataType::INT;
+        else if (str == "FLOAT") return DataType::FLOAT;
+        else if (str == "VOID") return DataType::VOID;
+    }
+
+    std::string MetaUtil::upper(std::string s) {
+        s.erase(remove_if(s.begin(), s.end(), ::isspace), s.end());
+        transform(s.begin(), s.end(), s.begin(), ::toupper);
+        return s;
+    }
+
+    InstType MetaUtil::stringToInstType(std::string str) {
+        str = upper(str);
+        return YamlUtil::str_inst_type_map[str];
+    }
+
     std::string MetaUtil::toString(InstType type) {
         switch (type) {
             case InstType::LOAD:       return "load"      ;

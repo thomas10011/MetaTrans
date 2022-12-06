@@ -20,6 +20,8 @@ namespace MetaTrans {
                                     .build();
         metaFuncs.push_back(metaFunc);
         std::cout << metaFunc->toString() << std::endl;
+        MetaFunction f(metaFunc->toString());
+        std::cout << f.toString() << std::endl; 
         return true;
     }
 

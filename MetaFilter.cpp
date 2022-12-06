@@ -46,10 +46,13 @@ namespace MetaTrans {
         for (auto it = builder.F->begin(); it != builder.F->end(); ++it) {
             BasicBlock& b  = *it;
             MetaBB&     mB = *(builder.bbMap[&b]);
+            std::vector<MetaInst*>& instList = mB.getInstList();
             assert(b.getFirstNonPHI());
             mB
                 .setEntry(builder.instMap[b.getFirstNonPHI()])
-                .setParent(builder.mF);
+                .setParent(builder.mF)
+                .setTerminator(instList[instList.size() - 1])
+                ;
         }
         chain.doFilter(target);
     }
