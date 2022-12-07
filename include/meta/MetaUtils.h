@@ -127,6 +127,10 @@ namespace MetaTrans {
 
             static int extractDataWidth(Type& dataType);
 
+            static void writeToFile(std::string, std::string file);
+
+            static std::string readFromFile(std::string file);
+
             /// if a value not exist in the map, create it by default constructor.
             template<typename K, typename V>
             static V* createValue(K* key, std::unordered_map<K*, V*>& map) {

@@ -1,4 +1,5 @@
 #include "meta/MetaUtils.h"
+#include <fstream>
 
 namespace MetaTrans {
 
@@ -188,6 +189,22 @@ namespace MetaTrans {
         str[str.length() - 1] = ']';
 
         return str;
+    }
+
+    void MetaUtil::writeToFile(std::string data, std::string file) {
+        std::ofstream out;
+        out.open(file);
+        out << data;
+        out.close();
+    }
+
+    std::string MetaUtil::readFromFile(std::string file) {
+        std::ifstream in;
+        std::string data;
+        in.open(file);
+        in >> data;
+        in.close();
+        return data;
     }
 
     DataType MetaUtil::extractDataType(Type& dataType) {
