@@ -174,6 +174,13 @@ namespace MetaTrans {
 
     bool MetaArgument::isMetaArgument() { return true; }
 
+    std::string MetaArgument::toString() {
+        std::string str = "";
+        return str + "{" 
+            + "\"id\":" + std::to_string(id) +
+            "}";
+    }
+
 //===-------------------------------------------------------------------------------===//
 /// Meta Instruction implementation.
 
@@ -508,17 +515,7 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.
 
-    MetaFunction::MetaFunction(std::string JSON) {
-        llvm::Expected<json::Value> expect = json::parse(JSON);
-        if (expect.takeError()) {
-            std::cout << "parse function json error!" << "\n";
-            return;
-        }
-
-        // TODO: 构建 constants 和 arguments!
-        // TODO: 为 Instruction 和 constants, arguments 之间构建依赖!
-
-        json::Object& object = *(expect.get().getAsObject());
+    void MetaFunction::init(llvm::json::Object& object) {
         json::Array& blocks =  *(object["basicBlocks"].getAsArray());
         json::Array& arguments = *(object["arguments"].getAsArray());
         json::Array& constants = *(object["constants"].getAsArray());
@@ -578,6 +575,21 @@ namespace MetaTrans {
             .setStackSize(object["stackSize"].getAsInteger().getValue())
             .setReturnType(MetaUtil::stringToDataType(object["returnType"].getAsString().getValue().str()))
             ;
+
+    }
+
+    MetaFunction::MetaFunction(std::string JSON) {
+        llvm::Expected<json::Value> expect = json::parse(JSON);
+        if (expect.takeError()) {
+            std::cout << "parse function json error!" << "\n";
+            return;
+        }
+        json::Object& object = *(expect.get().getAsObject());
+        init(object);
+    }
+
+    MetaFunction::MetaFunction(llvm::json::Object& object) {
+        init(object);
     }
 
     MetaFunction::MetaFunction() : stackSize(0), argNum(0) {

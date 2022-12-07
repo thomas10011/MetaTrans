@@ -19,9 +19,8 @@ namespace MetaTrans {
                                     .setTypeMap(typeMap)
                                     .build();
         metaFuncs.push_back(metaFunc);
-        std::cout << metaFunc->toString() << std::endl;
         MetaFunction f(metaFunc->toString());
-        std::cout << f.toString() << std::endl; 
+        MetaUtil::writeToFile(f.toString(), "/opt/BinaryTranslation/test/IR.json");
         return true;
     }
 

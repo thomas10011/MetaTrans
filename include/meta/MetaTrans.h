@@ -180,6 +180,8 @@ namespace MetaTrans {
             MetaFunction* getParent();
 
             virtual bool isMetaArgument() override;
+
+            std::string virtual toString() override;
     };
 
     class MetaInst : public MetaOperand {
@@ -371,6 +373,9 @@ namespace MetaTrans {
 
     class MetaFunction {
         private:
+            
+            void init(llvm::json::Object& object);
+
         protected:
 
             // a function should contains a set of constants.
@@ -396,6 +401,8 @@ namespace MetaTrans {
             MetaFunction();
 
             MetaFunction(std::string JSON);
+
+            MetaFunction(llvm::json::Object& JSON);
 
             MetaFunction& addConstant(MetaConstant* c);
             
