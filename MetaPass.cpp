@@ -8,6 +8,12 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function pass implementation, Will be invoked by LLVM pass manager.
 
+    MetaFunctionPass::~MetaFunctionPass() {
+        std::string funcs = MetaUtil::vectorToJsonString(metaFuncs);
+        MetaUtil::writeToFile(funcs, "/opt/BinaryTranslation/test/IR.json");
+        for (MetaFunction* mF : metaFuncs) delete mF;
+    }
+
     MetaFunctionPass::MetaFunctionPass() : FunctionPass(MetaFunctionPass::ID) {
         typeMap = YamlUtil::parseMapConfig("ir.yml", MetaFunctionPass::str_inst_map);
     }
@@ -20,7 +26,6 @@ namespace MetaTrans {
                                     .build();
         metaFuncs.push_back(metaFunc);
         MetaFunction f(metaFunc->toString());
-        MetaUtil::writeToFile(f.toString(), "/opt/BinaryTranslation/test/IR.json");
         return true;
     }
 

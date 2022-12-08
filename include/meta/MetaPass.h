@@ -92,6 +92,8 @@ namespace MetaTrans {
 
         MetaFunctionPass();
 
+        ~MetaFunctionPass();
+
         bool runOnFunction(Function & F) override;
 
     };

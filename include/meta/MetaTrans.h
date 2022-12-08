@@ -60,7 +60,8 @@ namespace MetaTrans {
         SQRT,
         FENCE,
         CONVERT,
-        HINT
+        HINT,
+        MOV
     };
 
     class MetaOperand {

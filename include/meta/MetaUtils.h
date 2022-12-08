@@ -10,7 +10,7 @@
 using namespace llvm;
 
 namespace MetaTrans {
-    static std::vector<std::string> InstTypeName = {"LOAD", "STORE", "COMPARE", "CALL", "BRANCH", "JUMP", "PHI", "ADD", "SUB", "MUL", "DIV", "REMAINDER", "AND", "OR", "XOR", "SHIFT", "NEG", "RET", "ALLOCATION", "ADDRESSING", "EXCEPTION", "SWAP", "MIN", "MAX", "SQRT", "FENCE", "CONVERT", "HINT"};
+    static std::vector<std::string> InstTypeName = {"LOAD", "STORE", "COMPARE", "CALL", "BRANCH", "JUMP", "PHI", "ADD", "SUB", "MUL", "DIV", "REMAINDER", "AND", "OR", "XOR", "SHIFT", "NEG", "RET", "ALLOCATION", "ADDRESSING", "EXCEPTION", "SWAP", "MIN", "MAX", "SQRT", "FENCE", "CONVERT", "HINT", "MOV"};
 
     class YamlUtil {
 
@@ -90,6 +90,24 @@ namespace MetaTrans {
                 for (unsigned i = 1u; i < type_vector.size(); i++) { s += ", " + MetaUtil::toString(type_vector[i]); }
                 s += " }";
                 return s;
+            }
+
+            template<typename T>
+            static std::string vectorToJsonString(std::vector<T*> vec) {
+                if (vec.empty()) return "[]";
+                std::string res = "[";
+                for (T* e : vec) res += e->toString() + ",";
+                res[res.length() - 1] = ']';
+                return res;
+            }
+
+            template<typename T>
+            static std::string vectorToJsonString(std::vector<T> vec) {
+                if (vec.empty()) return "[]";
+                std::string res = "[";
+                for (T& e : vec) res += e.toString() + ",";
+                res[res.length() - 1] = ']';
+                return res;
             }
 
             template<typename T>

@@ -98,6 +98,8 @@ FCmp:
 PHI:
   - PHI
 Select:
+  - COMPARE
+  - MOV
 Call:
   - CALL
 Shl:
@@ -118,5 +120,5 @@ CleanupPad:
   - EXCEPTION
 Freeze:
 GetElementPtr:
-  - MUL
   - ADD
+  - MOV

@@ -65,6 +65,7 @@ namespace MetaTrans {
         { "FENCE",          InstType::FENCE      },
         { "CONVERT",        InstType::CONVERT    },
         { "HINT",           InstType::HINT       },
+        { "MOV",            InstType::MOV        },
     };
 
 //===-------------------------------------------------------------------------------===//
@@ -178,6 +179,7 @@ namespace MetaTrans {
             case InstType::FENCE:      return "fence"     ;
             case InstType::CONVERT:    return "convert"   ;
             case InstType::HINT:       return "hint"      ;
+            case InstType::MOV:        return "mov"      ;
         }
     }
 
