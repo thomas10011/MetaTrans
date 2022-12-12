@@ -114,7 +114,7 @@ namespace MetaTrans {
             }
         }
         for (auto iter = instList.begin(); iter != instList.end(); ++iter) {
-            outs() << "degree of " << MetaUtil::typeVecToString((*iter)->getInstType()) \
+            outs() << "degree of " << (*iter) << " " << MetaUtil::typeVecToString((*iter)->getInstType()) \
             << " is " << deg[*iter] << "; oprand number is " << op_num[*iter] << '\n';
         } 
 
@@ -306,13 +306,15 @@ namespace MetaTrans {
     }
     
     void MetaUtil::paintColor(MetaFunction* mF, int startColor) {
+        std::tuple<int, int, int> counts(0,0,0); // Store, Load, Branch
         std::vector<std::string> name = {"Data Compute", "Addressing", "Control Flow"};
-        std::cout << "\n\n<<== Coloring TIR for CFG: " << " ==>>" << "\n";
+        std::cout << "\n\n<<== Coloring TIR for CFG: " << mF->getFunctionName() <<  " ==>>" << "\n";
         for_each(mF->bb_begin(), mF->bb_end(), [&] (MetaBB* bb) {
             std::cout << "-- Coloring Meta BB: " << " --" << "\n";
             for_each(bb->inst_begin(), bb->inst_end(), [&] (MetaInst* inst) { 
                 if (!inst->isMetaPhi())
                     if(inst->isType(InstType::STORE)){
+                        std::get<0>(counts) = std::get<0>(counts) + 1;
                         std::vector<MetaOperand*> ops = inst->getOperandList();
                         std::cout << "IsStore " << ops.size() <<  std::endl;
                         for(int i = 0; i < ops.size(); i++) {
@@ -324,7 +326,21 @@ namespace MetaTrans {
                                 startColor++;
                             }
                         }
+                    }else if(inst->isType(InstType::LOAD)){
+                        std::get<1>(counts) = std::get<1>(counts) + 1;
+                        std::vector<MetaOperand*> ops = inst->getOperandList();
+                        std::cout << "IsLoad " << ops.size() <<  std::endl;
+                        for(int i = 0; i < ops.size(); i++) {
+                            if(ops[i]->isMetaInst()) {
+                                inst->addColor(startColor, 1);
+                                printf("Color: %d, Type: Addressing\n", startColor);
+                                printf("%x(%d) LOAD,  -> \n", inst, startColor);
+                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 1, 0);
+                                startColor++;
+                            }
+                        }
                     }else if(inst->isType(InstType::BRANCH)){
+                        std::get<2>(counts) = std::get<2>(counts) + 1;
                         std::cout << "IsBranch" << std::endl;
                         std::vector<MetaOperand*> ops = inst->getOperandList();
                         for(int i = 0; i < ops.size(); i++) {
@@ -341,6 +357,8 @@ namespace MetaTrans {
                     // TODO
                 }
             });
+            std::cout << "\n\n-- Coloring Meta BB End! S/L/B= " << std::get<0>(counts) << ", " << std::get<1>(counts) << ", " << std::get<2>(counts) << " --" << "\n";
+            counts = std::make_tuple(0, 0, 0);
         });
         std::cout << "\n\n<<== Coloring TIR for CFG End! " << " ==>>" << "\n";
     }
