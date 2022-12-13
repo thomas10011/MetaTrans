@@ -187,6 +187,9 @@ namespace MetaTrans {
 
     class MetaInst : public MetaOperand {
         private:
+            
+            std::string originInst;
+
         protected:
 
             MetaBB* parent;
@@ -208,6 +211,8 @@ namespace MetaTrans {
 
             MetaInst(std::vector<InstType> ty); 
 
+            MetaInst& setOriginInst(std::string name);
+
             MetaInst& setInstType(std::vector<InstType> ty);
 
             MetaInst& setInstType(InstType ty);
@@ -217,6 +222,8 @@ namespace MetaTrans {
             MetaInst& setParent(MetaBB* bb);
 
             MetaInst& addOperand(MetaOperand* op);
+
+            std::string getOriginInst();
 
             virtual MetaInst& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
 
@@ -247,6 +254,10 @@ namespace MetaTrans {
 
             bool virtual isMetaPhi();
 
+            bool virtual isLoad();
+
+            bool virtual isStore();
+
             void addColor(int c, int t);
 
             std::set<ColorData>& getColors();
@@ -270,8 +281,6 @@ namespace MetaTrans {
 
             MetaPhi& addValue(MetaBB* bb, MetaOperand* op);
 
-            
-
             bool equals(MetaPhi* phi);
 
             MetaOperand* getValue(MetaBB* bb);
@@ -287,6 +296,10 @@ namespace MetaTrans {
             virtual MetaInst& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) override;
 
             std::string virtual toString() override;
+
+            bool virtual isLoad() override;
+
+            bool virtual isStore() override;
     };
 
     class MetaBB {
@@ -308,6 +321,10 @@ namespace MetaTrans {
             
             // record parent scope
             MetaFunction* parent;
+
+            std::vector<int> features;
+
+            double modular;
 
         public:
 
@@ -334,6 +351,8 @@ namespace MetaTrans {
 
             MetaBB& addNextBB(MetaBB* next);
 
+            MetaBB& addFeature(int f);
+
             MetaBB& setEntry(MetaInst* inst);
 
             MetaBB& setTerminator(MetaInst* inst);
@@ -343,6 +362,8 @@ namespace MetaTrans {
             MetaBB& setID(int id);
 
             MetaBB& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
+
+            std::vector<int> getFeature();
 
             std::vector<MetaBB*> getNextBB();
 
@@ -361,6 +382,10 @@ namespace MetaTrans {
             int getInstNum();
 
             std::string toString();
+
+            double getModular();
+
+            double similarity(MetaBB& bb);
 
             std::vector<MetaInst*>::iterator begin();
 

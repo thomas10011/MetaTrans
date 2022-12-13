@@ -50,4 +50,13 @@ namespace MetaTrans {
             virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
     };
+    
+    class MetaFeatureFilter : public Filter {
+
+        public:
+
+            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+
+    }
+
 }

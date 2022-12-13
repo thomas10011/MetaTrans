@@ -37,6 +37,11 @@ namespace MetaTrans {
         // TODO - scan alloca inst and add statck size in meta function.
         // Problem - if compile with -o3 then ir may have no alloca instruction.
 
+        std::unordered_map<Instruction*, MetaInst*>& instMap = builder.instMap;
+
+        for (auto iter = instMap.begin(); iter != instMap.end(); ++iter) {
+            iter->second->setOriginInst(iter->first->getOpcodeName());
+        }
 
         chain.doFilter(target);
     }
@@ -94,6 +99,29 @@ namespace MetaTrans {
             for (auto inst_iter = bb.begin(); inst_iter != bb.end(); ++inst_iter) {
                 (**inst_iter).setID(operand_id++);
             }
+        }
+
+        chain.doFilter(target);
+
+    }
+
+    void MetaFeatureFilter::doFilter(FilterTarget& target, FilterChain& chain) {
+        MetaAsmBuilder&                             builder     =   dynamic_cast<MetaAsmBuilder&>(target);
+        MetaFunction&                               metaFunc    =   *(builder.mF);
+
+        for (auto bb_iter = metaFunc.begin(); bb_iter != metaFunc.end(); ++bb_iter) {
+            MetaBB& bb = **bb_iter;
+            int load_count = 0, store_count = 0;
+            for (auto inst_iter = bb.inst_begin(); inst_iter != bb.inst_end(); ++inst_iter) {
+                MetaInst& inst = **inst_iter;
+                if (inst.isLoad()) load_count++;
+                if (inst.isStore()) store_count++;
+            }
+            
+            bb
+                .addFeature(load_count)
+                .addFeature(store_count)
+                ;
         }
 
         chain.doFilter(target);
