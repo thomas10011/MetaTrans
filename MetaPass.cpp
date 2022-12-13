@@ -24,6 +24,7 @@ namespace MetaTrans {
                                     .setFunction(&F)
                                     .setTypeMap(typeMap)
                                     .build();
+        MetaTrans::MetaUtil::paintColor(metaFunc, 0);
         metaFuncs.push_back(metaFunc);
         MetaFunction f(metaFunc->toString());
         return true;
