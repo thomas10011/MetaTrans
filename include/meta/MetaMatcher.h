@@ -10,7 +10,7 @@ private:
 
 protected:
 
-MetaFunction* x, y;
+MetaFunction *x, *y;
 
 std::unordered_map<MetaBB*, MetaBB*> bbMap;
 
@@ -25,9 +25,6 @@ MetaMatcher& setY(MetaFunction* y);
 MetaMatcher& match();
 
 std::unordered_map<MetaBB*, MetaBB*>& getBBMatchResult();
-
-
-
 
 };
 

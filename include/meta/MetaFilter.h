@@ -57,6 +57,6 @@ namespace MetaTrans {
 
             virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
-    }
+    };
 
 }

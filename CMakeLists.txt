@@ -8,6 +8,7 @@ add_llvm_library( LLVMMetaTrans MODULE
   MetaPass.cpp
   MetaTrans.cpp
   MetaUtils.cpp
+  MetaMatcher.cpp
 
   PLUGIN_TOOL
   opt

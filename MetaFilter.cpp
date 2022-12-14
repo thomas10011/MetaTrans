@@ -106,7 +106,7 @@ namespace MetaTrans {
     }
 
     void MetaFeatureFilter::doFilter(FilterTarget& target, FilterChain& chain) {
-        MetaAsmBuilder&                             builder     =   dynamic_cast<MetaAsmBuilder&>(target);
+        MetaFunctionBuilder&                        builder     =   dynamic_cast<MetaFunctionBuilder&>(target);
         MetaFunction&                               metaFunc    =   *(builder.mF);
 
         for (auto bb_iter = metaFunc.begin(); bb_iter != metaFunc.end(); ++bb_iter) {

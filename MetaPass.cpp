@@ -1,5 +1,7 @@
 #include "meta/MetaPass.h"
 #include "meta/MetaFilter.h"
+#include "llvm/Support/JSON.h"
+#include "meta/MetaMatcher.h"
 
 using namespace llvm;
 
@@ -11,6 +13,36 @@ namespace MetaTrans {
     MetaFunctionPass::~MetaFunctionPass() {
         std::string funcs = MetaUtil::vectorToJsonString(metaFuncs);
         MetaUtil::writeToFile(funcs, "/opt/BinaryTranslation/test/IR.json");
+
+        std::string asmStr = MetaUtil::readFromFile("/opt/BinaryTranslation/test/asm.json");
+        
+        llvm::Expected<json::Value> expect = json::parse(asmStr);
+        if (expect.takeError()) {
+            std::cout << "parse function json error!" << "\n";
+            return;
+        }
+        json::Array& funcArr = *(expect.get().getAsArray());
+        for (int i = 0; i < funcArr.size(); i++) {
+            MetaFunction f(*(funcArr[i].getAsObject()));
+            
+            MetaMatcher matcher;
+            for (MetaFunction* mF : metaFuncs) {
+                if (mF->getFunctionName() == f.getFunctionName()) {
+                    std::unordered_map<MetaBB*, MetaBB*>& result = matcher
+                                                                    .setX(&f)
+                                                                    .setY(mF)
+                                                                    .match()
+                                                                    .getBBMatchResult()
+                                                                    ;
+                    for (auto pair = result.begin(); pair != result.end(); ++pair) {
+                        printf("%d--->>>%d\n", pair->first->getID(), pair->second->getID());
+                    }
+                    printf("-----------------------------------\n");
+                }
+                
+
+            }
+        }
         for (MetaFunction* mF : metaFuncs) delete mF;
     }
 
@@ -113,6 +145,7 @@ namespace MetaTrans {
             .addFilter(new MetaBBFilter())
             .addFilter(new MetaFuncFilter())
             .addFilter(new MetaIDFilter())
+            .addFilter(new MetaFeatureFilter())
             ;
     }
 

@@ -18,6 +18,7 @@ namespace MetaTrans {
             friend class MetaBBFilter;
             friend class MetaFuncFilter;
             friend class MetaIDFilter;
+            friend class MetaFeatureFilter;
 
             Function* F;
 

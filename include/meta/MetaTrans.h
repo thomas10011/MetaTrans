@@ -457,11 +457,15 @@ namespace MetaTrans {
             // create a new bb at the end of bb list.
             MetaBB* buildBB();
 
+            MetaBB* getRoot();
+
             MetaArgument* buildArgument();
 
             MetaConstant* buildConstant();
 
             std::string toString();
+            
+            std::vector<MetaBB*>& getBB();
 
             std::vector<MetaBB*>::iterator begin();
 
