@@ -224,7 +224,8 @@ namespace MetaTrans {
 
     MetaInst& MetaInst::buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
         json::Array& ops = *(JSON["type"].getAsArray());
-        
+        std::string originInst = JSON["originInst"].getAsString().getValue().str();
+        (*this).setOriginInst(originInst);
         for (int i = 0; i < ops.size(); ++i) {
             std::string op = ops[i].getAsString().getValue().str();
             addInstType(MetaUtil::stringToInstType(op));
