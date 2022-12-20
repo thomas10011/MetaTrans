@@ -395,6 +395,10 @@ namespace MetaTrans {
 
             std::vector<MetaInst*>::iterator inst_end();
 
+            std::vector<MetaBB*>::iterator next_begin();
+
+            std::vector<MetaBB*>::iterator next_end();
+
     };
 
     class MetaFunction {

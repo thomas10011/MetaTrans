@@ -493,6 +493,8 @@ namespace MetaTrans {
         (*this)
             .addFeature(JSON["load"].getAsInteger().getValue())
             .addFeature(JSON["store"].getAsInteger().getValue())
+            .addFeature(JSON["in"].getAsInteger().getValue())
+            .addFeature(JSON["out"].getAsInteger().getValue())
             .setEntry((MetaInst*)tempOperandMap[JSON["entry"].getAsInteger().getValue()])
             .setTerminator((MetaInst*)tempOperandMap[JSON["terminator"].getAsInteger().getValue()])
             ;
@@ -537,6 +539,10 @@ namespace MetaTrans {
 
     std::vector<MetaInst*>::iterator MetaBB::inst_end() { return instList.end(); }
 
+    std::vector<MetaBB*>::iterator MetaBB::next_begin() { return successors.begin(); }
+
+    std::vector<MetaBB*>::iterator MetaBB::next_end() { return successors.end(); }
+
     std::string MetaBB::toString() {
 
         std::string instListStr = instList.empty() ? "[]" : "[";
@@ -555,6 +561,8 @@ namespace MetaTrans {
             "\"terminator\":" + (terminator == nullptr ? "null" : std::to_string(terminator->getID())) + "," +
             "\"load\":" + std::to_string(features[0]) + "," +
             "\"store\":" + std::to_string(features[1]) + "," +
+            "\"in\":" + std::to_string(features[2]) + "," +
+            "\"out\":" + std::to_string(features[3]) + "," +
             "\"instList\":" + instListStr + "," +
             "\"successors\":" + sucStr + 
             "}";

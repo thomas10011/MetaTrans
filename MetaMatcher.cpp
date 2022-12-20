@@ -37,7 +37,7 @@ MetaMatcher& MetaMatcher::match() {
             i++; j++;
         }
         else if (!bb_x->getModular()) {
-            printf("skip bb %d", bb_x->getID());
+            printf("skip bb %d\n", bb_x->getID());
             i++;
         }
         else if (!bb_y->getModular()) j++;
