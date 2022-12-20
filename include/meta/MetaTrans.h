@@ -64,6 +64,22 @@ namespace MetaTrans {
         MOV
     };
 
+    // struct for path (data compute/addressing/control flow)
+    struct Path {
+      MetaInst *firstNode;
+      int type; // (0 data computing 1 addressing 3 control flow)
+      int numLoad;
+      int numStore;
+      int numPHI;
+      int numGEP;
+      bool operator==(const Path& rhs) const
+        {
+        return type == rhs.type && numLoad == rhs.numLoad &&
+               numStore == rhs.numStore && numPHI == rhs.numPHI &&
+               numGEP == rhs.numGEP;
+      }
+    };
+
     class MetaOperand {
         private:
         protected:
@@ -202,7 +218,8 @@ namespace MetaTrans {
             InstMetaData metaData;
 
             std::set<ColorData> colors; // color, type(0 data computing 1 addressing 3 control flow)
-
+            
+            std::vector<Path*> paths ; // fitst node of path, (0 data computing 1 addressing 3 control flow)
         public:
 
             MetaInst();
@@ -264,6 +281,15 @@ namespace MetaTrans {
 
             bool hasColor(int c);
 
+            std::vector<Path *> &getAllPath();
+
+            Path* getPath(int type);
+
+            void dumpPath(int index);
+
+            void addToPath(Path* p);
+
+            std::vector<MetaInst *> findTheSameInst(MetaBB *bb);
     };
 
     /// represent a phi node.

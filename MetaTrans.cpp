@@ -185,7 +185,7 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Instruction implementation.
 
-    MetaInst::MetaInst() { }
+    MetaInst::MetaInst() : paths(3) { }
 
     MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) { }
 
@@ -295,6 +295,56 @@ namespace MetaTrans {
             if (each.color == c) return true;
         }
         return false;
+    }
+
+    std::vector<Path *>& MetaInst::getAllPath() { return paths; }
+
+    Path* MetaInst::getPath(int type) { return paths[type]; }
+
+    void MetaInst::dumpPath(int index) {
+        printf("%x, type: %d, numLoad: %d, numStore: "
+            "%d, numPHI: %d, numGEP: %d\n",
+            paths[index]->firstNode, paths[index]->type, paths[index]->numLoad,
+            paths[index]->numStore, paths[index]->numPHI, paths[index]->numGEP);
+    }
+
+    void MetaInst::addToPath(Path* p) {
+        paths.push_back(p);
+    }
+
+    std::vector<MetaInst *> MetaInst::findTheSameInst(MetaBB *bb) {
+        // Find the instruction has same path: each /data compute/addressing/control flow/ path has the same numLoad, numStore, numPHI, numGEP
+        std::vector<MetaInst *> ans;
+        for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
+            MetaInst *inst = *it;
+            std::vector<Path *> anotherPath = inst->getAllPath();
+            std::cout << inst->toString() << std::endl;
+            if (inst->isType(type[0])) {
+                if(type[0] == InstType::BRANCH) {
+                  inst->dumpPath(2);
+                  if (*(paths[2]) == *(anotherPath[2])) { // control flow
+                    std::cout << "findTheSamePath" << std::endl;
+                    ans.push_back(inst);
+                  }
+                }else {
+                    inst->dumpPath(1);
+                    if(*(paths[1]) == *(anotherPath[1])) { // addressing
+                        if(type[0] == InstType::STORE) {
+                            inst->dumpPath(0);
+                            if(*(paths[0]) == *(anotherPath[0])) { // data compute
+                                std::cout << "findTheSamePath" << std::endl;
+                                ans.push_back(inst);
+                            }
+                        }else {
+                            std::cout << "findTheSamePath" << std::endl;
+                            ans.push_back(inst);
+                        }
+                    }
+                }
+            }
+        }
+        std::cout << "Exit findTheSameInst" << std::endl;
+        return ans;
     }
 
 //===-------------------------------------------------------------------------------===//

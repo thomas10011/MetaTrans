@@ -157,7 +157,7 @@ namespace MetaTrans {
                 return map[key] = new V();
             }
             
-            static void paintInsColorRecursive(MetaInst* inst, int color, int type, int depth);
+            static void paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p);
 
             static void paintColor(MetaFunction* mF, int startColor);
 
