@@ -230,7 +230,15 @@ namespace MetaTrans {
             std::string op = ops[i].getAsString().getValue().str();
             addInstType(MetaUtil::stringToInstType(op));
         }
-
+        json::Array* paths = JSON.getArray("path");
+        if(paths) {
+            for(int i = 0; i < (*paths).size(); i++) {
+                json::Array& path = *((*paths)[i].getAsArray());
+                this->paths[path[0].getAsInteger().getValue()] = new Path{nullptr, path[0].getAsInteger().getValue(), path[1].getAsInteger().getValue(),  path[2].getAsInteger().getValue(), path[3].getAsInteger().getValue(), path[4].getAsInteger().getValue()};
+                // printf("path.size() = %d\n", path.size());
+                // std::cout << "type: " << path[0].getAsInteger().getValue() << " numLoad: " <<  path[1].getAsInteger().getValue() << " numStore: " <<  path[2].getAsInteger().getValue()<< " numPHI: " <<  path[3].getAsInteger().getValue() << " numGEP: " <<  path[4].getAsInteger().getValue() << "\n";
+            }
+        }
         return *this;
     }
 
@@ -277,13 +285,37 @@ namespace MetaTrans {
     std::string MetaInst::toString() {
         std::string opList = operandList.size() == 0 ? "[]" : "[";
         for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        std::string path = "[";
+        for (int i = 0; i < 3; i++) {
+            if(type[0] == InstType::LOAD && i == 1) {
+                if(paths.size() > i) {
+                    Path *p = paths[i];
+                    if(p) path += "[" + std::to_string(p->type) + "," +std::to_string(p->numLoad) + "," +std::to_string(p->numStore) + "," +std::to_string(p->numPHI) + "," +std::to_string(p->numGEP) + "]";
+                }
+                break;
+            } else if (type[0] == InstType::STORE && (i == 0 || i == 1)) {
+                if(paths.size() > i) {
+                    if (i == 1 && paths[0]) path += ",";
+                    Path *p = paths[i];
+                    if(p) path += "[" + std::to_string(p->type) + "," +std::to_string(p->numLoad) + "," +std::to_string(p->numStore) + "," +std::to_string(p->numPHI) + "," +std::to_string(p->numGEP) + "]";
+                }
+            } else if (type[0] == InstType::BRANCH && (i == 2)) {
+                if(paths.size() > i) {
+                    Path *p = paths[i];
+                    if(p) path += "[" + std::to_string(p->type) + "," +std::to_string(p->numLoad) + "," +std::to_string(p->numStore) + "," +std::to_string(p->numPHI) + "," +std::to_string(p->numGEP) + "]";
+                }
+                break;
+            }
+        }
+        path += "]";
         opList[opList.length() - 1] = ']';
         std::string str = "";
-        return str + "{" + "\"id\":" + std::to_string(id) + 
-            ",\"originInst\":" + "\"" + originInst + "\"" +
-            ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type)
-            + "," + "\"operandList\":" + opList +
-            "}";
+        str = str + "{" + "\"id\":" + std::to_string(id) + ",\"originInst\":" + "\"" +
+            originInst + "\"" +
+            ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
+            "\"operandList\":" + opList + "," + "\"path\":" + path + "}";
+        std::cout << str << std::endl;
+        return str;
     }
 
     void MetaInst::addColor(int c, int t) { colors.insert(ColorData(c,t)); }
@@ -685,6 +717,8 @@ namespace MetaTrans {
     }
 
     MetaFunction::MetaFunction(std::string JSON) {
+        std::cout << "MetaFunction::MetaFunction(std::string JSON)" << std::endl;
+        std::cout << JSON << std::endl;
         llvm::Expected<json::Value> expect = json::parse(JSON);
         if (expect.takeError()) {
             std::cout << "parse function json error!" << "\n";
