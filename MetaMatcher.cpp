@@ -69,4 +69,4 @@ std::unordered_map<MetaBB*, MetaBB*>& MetaMatcher::getBBMatchResult() {
     return bbMap;
 }
 
-}
+} // namespace MetaTrans

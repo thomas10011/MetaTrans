@@ -97,5 +97,7 @@ namespace MetaTrans {
 
         bool runOnFunction(Function & F) override;
 
+        void processMatch();
+
     };
 }

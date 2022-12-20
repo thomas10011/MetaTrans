@@ -14,6 +14,12 @@ namespace MetaTrans {
         std::string funcs = MetaUtil::vectorToJsonString(metaFuncs);
         MetaUtil::writeToFile(funcs, "/opt/BinaryTranslation/test/IR.json");
 
+        processMatch();
+
+        for (MetaFunction* mF : metaFuncs) delete mF;
+    }
+
+    void MetaFunctionPass::processMatch() {
         std::string asmStr = MetaUtil::readFromFile("/opt/BinaryTranslation/test/asm.json");
         
         llvm::Expected<json::Value> expect = json::parse(asmStr);
@@ -43,7 +49,7 @@ namespace MetaTrans {
 
             }
         }
-        for (MetaFunction* mF : metaFuncs) delete mF;
+
     }
 
     MetaFunctionPass::MetaFunctionPass() : FunctionPass(MetaFunctionPass::ID) {

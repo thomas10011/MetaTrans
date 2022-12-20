@@ -11,7 +11,8 @@
 
 Example command
 `~/Projects/llvm-project/build/bin/opt -enable-new-pm=0 -load ~/Projects/llvm-project/build/lib/LLVMMetaTrans.dylib --meta-trans test.ll`
--enable-new-pm=0 means do not use new pass manager, --meta-trans invoke the meta translation pass.
+
+`-enable-new-pm=0` means do not use new pass manager, `--meta-trans` invoke the meta translation pass.
 
 
 ## Notice
