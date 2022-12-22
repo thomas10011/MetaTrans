@@ -385,7 +385,7 @@ namespace MetaTrans {
         auto bb  = this->getParent();
         this->EquivClassTag = 1;
         for(auto i = vec.begin(); i!=vec.end();i++){
-               if((*i)->isMetaInst() && (*i)->getParent() == bb)
+               if((*i)->isMetaInst() && dynamic_cast<MetaInst*>(*i)->getParent() == bb)
                     (dynamic_cast<MetaInst*>(*i))->buildEquivClass(); 
         }
     }
@@ -395,7 +395,7 @@ namespace MetaTrans {
         auto bb  = this->getParent();
         this->EquivClassTag = 0;
         for(auto i = vec.begin(); i!=vec.end();i++){
-               if((*i)->isMetaInst() && (*i)->getParent() == bb)
+               if((*i)->isMetaInst() && dynamic_cast<MetaInst*>(*i)->getParent() == bb)
                     (dynamic_cast<MetaInst*>(*i))->resetEquivClass();     
         }
     }
