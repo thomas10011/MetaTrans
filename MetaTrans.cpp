@@ -230,6 +230,7 @@ namespace MetaTrans {
             std::string op = ops[i].getAsString().getValue().str();
             addInstType(MetaUtil::stringToInstType(op));
         }
+
         json::Array* paths = JSON.getArray("path");
         if(paths) {
             for(int i = 0; i < (*paths).size(); i++) {
@@ -328,7 +329,7 @@ namespace MetaTrans {
         }
         return false;
     }
-
+    
     std::vector<Path *>& MetaInst::getAllPath() { return paths; }
 
     Path* MetaInst::getPath(int type) { return paths[type]; }
@@ -379,7 +380,6 @@ namespace MetaTrans {
         return ans;
     }
 
-
     void MetaInst::buildEquivClass(){
         auto vec = this->getOperandList();
         auto bb  = this->getParent();
@@ -399,10 +399,17 @@ namespace MetaTrans {
                     (dynamic_cast<MetaInst*>(*i))->resetEquivClass();     
         }
     }
-    
+
     bool MetaInst::ifMatched(){
         return this->Matched;
     }
+
+    
+    MetaInst& MetaInst::setTypeSrc(std::vector<std::vector<int>> src){
+        typeSrc = src;
+        return (*this);
+    }
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Phi Instruction implementation.

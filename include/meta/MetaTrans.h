@@ -213,6 +213,8 @@ protected:
     // a vector to indicate the real type of a instruction.
     std::vector<InstType> type;
 
+    std::vector<std::vector<int>> typeSrc;
+
     std::vector<MetaOperand*> operandList;
 
     InstMetaData metaData;
@@ -238,6 +240,8 @@ protected:
     MetaInst& setInstType(std::vector<InstType> ty);
 
     MetaInst& setInstType(InstType ty);
+
+    MetaInst& setTypeSrc(std::vector<std::vector<int>>);
 
     MetaInst& addInstType(InstType ty);
 

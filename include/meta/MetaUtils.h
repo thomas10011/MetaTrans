@@ -47,17 +47,90 @@ namespace MetaTrans {
             
             // parse config file.
             // return a map between ASM / IR to TIR.
-            static std::unordered_map<std::string, std::vector<InstType>>* parseAsmMapConfig(std::string filePath) {
-                auto        map   = new std::unordered_map<std::string, std::vector<InstType>>(); 
+            static std::unordered_map<std::string, std::vector<std::pair<InstType,std::vector<int>>>>* parseAsmMapConfig(std::string filePath) {
+                auto        map   = new std::unordered_map<std::string, std::vector<std::pair<InstType,std::vector<int>>>>(); 
                 YAML::Node  config = YAML::LoadFile(filePath);
                 for (YAML::const_iterator it = config.begin(); it != config.end(); ++it) {
                     std::string                  key = it->first.as<std::string>();
-                    std::vector<InstType>   value;
+                    //std::cout   << "DEBUG:: Found " << key <<std::endl;
+
+                    std::vector<std::pair<InstType, std::vector<int>>>   value;
+                    std::string opcode;
                     for (auto tmp : it->second) {
-                        value.push_back(str_inst_type_map[tmp.as<std::string>()]);
+                        //value.push_back(str_inst_type_map[tmp.as<std::string>()]);
+                     
+                        // if(tmp.IsSequence())
+                        //      std::cout << "String opcode is IsSequence = " << std::endl;
+
+                        // if(tmp.Type()==YAML::NodeType::Null)
+                        //     continue;
+                        std::vector<int> info;
+                        if(tmp.IsScalar()){
+                            std::cout << "String opcode IsScalar =  " << tmp.as<std::string>() << std::endl;
+                            opcode = tmp.as<std::string>();
+                            value.push_back(std::make_pair(str_inst_type_map[tmp.as<std::string>()], info));
+                        }
+                        else if(tmp.IsMap()){
+                                std::cout << "tmp is IsMap !" << std::endl;
+                            // if(tmp.first.Type()==YAML::NodeType::Null)
+                            //     std::cout << "tmp.first is NULL !" << std::endl;
+                            //  if(tmp.first.IsScalar())
+                            //     std::cout << "tmp.first is Scalar !" << std::endl;
+                            //  if(tmp.second.IsSequence())
+                            //     std::cout << "tmp.second is IsMap !" << std::endl;
+                            //  if(tmp.second.IsMap())
+                            //     std::cout << "tmp.second is IsMap !" << std::endl;
+                             for (auto i = tmp.begin(); i!= tmp.end(); i++) {
+                                //std::cout << "Enter Loop: auto infoNode : tmp.second" << std::endl;
+                                if(i->first.IsScalar()){
+                                  std::cout << "Operation is Scalar !" << std::endl;
+                                  opcode = i->first.as<std::string>();
+                                  std::cout << "Operation = " << opcode <<std::endl;
+                                }
+                                if(i->first.IsMap())
+                                  std::cout << "i->first is Map !" << std::endl;
+                                if(i->second.IsMap())
+                                  std::cout << "TypeSrc is Map !" << std::endl;
+                                if(i->second.IsSequence()){
+                                  std::cout << "TypeSrc is Sequence !" << std::endl;
+                                  YAML::Node list = i->second;
+                                   for ( auto list= i->second.begin();  list!= i->second.end(); list++) {
+                                        //std::cout << "Enter Loop: auto infoNode : tmp.second = " << list->as<int>()<< std::endl;
+                                        // if (infoNode.Type() == YAML::NodeType::Scalar) 
+                                        info.push_back(list->as<int>());
+                                
+                                    }
+                                }
+                                if(i->second.IsScalar()){
+                                //   std::cout << "i->second is scalar !" << std::endl;
+                                //   std::cout << "i->second = " << i->second.as<int>()<<std::endl;
+                                  info.push_back(i->second.as<int>());
+                                }
+                        //if(tmp.IsSequence() && tmp.second.Type() != YAML::NodeType::Null){
+                            std::cout << "Entering else tmp is not scalar! " << std::endl;
+                            // YAML::Node src = tmp.second.as<YAML::Node>();
+                        // if(tmp.IsSequence() && tmp.second.Type() != YAML::NodeType::Null){
+                           
+                            value.push_back(std::make_pair(str_inst_type_map[opcode], info));
+
+                            std::cout << "Make pair completes! " << std::endl;
+
+                            }   
+
+                        }
+                        // if(it->second.IsSequence())
+                        //     value.push_back(std::make_pair(str_inst_type_map[tmp.first.as<std::string>()], info));
+                        // if(it->second.IsScalar())
+                            
+
+                        // if( info.size() != 0 ) 
+                        //     std::cout   << "DEBUG::parseAsmMapConfig:: Operand "
+                        //             << opcode << ", Of Inst  " <<  key 
+                        //             << ", has the type source " << info[0] << std::endl;
                     }
-                    (*map)[key] = value; 
+                     (*map)[key] = value; 
                 }
+                
                 if (DebugFlag) {
                     std::cout << "loading config file: " << filePath        << "\n";
                     std::cout << "size of configs is: " << config  .size() << "\n";
