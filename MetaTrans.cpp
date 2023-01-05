@@ -44,6 +44,23 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Operand implementation.
 
+    MetaOperand& MetaOperand::addUser(MetaInst* user) {
+        users.push_back(user);
+        return *this;
+    }
+
+    std::vector<MetaInst*> MetaOperand::getUsers() {
+        return users;
+    }
+
+    std::vector<MetaInst*>::iterator MetaOperand::users_begin() {
+        return users.begin();
+    }
+
+    std::vector<MetaInst*>::iterator MetaOperand::users_end() {
+        return users.end();
+    }
+
     MetaOperand& MetaOperand::setID(int id) { this->id = id; return* this; }
 
     int MetaOperand::getID() { return id; }
@@ -219,6 +236,7 @@ namespace MetaTrans {
 
     MetaInst& MetaInst::addOperand(MetaOperand* op) {
         operandList.push_back(op);
+        op->addUser(this);
         return *this;
     }
 

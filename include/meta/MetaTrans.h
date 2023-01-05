@@ -86,9 +86,20 @@ protected:
 
     int id;
 
+    // record those instructions that use this operand.
+    std::vector<MetaInst*> users;
+
 public:
 
     MetaOperand& setID(int id);
+
+    MetaOperand& addUser(MetaInst* user);
+
+    std::vector<MetaInst*> getUsers();
+
+    std::vector<MetaInst*>::iterator users_begin();
+
+    std::vector<MetaInst*>::iterator users_end();
 
     int getID();
 
