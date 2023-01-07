@@ -4,6 +4,8 @@
 #include "meta/MetaTrans.h"
 #include "meta/MetaUtils.h"
 
+extern int globalColor;
+
 namespace MetaTrans {
     
     /// An simple implementation of Builder Pattern.

@@ -238,6 +238,8 @@ protected:
 
     bool Matched;    
 
+    unsigned long hashCode = 0;
+
     public:
 
     MetaInst();
@@ -302,6 +304,10 @@ protected:
     std::set<ColorData>& getColors();
 
     bool hasColor(int c);
+
+    unsigned long getHashcode();
+
+    void setHashcode(unsigned long hashCode);
     
     std::vector<Path *> &getAllPath();
 

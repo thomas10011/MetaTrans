@@ -328,8 +328,11 @@ namespace MetaTrans {
                         std::get<0>(counts) = std::get<0>(counts) + 1;
                         std::vector<MetaOperand*> ops = inst->getOperandList();
                         std::cout << "IsStore " << ops.size() <<  std::endl;
+                        std::vector<MetaInst*> vecForHash;
+                        vecForHash.push_back(inst);
                         for(int i = 0; i < ops.size(); i++) {
                             if(ops[i]->isMetaInst()) {
+                                vecForHash.push_back((MetaInst*)(ops[i]));
                                 inst->addColor(startColor, i);
                                 Path* p = new Path{(MetaInst*)(ops[i]), i, 0, 0, 0, 0};
                                 inst->addToPath(p);
@@ -344,7 +347,8 @@ namespace MetaTrans {
                                 startColor++;
                             }
                         }
-                    } else if (inst->isType(InstType::LOAD)) {
+                        inst->setHashcode(MetaUtil::hashCode(vecForHash));
+                    }else if(inst->isType(InstType::LOAD)){
                         std::get<1>(counts) = std::get<1>(counts) + 1;
                         std::vector<MetaOperand*> ops = inst->getOperandList();
                         std::cout << "IsLoad " << ops.size() <<  std::endl;
@@ -362,7 +366,14 @@ namespace MetaTrans {
                                 startColor++;
                             }
                         }
-                    } else if (inst->isType(InstType::BRANCH)) {
+                        std::vector<MetaInst*> vecForHash;
+                        vecForHash.push_back(inst);
+                        std::vector<MetaInst*> users = inst->getUsers();
+                        for(int i = 0; i < users.size(); i++) {
+                            vecForHash.push_back((MetaInst*)(users[i]));
+                        }
+                        inst->setHashcode(MetaUtil::hashCode(vecForHash));
+                    }else if(inst->isType(InstType::BRANCH)){
                         std::get<2>(counts) = std::get<2>(counts) + 1;
                         std::cout << "IsBranch" << std::endl;
                         std::vector<MetaOperand*> ops = inst->getOperandList();
@@ -381,9 +392,10 @@ namespace MetaTrans {
                                 startColor++;
                             }
                         }
-                    } else {
-                        // TODO
                     }
+                else {
+                    // TODO
+                }
             });
             std::cout << "\n\n-- Coloring Meta BB End! S/L/B= " << std::get<0>(counts) << ", " << std::get<1>(counts) << ", " << std::get<2>(counts) << " --" << "\n";
             counts = std::make_tuple(0, 0, 0);
@@ -391,5 +403,35 @@ namespace MetaTrans {
         std::cout << "\n\n<<== Coloring TIR for CFG End! " << " ==>>" << "\n";
     }
 
+    unsigned long MetaUtil::hashCode(std::vector<MetaInst*> instList) {
+        // instLis[0] is load/store, the remain elements are instructions depend on load, or store data
+        // Type of each inst will generate a hash (may including 1~n types)
+        // Then hash all the Each inst's hash as hash of instList
+        std::vector<std::string> stringList;
+        unsigned long ans = 5381;
+        for(MetaInst* inst : instList) {
+            unsigned long hash = 5381;
+            auto types = inst->getInstType();
+            std::string typeName = "";
+            for(int j = 0; j < types.size(); j++) {
+                typeName = typeName + InstTypeName[types[j]];
+            }
+            stringList.push_back(typeName);
+        }
+        // Hash stringList
+        std::vector<unsigned long> hashes;
+        for(std::string str : stringList) {
+            unsigned long hash = 5381;
+            for(auto c : str) {
+                hash = ((hash << 5) + hash) + c; /* hash * 33 + c */
+            }
+            hashes.push_back(hash);
+        }
+        // Hash hashes in an order-independent way
+        for(auto ha : hashes) {
+            ans += ha;
+        }
+        return ans;
+    }
 
 }

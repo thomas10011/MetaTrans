@@ -202,7 +202,7 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Instruction implementation.
 
-    MetaInst::MetaInst() : paths(3) { }
+    MetaInst::MetaInst()  { }
 
     MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) { }
 
@@ -258,6 +258,10 @@ namespace MetaTrans {
                 // std::cout << "type: " << path[0].getAsInteger().getValue() << " numLoad: " <<  path[1].getAsInteger().getValue() << " numStore: " <<  path[2].getAsInteger().getValue()<< " numPHI: " <<  path[3].getAsInteger().getValue() << " numGEP: " <<  path[4].getAsInteger().getValue() << "\n";
             }
         }
+
+        unsigned long _hashCode = JSON.getInteger("hashCode").getValue();
+        this->hashCode = _hashCode;
+
         return *this;
     }
 
@@ -304,6 +308,8 @@ namespace MetaTrans {
     std::string MetaInst::toString() {
         std::string opList = operandList.size() == 0 ? "[]" : "[";
         for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        std::string userList = users.size() == 0 ? "[]" : "[";
+        for (MetaOperand* user : users) { userList = userList + std::to_string(user->getID()) + ","; }
         std::string path = "[";
         for (int i = 0; i < 3; i++) {
             if(type[0] == InstType::LOAD && i == 1) {
@@ -328,11 +334,12 @@ namespace MetaTrans {
         }
         path += "]";
         opList[opList.length() - 1] = ']';
+        userList[userList.length() - 1] = ']';
         std::string str = "";
         str = str + "{" + "\"id\":" + std::to_string(id) + ",\"originInst\":" + "\"" +
             originInst + "\"" +
             ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
-            "\"operandList\":" + opList + "," + "\"path\":" + path + "}";
+            "\"operandList\":" + opList + "," + "\"userList\":" + userList + "," + "\"path\":" + path + ",\"hashCode\":" + std::to_string(hashCode) + "}";
         std::cout << str << std::endl;
         return str;
     }
@@ -347,7 +354,11 @@ namespace MetaTrans {
         }
         return false;
     }
-    
+
+    unsigned long MetaInst::getHashcode() {return hashCode;}
+
+    void MetaInst::setHashcode(unsigned long _hashCode) {hashCode = _hashCode;}
+
     std::vector<Path *>& MetaInst::getAllPath() { return paths; }
 
     Path* MetaInst::getPath(int type) { return paths[type]; }
@@ -364,8 +375,15 @@ namespace MetaTrans {
     }
 
     std::vector<MetaInst *> MetaInst::findTheSameInst(MetaBB *bb) {
-        // Find the instruction has same path: each /data compute/addressing/control flow/ path has the same numLoad, numStore, numPHI, numGEP
         std::vector<MetaInst *> ans;
+        // ompare with hashCode
+        for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
+            MetaInst *inst = *it;
+            if(inst->getHashcode() == hashCode) {
+                ans.push_back(inst);
+            }
+        }
+        // Find the instruction has same path: each /data compute/addressing/control flow/ path has the same numLoad, numStore, numPHI, numGEP
         for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
             MetaInst *inst = *it;
             std::vector<Path *> anotherPath = inst->getAllPath();

@@ -233,7 +233,7 @@ namespace MetaTrans {
             static void paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p);
 
             static void paintColor(MetaFunction* mF, int startColor);
-
+            static unsigned long hashCode(std::vector<MetaInst*> instList);
         
     };
 

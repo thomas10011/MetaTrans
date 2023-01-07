@@ -4,7 +4,7 @@
 #include "meta/MetaMatcher.h"
 
 using namespace llvm;
-
+int globalColor = 0;
 namespace MetaTrans {
     
 //===-------------------------------------------------------------------------------===//
@@ -62,7 +62,6 @@ namespace MetaTrans {
                                     .setFunction(&F)
                                     .setTypeMap(typeMap)
                                     .build();
-        MetaTrans::MetaUtil::paintColor(metaFunc, 0);
         metaFuncs.push_back(metaFunc);
         MetaFunction f(metaFunc->toString());
         return true;
@@ -180,6 +179,7 @@ namespace MetaTrans {
             .buildMetaElements()
             .buildGraph()
             .buildMetaData();
+        MetaUtil::paintColor(mF, globalColor++);
         return mF;
     }
 
@@ -228,6 +228,7 @@ namespace MetaTrans {
                 .createMetaInst(*i, newBB)
                 .createMetaOperand(*i);
         }
+        outs() << "\n";
         return *this;
     }
     
@@ -285,6 +286,7 @@ namespace MetaTrans {
             MetaUtil::printValueType(value); 
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
+        outs() << "\n";
     }
 
     void MetaFunctionBuilder::copyDependencies(Instruction* curInst) {
@@ -293,7 +295,7 @@ namespace MetaTrans {
         if (auto phi = dyn_cast<PHINode>(curInst)) { copyDependencies(phi); }
 
         MetaBB* curBB = inst->getParent();
-        outs() << "inst type: " << curInst->getOpcodeName() << "\n";
+        outs() << "inst " << inst << ",  type: " << curInst->getOpcodeName() << "\n";
         for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
             Value* value = op->get();
             MetaUtil::printValueType(value);
