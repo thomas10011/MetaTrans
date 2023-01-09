@@ -202,9 +202,9 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Instruction implementation.
 
-    MetaInst::MetaInst()  { }
+    MetaInst::MetaInst()  { paths.resize(3); }
 
-    MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) { }
+    MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) { paths.resize(3); }
 
     MetaInst::~MetaInst() { }
 
@@ -249,6 +249,7 @@ namespace MetaTrans {
             addInstType(MetaUtil::stringToInstType(op));
         }
 
+        this->paths.resize(3);
         json::Array* paths = JSON.getArray("path");
         if(paths) {
             for(int i = 0; i < (*paths).size(); i++) {
@@ -371,12 +372,12 @@ namespace MetaTrans {
     }
 
     void MetaInst::addToPath(Path* p) {
-        paths.push_back(p);
+        paths[p->type] = p;
     }
 
     std::vector<MetaInst *> MetaInst::findTheSameInst(MetaBB *bb) {
         std::vector<MetaInst *> ans;
-        // ompare with hashCode
+        // Compare with hashCode
         for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
             MetaInst *inst = *it;
             if(inst->getHashcode() == hashCode) {

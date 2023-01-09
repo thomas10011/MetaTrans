@@ -67,7 +67,7 @@ enum InstType {
 // struct for path (data compute/addressing/control flow)
 struct Path {
     MetaInst *firstNode;
-    int type; // (0 data computing 1 addressing 3 control flow)
+    int type; // (0 data computing 1 addressing 2 control flow)
     int numLoad;
     int numStore;
     int numPHI;
@@ -230,9 +230,9 @@ protected:
 
     InstMetaData metaData;
 
-    std::set<ColorData> colors; // color, type(0 data computing 1 addressing 3 control flow)
+    std::set<ColorData> colors; // color, type(0 data computing 1 addressing 2 control flow)
 
-    std::vector<Path*> paths ; // fitst node of path, (0 data computing 1 addressing 3 control flow)
+    std::vector<Path*> paths ; // fitst node of path, (0 data computing 1 addressing 2 control flow)
 
     int EquivClassTag;    
 
