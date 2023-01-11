@@ -365,10 +365,9 @@ namespace MetaTrans {
     Path* MetaInst::getPath(int type) { return paths[type]; }
 
     void MetaInst::dumpPath(int index) {
-        printf("%x, type: %d, numLoad: %d, numStore: "
-            "%d, numPHI: %d, numGEP: %d\n",
-            paths[index]->firstNode, paths[index]->type, paths[index]->numLoad,
-            paths[index]->numStore, paths[index]->numPHI, paths[index]->numGEP);
+        std::cout << "type: , numLoad: , numStore: , numPHI: , numGEP: " <<
+            paths[index]->type << paths[index]->numLoad <<
+            paths[index]->numStore << paths[index]->numPHI << paths[index]->numGEP << std::endl;
     }
 
     void MetaInst::addToPath(Path* p) {
@@ -376,44 +375,60 @@ namespace MetaTrans {
     }
 
     std::vector<MetaInst *> MetaInst::findTheSameInst(MetaBB *bb) {
+        std::cout << "Enter findTheSameInst" << std::endl;
         std::vector<MetaInst *> ans;
         // Compare with hashCode
-        for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
-            MetaInst *inst = *it;
-            if(inst->getHashcode() == hashCode) {
-                ans.push_back(inst);
+        if(hashCode != 0) {
+            for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
+                MetaInst *inst = *it;
+                if(inst->getHashcode() == hashCode) {
+                    ans.push_back(inst);
+                }
             }
         }
         // Find the instruction has same path: each /data compute/addressing/control flow/ path has the same numLoad, numStore, numPHI, numGEP
         for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
             MetaInst *inst = *it;
             std::vector<Path *> anotherPath = inst->getAllPath();
-            std::cout << inst->toString() << std::endl;
+            // std::cout << inst->toString() << std::endl;
             if (inst->isType(type[0])) {
                 if(type[0] == InstType::BRANCH) {
-                  inst->dumpPath(2);
-                  if (*(paths[2]) == *(anotherPath[2])) { // control flow
-                    std::cout << "findTheSamePath" << std::endl;
-                    ans.push_back(inst);
+                  if(paths[2] != nullptr && anotherPath[2] != nullptr) {
+                    inst->dumpPath(2);
+                    if (*(paths[2]) == *(anotherPath[2])) { // control flow
+                        std::cout << "findTheSamePath" << std::endl;
+                        ans.push_back(inst);
+                    }
                   }
                 }else {
-                    inst->dumpPath(1);
-                    if(*(paths[1]) == *(anotherPath[1])) { // addressing
-                        if(type[0] == InstType::STORE) {
-                            inst->dumpPath(0);
-                            if(*(paths[0]) == *(anotherPath[0])) { // data compute
+                    if(paths[1] != nullptr && anotherPath[1] != nullptr){
+                        inst->dumpPath(1);
+                        if(*(paths[1]) == *(anotherPath[1])) { // addressing
+                            if(type[0] == InstType::STORE) {
+                                if(paths[0] != nullptr && anotherPath[0] != nullptr){
+                                    inst->dumpPath(0);
+                                    if(*(paths[0]) == *(anotherPath[0])) { // data compute
+                                        std::cout << "findTheSamePath" << std::endl;
+                                        ans.push_back(inst);
+                                    }
+                                }
+                            }else {
                                 std::cout << "findTheSamePath" << std::endl;
                                 ans.push_back(inst);
                             }
-                        }else {
-                            std::cout << "findTheSamePath" << std::endl;
-                            ans.push_back(inst);
                         }
                     }
                 }
             }
         }
         std::cout << "Exit findTheSameInst" << std::endl;
+        if(ans.size() != 0) {
+            std::cout << "Ans = " << std::endl;
+            for(auto a : ans) {
+                std::cout << a->toString() << std::endl;
+            }
+            std::cout << "End Ans " << std::endl;
+        }
         return ans;
     }
 
