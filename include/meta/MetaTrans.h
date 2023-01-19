@@ -240,6 +240,8 @@ protected:
 
     unsigned long hashCode = 0;
 
+    std::string dataRoot = "";
+
     public:
 
     MetaInst();
@@ -308,6 +310,10 @@ protected:
     unsigned long getHashcode();
 
     void setHashcode(unsigned long hashCode);
+
+    std::string getDataRoot();
+
+    void setDataRoot(std::string s);
     
     std::vector<Path *> &getAllPath();
 

@@ -262,7 +262,8 @@ namespace MetaTrans {
 
         unsigned long _hashCode = JSON.getInteger("hashCode").getValue();
         this->hashCode = _hashCode;
-
+        std::string dataRoot = JSON["dataRoot"].getAsString().getValue().str();
+        this->dataRoot = dataRoot;
         return *this;
     }
 
@@ -340,7 +341,7 @@ namespace MetaTrans {
         str = str + "{" + "\"id\":" + std::to_string(id) + ",\"originInst\":" + "\"" +
             originInst + "\"" +
             ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
-            "\"operandList\":" + opList + "," + "\"userList\":" + userList + "," + "\"path\":" + path + ",\"hashCode\":" + std::to_string(hashCode) + "}";
+            "\"operandList\":" + opList + "," + "\"userList\":" + userList + "," + "\"path\":" + path + ",\"hashCode\":" + std::to_string(hashCode) + ",\"dataRoot\":\"" + dataRoot + "\"}";
         std::cout << str << std::endl;
         return str;
     }
@@ -359,6 +360,10 @@ namespace MetaTrans {
     unsigned long MetaInst::getHashcode() {return hashCode;}
 
     void MetaInst::setHashcode(unsigned long _hashCode) {hashCode = _hashCode;}
+
+    std::string MetaInst::getDataRoot() {return dataRoot;}
+
+    void MetaInst::setDataRoot(std::string s) {dataRoot = s;}
 
     std::vector<Path *>& MetaInst::getAllPath() { return paths; }
 
@@ -382,6 +387,7 @@ namespace MetaTrans {
             for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
                 MetaInst *inst = *it;
                 if(inst->getHashcode() == hashCode) {
+                    std::cout << "findTheSameHash: " << hashCode << std::endl;
                     ans.push_back(inst);
                 }
             }
