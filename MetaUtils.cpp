@@ -316,7 +316,7 @@ namespace MetaTrans {
     }
 
     void MetaUtil::paintColor(MetaFunction* mF, int startColor) {
-        std::tuple<int, int, int> counts(0, 0, 0); // Store, Load, Branch
+        std::tuple<int, int, int> counts(0,0,0); // Store, Load, Branch
         std::vector<std::string> name = {"Data Compute", "Addressing",
                                          "Control Flow"};
         std::cout << "\n\n<<== Coloring TIR for CFG: " << mF->getFunctionName() << " ==>>" << "\n";
@@ -328,11 +328,8 @@ namespace MetaTrans {
                         std::get<0>(counts) = std::get<0>(counts) + 1;
                         std::vector<MetaOperand*> ops = inst->getOperandList();
                         std::cout << "IsStore " << ops.size() <<  std::endl;
-                        std::vector<MetaInst*> vecForHash;
-                        vecForHash.push_back(inst);
                         for(int i = 0; i < ops.size(); i++) {
                             if(ops[i]->isMetaInst()) {
-                                vecForHash.push_back((MetaInst*)(ops[i]));
                                 inst->addColor(startColor, i);
                                 Path* p = new Path{(MetaInst*)(ops[i]), i, 0, 0, 0, 0};
                                 inst->addToPath(p);
@@ -347,7 +344,12 @@ namespace MetaTrans {
                                 startColor++;
                             }
                         }
-                        inst->setHashcode(MetaUtil::hashCode(vecForHash));
+                        std::vector<MetaInst*> vecForHash;
+                        vecForHash.push_back(inst);
+                        if(ops.size() > 0 && ops[0]->isMetaInst()) vecForHash.push_back((MetaInst*)(ops[0])); // only push_back data compute
+                        auto hashCode = MetaUtil::hashCode(vecForHash);
+                        printf("hashCode: %d\n", hashCode);
+                        inst->setHashcode(hashCode);
                     }else if(inst->isType(InstType::LOAD)){
                         std::get<1>(counts) = std::get<1>(counts) + 1;
                         std::vector<MetaOperand*> ops = inst->getOperandList();
@@ -372,7 +374,9 @@ namespace MetaTrans {
                         for(int i = 0; i < users.size(); i++) {
                             vecForHash.push_back((MetaInst*)(users[i]));
                         }
-                        inst->setHashcode(MetaUtil::hashCode(vecForHash));
+                        auto hashCode = MetaUtil::hashCode(vecForHash);
+                        printf("hashCode: %d\n", hashCode);
+                        inst->setHashcode(hashCode);
                     }else if(inst->isType(InstType::BRANCH)){
                         std::get<2>(counts) = std::get<2>(counts) + 1;
                         std::cout << "IsBranch" << std::endl;
