@@ -16,7 +16,7 @@ MetaMatcher& MetaMatcher::setY(MetaFunction* y) {
     return *this;
 }
 
-MetaMatcher& MetaMatcher::match() {
+MetaMatcher& MetaMatcher::matchBB() {
     MetaBB* root_x = x->getRoot();
     MetaBB* root_y = y->getRoot();
     std::vector<MetaBB*>& bbs_x = x->getBB();
@@ -36,33 +36,47 @@ MetaMatcher& MetaMatcher::match() {
             visited_y.insert(bb_y);
             i++; j++;
         }
-        else if (!bb_x->getModular()) {
-            printf("skip bb %d\n", bb_x->getID());
-            i++;
-        }
+        else if (!bb_x->getModular()) i++;
         else if (!bb_y->getModular()) j++;
-        else {
-            int k = j;
-            for (; k < bbs_y.size(); k++) {
-                MetaBB* bb_k = bbs_y[k];
-                if (visited_y.find(bb_k) != visited_y.end()) continue;
-                if (bb_x->similarity(*bb_k) > 0.99) {
-                    bbMap[bb_x] = bb_k;
-                    visited_x.insert(bb_x);
-                    visited_y.insert(bb_k);
-                    i++; j += (k == j);
-                    break;
-                }
-            }
-            // if didn't find a matched bb for bb_x
-            if (k == bbs_y.size()) {
-                visited_x.insert(bb_x);
-                i++;
-            }
-        }
+        else matchNextBB(i, j, bbs_x, bbs_y, visited_x, visited_y);
     }
 
     return *this;
+}
+
+MetaMatcher& MetaMatcher::matchNextBB(int& i, int& j, std::vector<MetaBB*>& bbs_x, std::vector<MetaBB*>& bbs_y, std::unordered_set<MetaBB*>& visited_x, std::unordered_set<MetaBB*>& visited_y) {
+    MetaBB* bb_x = bbs_x[i]; int k = j;
+    while (k++ < bbs_y.size()) {
+        MetaBB* bb_k = bbs_y[k];
+        if (visited_y.find(bb_k) != visited_y.end()) continue;
+        if (bb_x->similarity(*bb_k) > 0.99) {
+            bbMap[bb_x] = bb_k;
+            visited_x.insert(bb_x);
+            visited_y.insert(bb_k);
+            i++; j += (k == j); // j 每次只移动一次，防止出现交错的情况
+            break;
+        }
+    }
+    // if didn't find a matched bb for bb_x
+    if (k == bbs_y.size()) {
+        visited_x.insert(bb_x);
+        i++;
+    }
+    return *this;
+}
+
+MetaMatcher& MetaMatcher::matchInst() {
+    for (auto pair = bbMap.begin(); pair != bbMap.end(); ++pair) {
+        MetaBB& u = *(pair->first);
+        MetaBB& v = *(pair->second);
+        matchInstGraph(u, v);
+    }
+
+    return *this;
+}
+
+std::pair<MetaInst*, MetaInst*> MetaMatcher::matchInstGraph(MetaBB& u, MetaBB& v) {
+
 }
 
 std::unordered_map<MetaBB*, MetaBB*>& MetaMatcher::getBBMatchResult() {
