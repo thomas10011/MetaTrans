@@ -476,6 +476,9 @@ namespace MetaTrans {
         int         range    = abs(cnt-OpCnt);
         MetaInst*   ret      = inst;
 
+        std::cout << "DEBUG:: Entering function fuseInst().....\n";
+
+        
         //TODO: Currently skip the bidirectional fusion
         if(OpCnt > cnt)
             return NULL;
@@ -550,6 +553,8 @@ namespace MetaTrans {
         // std::vector<MetaInst*> tmp;
         std::vector<MetaInst*> fused;
 
+        std::cout << "DEBUG:: Entering function trainInst().....\n";
+
 
         //Perfect Match Case: 1-1 or N-N operation mapping
         if(this->hasSameType(irinst)){
@@ -560,6 +565,8 @@ namespace MetaTrans {
         if(asmOpCnt > irOpCnt){
             if(fuseInst(asmOpVec, irinst, fused))
                 this->buildMapping(fused);
+            std::cout << "DEBUG:: Leaving function fuseInst().....\n";
+
         }
         // Fuse ASM TIR instructions
         else{
@@ -580,12 +587,15 @@ namespace MetaTrans {
 
         // }
 
+        std::cout << "DEBUG:: Leaving function trainInst().....\n";
 
         return (*this);
     }
 
     std::vector<MetaInst*>& MetaInst::findMatchedInst(std::vector<MetaInst*> irvec){
         
+        std::cout << "DEBUG:: Enter function findMatchedInst().....\n";
+
         auto asmOpVec   = this->getInstType();
         int  asmOpCnt   = asmOpVec.size();
         int  irOpCnt    = 0;
@@ -619,6 +629,8 @@ namespace MetaTrans {
             }
         } 
 
+        std::cout << "DEBUG:: Leaving function findMatchedInst().....\n";
+
         return tmp;
 
     }
@@ -632,7 +644,7 @@ namespace MetaTrans {
         std::vector<MetaInst*> irvec;
         std::vector<MetaInst*> retvec;
 
-
+        std::cout << "DEBUG:: Enter function trainEquivClass().....\n";
         //if(inst->getInstType()[0] == InstType::LOAD){
         asmvec = this->getUsers();
         irvec  = irinst->getUsers();
@@ -963,7 +975,7 @@ namespace MetaTrans {
     }
 
     MetaBB* MetaBB::trainBB(MetaBB* irbb){
-        
+        std::cout << "\nDEBUG:: Entering function trainBB.....\n";
         MetaInst* irinst = NULL;
         std::vector<MetaInst*> asmvec;
         std::vector<MetaInst*> irvec;
@@ -972,7 +984,20 @@ namespace MetaTrans {
         for(auto inst= this->begin(); inst!= this->end(); inst++){
             // Visit all the load and store instructions
             //if((*inst)->getInstType()[0] !=InstType::LOAD && (*inst)->getInstType()[0] !=InstType::STORE)
+            std::cout << "DEBUG:: Checking Inst: "<< (*inst)->getOriginInst()<< std::endl;
 
+            if((*inst)->ifMatched()){
+                std::cout << "DEBUG:: Calling function QualifiedForMatch().....\n";
+                auto res = (*inst)->QualifiedForMatch();
+                if(res){
+                    auto it = (*inst)->getMatchedInst().rbegin();
+                    if(!*it)
+                        std::cout << "DEBUG:: getMatchedInst() returns NULL!\n";
+                    if(*it)
+                        (*inst)->trainEquivClass(*it);
+                }
+            }
+               
             if((*inst)->getInstType()[0] == InstType::BRANCH)
                 (*inst)->trainControlFlow();
             
@@ -982,11 +1007,16 @@ namespace MetaTrans {
                 auto matchvec = (*inst)->findTheSameInst(irbb);
                 // Skip unmatched or ambiguous instructions 
                 // Can be optimized to address ambiguity if needed
-                if(matchvec.size() != 1 )
+                if(matchvec.size() != 1 ){
+                    if(matchvec.size() > 1)
+                        std::cout << "DEBUG:: Matched more than one load instruction!\n";
+                    else
+                        std::cout << "DEBUG:: No load instruction is matched!\n";
                     continue;
+                }
 
                 irinst = matchvec[0]; 
-
+                std::cout << "DEBUG:: Calling function trainEquivClass().....\n";
                 (*inst)->trainEquivClass(irinst);
 
                 // asmvec = (*inst)->getUsers();
@@ -994,14 +1024,7 @@ namespace MetaTrans {
             
             }
 
-            if((*inst)->ifMatched()){
-                auto res = (*inst)->QualifiedForMatch();
-                if(res){
-                    auto it = (*inst)->getMatchedInst().rbegin();
-                    (*inst)->trainEquivClass(*it);
-                }
-            }
-               
+      
 
            
 

@@ -236,7 +236,7 @@ protected:
 
     int EquivClassTag;    
 
-    bool Matched;    
+    bool Matched = false;    
 
     unsigned long hashCode = 0;
 
