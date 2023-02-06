@@ -81,6 +81,9 @@ std::pair<MetaInst*, MetaInst*> MetaMatcher::matchInstGraph(MetaBB& u, MetaBB& v
         MetaInst& instRef = **inst;
         if (instRef.isLoad() || instRef.isStore()) {
             std::vector<MetaInst*> matchedInsts = instRef.findTheSameInst(&v);
+            std::cout <<"\nDEBUG:: matchInstGraph():: matchedInsts vector size = " << matchedInsts.size() << std::endl;
+            if(matchedInsts.size()==1 && matchedInsts[0]!=NULL)
+                instRef.buildMapping(matchedInsts[0]);
             MetaUtil::printVector(matchedInsts, "=========== Matched Inst For " + MetaUtil::toString(instRef.getInstType()) + " ===========");
         }
     }

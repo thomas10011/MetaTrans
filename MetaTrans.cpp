@@ -527,7 +527,7 @@ namespace MetaTrans {
     }
 
     MetaInst& MetaInst::buildMapping(std::vector<MetaInst*> fused){
-        
+        std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
         if(!fused.size()){
             std::cout << "\n\nERROR:: In MetaInst::buildMapping(), Empty Fused Instruction Vector!\n\n";
             return *this;
@@ -541,17 +541,22 @@ namespace MetaTrans {
             this->MatchedInst.push_back((*it));
             (*it)->MatchedInst.push_back(this);
         }
+        std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
+
         return *this;
     }
 
     MetaInst& MetaInst::buildMapping(MetaInst* inst){
 
-    
+        std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
+
         this->Matched   = true;
         inst->Matched   = true;
 
         this->MatchedInst.push_back(inst);
         inst->MatchedInst.push_back(this);
+    
+        std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
 
         return *this;
 
@@ -661,8 +666,14 @@ namespace MetaTrans {
 
         std::cout << "DEBUG:: Enter function trainEquivClass().....\n";
         //if(inst->getInstType()[0] == InstType::LOAD){
-        asmvec = this->getUsers();
-        irvec  = irinst->getUsers();
+        // asmvec = this->getUsers();
+        // irvec  = irinst->getUsers();
+        this->getUsers();
+        irinst->getUsers();
+        std::cout << "DEBUG:: asmvec.size() = "<< asmvec.size() <<std::endl;
+        std::cout << "DEBUG:: irvec.size() = "<< irvec.size() <<std::endl;
+        std::cout << "DEBUG:: trainEquivClass:: getUsers() completes \n";
+
         //}
             // SKIP STORE INSTRUCTIONS
             // else{
@@ -675,14 +686,22 @@ namespace MetaTrans {
 
         if(asmvec.size() == 0 || irvec.size()== 0)
             return NULL;   
-            
+        
+        //std::cout << "DEBUG:: trainEquivClass:: asmvec size check completes \n";
+
         for(auto it = asmvec.begin(); it != asmvec.end(); it++){
+            // std::cout << "DEBUG:: trainEquivClass:: enter loops \n";
+            
+            if(!(*it)->getInstType().size())
+                continue;
+
             // Skip Load Store & Branch instruction in EquivClass training
             // TODO:: BE CAUTIOUS OF AMO INSTRUCTIONS that have implicit load, store operations!!!
             if( (*it)->getInstType()[0] == InstType::LOAD || (*it)->getInstType()[0] == InstType::STORE || 
                 (*it)->getInstType()[0] == InstType::BRANCH )
                 continue;
             
+
             retvec = (*it)->findMatchedInst(irvec);
 
             // TODO: Ambiguous cases can be addressed if adding further hash check
@@ -1005,11 +1024,19 @@ namespace MetaTrans {
                 std::cout << "DEBUG:: Calling function QualifiedForMatch().....\n";
                 auto res = (*inst)->QualifiedForMatch();
                 if(res){
-                    auto it = (*inst)->getMatchedInst().rbegin();
-                    if(!*it)
+                    std::cout << "DEBUG:: MatchedInst() size = "<< (*inst)->getMatchedInst().size() << std::endl;
+                    if((*inst)->getMatchedInst().size() == 0)
+                        continue;
+
+                    auto it = (*inst)->getMatchedInst()[(*inst)->getMatchedInst().size()-1];
+                    std::cout << "DEBUG:: The end of MatchedInst ID is = "<< it->getID()
+                              << ", Type is "
+                              <<  it->getInstType()[0] 
+                              << std::endl;
+                    if(!it)
                         std::cout << "DEBUG:: getMatchedInst() returns NULL!\n";
-                    if(*it)
-                        (*inst)->trainEquivClass(*it);
+                    if(it)
+                        (*inst)->trainEquivClass(it);
                 }
             }
                
@@ -1017,7 +1044,7 @@ namespace MetaTrans {
                 (*inst)->trainControlFlow();
             
 
-            if((*inst)->getInstType()[0] == InstType::LOAD){
+            if((*inst)->getInstType()[0] == InstType::LOAD && !(*inst)->ifMatched()){
                 // TODO:: CHECK If implict LOAD/STORE operations within an instruction can be traversed correctly
                 auto matchvec = (*inst)->findTheSameInst(irbb);
                 // Skip unmatched or ambiguous instructions 
