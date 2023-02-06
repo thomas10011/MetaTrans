@@ -217,6 +217,8 @@ private:
     
     std::string originInst;
 
+    bool is_load, is_store;
+
 protected:
 
     MetaBB* parent;
@@ -252,7 +254,9 @@ protected:
 
     virtual ~MetaInst();
 
-    MetaInst(std::vector<InstType> ty); 
+    MetaInst(std::vector<InstType> ty);
+
+    MetaInst& checkLoadStoreFlag();
 
     MetaInst& setOriginInst(std::string name);
 

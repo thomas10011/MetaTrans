@@ -37,9 +37,11 @@ namespace MetaTrans {
                     std::unordered_map<MetaBB*, MetaBB*>& result = matcher
                                                                     .setX(&f)
                                                                     .setY(mF)
-                                                                    .match()
+                                                                    .matchBB()
+                                                                    .matchInst()
                                                                     .getBBMatchResult()
                                                                     ;
+                    // print match result.
                     for (auto pair = result.begin(); pair != result.end(); ++pair) {
                         printf("%d--->>>%d\n", pair->first->getID(), pair->second->getID());
                     }
@@ -226,16 +228,13 @@ namespace MetaTrans {
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b) {
-        outs() << "creating instructions in Basic Block " << b;
         MetaBB& newBB = *(mF->buildBB());
         assert(bbMap.insert({&b, &newBB}).second);
         for (auto i = b.begin(); i != b.end(); ++i) {
-            outs() << "instruction with type: " << i->getOpcodeName() << "\n";
             (*this)
                 .createMetaInst(*i, newBB)
                 .createMetaOperand(*i);
         }
-        outs() << "\n";
         return *this;
     }
     
@@ -264,15 +263,9 @@ namespace MetaTrans {
     }
 
     MetaOperand* MetaFunctionBuilder::findMetaOperand(Value* value) {
-        if (Argument* arg = dyn_cast<Argument>(value)) {
-            return (MetaOperand*)argMap[arg];
-        }
-        else if (Constant* c = dyn_cast<Constant>(value)) {
-            return (MetaOperand*)constantMap[c];
-        }
-        else if (Instruction* i = dyn_cast<Instruction>(value)) {
-            return (MetaOperand*)instMap[i];
-        }
+        if (Argument*    a = dyn_cast<Argument>(value))    return (MetaOperand*)argMap[a];
+        if (Constant*    c = dyn_cast<Constant>(value))    return (MetaOperand*)constantMap[c];
+        if (Instruction* i = dyn_cast<Instruction>(value)) return (MetaOperand*)instMap[i];
         return nullptr;
     }
 
@@ -310,7 +303,8 @@ namespace MetaTrans {
             if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
                 (*curBB)
                     .addNextBB(bbMap[bb])
-                    .setTerminator(inst);
+                    .setTerminator(inst)
+                    ;
             }
 
             if (MetaOperand* metaOp = findMetaOperand(value))
@@ -321,7 +315,7 @@ namespace MetaTrans {
 
     }
 
-}
+} // namespace MetaTrans
 
 
 static RegisterPass<MetaTrans::MetaFunctionPass> X("meta-trans", "MetaTrans Pass",

@@ -203,11 +203,23 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Instruction implementation.
 
-    MetaInst::MetaInst()  { paths.resize(3); }
+    MetaInst::MetaInst() : is_store(false), is_load(false) { 
+        paths.resize(3);
+    }
 
-    MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) { paths.resize(3); }
+    MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) {
+        paths.resize(3);
+    }
 
     MetaInst::~MetaInst() { }
+
+    MetaInst& MetaInst::checkLoadStoreFlag() {
+        for (auto ty : type) {
+            if (ty == InstType::LOAD) is_load = true;
+            if (ty == InstType::STORE) is_store = true;
+        }
+        return *this;
+    }
 
     MetaInst& MetaInst::setOriginInst(std::string name) {
         originInst = name;
@@ -216,17 +228,20 @@ namespace MetaTrans {
 
     MetaInst& MetaInst::setInstType(std::vector<InstType> ty) {
         type = ty;
+        checkLoadStoreFlag();
         return *this;
     }
 
     MetaInst& MetaInst::setInstType(InstType ty) {
         std::vector<InstType> tmp(1, ty);
         type = tmp;
+        checkLoadStoreFlag();
         return *this;
     }
 
     MetaInst& MetaInst::addInstType(InstType ty) {
         type.push_back(ty);
+        checkLoadStoreFlag();
         return *this;
     }
 
@@ -272,9 +287,9 @@ namespace MetaTrans {
         return originInst;
     }
 
-    bool MetaInst::isLoad() { for (auto ty : type) if (ty == InstType::LOAD) return true; return false; }
+    bool MetaInst::isLoad() { return is_load; }
 
-    bool MetaInst::isStore() { for (auto ty : type) if (ty == InstType::STORE) return true; return false; }
+    bool MetaInst::isStore() { return is_store; }
 
     int MetaInst::getOperandNum() { return operandList.size(); }
 
