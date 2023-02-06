@@ -1,6 +1,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/JSON.h"
 #include <math.h>
+#include <stdlib.h>
 #include "meta/MetaTrans.h"
 #include "meta/MetaUtils.h"
 
@@ -483,6 +484,227 @@ namespace MetaTrans {
         return (*this);
     }
 
+    MetaInst* fuseInst(std::vector<InstType> vec, MetaInst* inst, std::vector<MetaInst*> fused){
+        auto        OpVec    = inst->getInstType();
+        int         OpCnt    = OpVec.size();
+        int         cnt      = vec.size();
+        int         range    = abs(cnt-OpCnt);
+        MetaInst*   ret      = inst;
+
+        //TODO: Currently skip the bidirectional fusion
+        if(OpCnt > cnt)
+            return NULL;
+        
+        //int max = cnt >= OpCnt? cnt:OpCnt;
+
+        for(int i = 0; i < OpCnt; i++){
+            if(vec[i]!=OpVec[i])
+                return NULL;
+        }
+        
+        // Comply with the instruction ordering
+        fused.push_back(inst);
+
+        // Recursive Instruction Fusion
+        if(range){
+            std::vector<InstType> v(vec.begin()+OpCnt, vec.end()-1);
+            auto childVec = inst->getUsers();
+            // Fused Instruction implies intermediate its result (rd) which can ONLY be reused by 1 instruction!
+            if(childVec.size() != 1)
+                return NULL;
+            else
+                ret = fuseInst(v,childVec[0],fused);                  
+        }
+
+        if(ret)
+            return inst;
+        else
+            return NULL;
+
+    }
+
+    MetaInst& MetaInst::buildMapping(std::vector<MetaInst*> fused){
+        
+        if(!fused.size()){
+            std::cout << "\n\nERROR:: In MetaInst::buildMapping(), Empty Fused Instruction Vector!\n\n";
+            return *this;
+        }
+
+        int fuseID      = fused[0]->getID();
+        this->Matched   = true;
+        for(auto it = fused.begin(); it!= fused.end(); it++){
+            (*it)->Matched = true;
+            (*it)->FuseID  = fuseID;
+            this->MatchedInst.push_back((*it));
+            (*it)->MatchedInst.push_back(this);
+        }
+        return *this;
+    }
+
+    MetaInst& MetaInst::buildMapping(MetaInst* inst){
+
+    
+        this->Matched   = true;
+        inst->Matched   = true;
+
+        this->MatchedInst.push_back(inst);
+        inst->MatchedInst.push_back(this);
+
+        return *this;
+
+    }
+
+    MetaInst& MetaInst::trainInst(MetaInst* irinst){
+        
+        int  flag       = 0;
+        auto asmOpVec   = this->getInstType();
+        auto irOpVec    = irinst->getInstType();
+        int  asmOpCnt   = asmOpVec.size();
+        int  irOpCnt    = irOpVec.size();
+        // std::vector<MetaInst*> childVec;
+        // std::vector<MetaInst*> tmp;
+        std::vector<MetaInst*> fused;
+
+
+        //Perfect Match Case: 1-1 or N-N operation mapping
+        if(this->hasSameType(irinst)){
+            this->buildMapping(irinst);
+        }
+
+        // Fuse IR TIR instructions
+        if(asmOpCnt > irOpCnt){
+            if(fuseInst(asmOpVec, irinst, fused))
+                this->buildMapping(fused);
+        }
+        // Fuse ASM TIR instructions
+        else{
+            if(fuseInst(irOpVec, this ,fused))
+                irinst->buildMapping(fused);
+        }
+        // else if(asmOpCnt > irOpCnt){
+
+        //     childVec = irinst->getUsers();
+        //     std::vector<InstType>vec(asmOpVec.begin()+irOpCnt, asmOpVec.end()-1);
+
+        //     for(int i = irOpCnt; i < asmOpCnt; i++){
+        //         for(auto it = childVec.begin(); it!=childVec.end();it++)
+        //             if(fuseInst( vec, *it, fused ))
+        //                 tmp.push_back(fuseInst( vec, *it,fused));
+        //     }
+            
+
+        // }
+
+
+        return (*this);
+    }
+
+    std::vector<MetaInst*>& MetaInst::findMatchedInst(std::vector<MetaInst*> irvec){
+        
+        auto asmOpVec   = this->getInstType();
+        int  asmOpCnt   = asmOpVec.size();
+        int  irOpCnt    = 0;
+        
+        std::vector<MetaInst*> tmp;
+
+        // Perfect 1-1 or N-N mapping 
+        for( auto it = irvec.begin(); it != irvec.end(); it++){
+            if(this->hasSameType(*it)){
+                //this->MatchedInst.push_back(*it);
+                tmp.push_back(*it);
+            }
+        }
+
+        // check if fusion is needed
+        if( this->MatchedInst.size() == 0 ){        
+            for(auto it = irvec.begin(); it != irvec.end(); it++ ){
+                int  bits     =  0;
+                auto irOpVec  =  (*it)->getInstType();
+                irOpCnt       =  irOpVec.size();
+
+                if(asmOpCnt == irOpCnt)
+                    continue;
+                int max = asmOpCnt > irOpCnt? asmOpCnt:irOpCnt;
+
+                for( int i  = 0; i < max; i++ ) bits |= 1 << asmOpVec[i];
+                for( int i  = 0; i < max; i++ ) bits ^= 1 << irOpVec[i];
+                if ( bits == 0 )
+                    tmp.push_back((*it));
+                    //this->MatchedInst.push_back((*it));
+            }
+        } 
+
+        return tmp;
+
+    }
+
+    int MetaInst::getFuseID(){return this->FuseID;}
+
+
+    MetaInst* MetaInst::trainEquivClass(MetaInst* irinst){
+        
+        std::vector<MetaInst*> asmvec;
+        std::vector<MetaInst*> irvec;
+        std::vector<MetaInst*> retvec;
+
+
+        //if(inst->getInstType()[0] == InstType::LOAD){
+        asmvec = this->getUsers();
+        irvec  = irinst->getUsers();
+        //}
+            // SKIP STORE INSTRUCTIONS
+            // else{
+            //     // TODO: RISC-V places val in rs2 for Store instruction
+            //     // This may change for ARM or X86. We may need a unified
+            //     // load store protocols for ASM TIR of different ISAs
+            //     asmvec = (*inst)->getOperandList()[1]->getUsers();
+            //     irvec  = irinst->getOperandList()[0]->getUsers();
+            // }
+
+        if(asmvec.size() == 0 || irvec.size()== 0)
+            return NULL;   
+            
+        for(auto it = asmvec.begin(); it != asmvec.end(); it++){
+            // Skip Load Store & Branch instruction in EquivClass training
+            // TODO:: BE CAUTIOUS OF AMO INSTRUCTIONS that have implicit load, store operations!!!
+            if( (*it)->getInstType()[0] == InstType::LOAD || (*it)->getInstType()[0] == InstType::STORE || 
+                (*it)->getInstType()[0] == InstType::BRANCH )
+                continue;
+            
+            retvec = (*it)->findMatchedInst(irvec);
+
+            // TODO: Ambiguous cases can be addressed if adding further hash check
+                if(retvec.size() == 1)
+                    for(auto itt = retvec.begin();itt!=retvec.end();itt++)
+                        this->trainInst(*itt);
+            }
+
+        return this;
+    }
+
+    MetaInst* MetaInst::QualifiedForMatch(){
+        auto        vec     = this->getUsers();
+        //auto        vec     = this->findMatchedInst();
+        int         flag    = 0;
+
+        // Skip the instructions that have been matched
+        for(auto it = vec.begin(); it!=vec.end();it++){
+            if((*it)->Matched){
+                flag  =  1; 
+                return NULL;
+            }           
+        }
+
+        return this;
+
+    }
+
+    std::vector<MetaInst*> MetaInst::getMatchedInst(){return this->MatchedInst;}
+
+    MetaInst* MetaInst::trainControlFlow(){
+        
+    }
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Phi Instruction implementation.
@@ -754,6 +976,79 @@ namespace MetaTrans {
             "\"successors\":" + sucStr + 
             "}";
     }
+
+    MetaBB* MetaBB::trainBB(MetaBB* irbb){
+        
+        MetaInst* irinst = NULL;
+        std::vector<MetaInst*> asmvec;
+        std::vector<MetaInst*> irvec;
+        std::vector<MetaInst*> retvec;
+
+        for(auto inst= this->begin(); inst!= this->end(); inst++){
+            // Visit all the load and store instructions
+            //if((*inst)->getInstType()[0] !=InstType::LOAD && (*inst)->getInstType()[0] !=InstType::STORE)
+
+            if((*inst)->getInstType()[0] == InstType::BRANCH)
+                (*inst)->trainControlFlow();
+            
+
+            if((*inst)->getInstType()[0] == InstType::LOAD){
+                // TODO:: CHECK If implict LOAD/STORE operations within an instruction can be traversed correctly
+                auto matchvec = (*inst)->findTheSameInst(irbb);
+                // Skip unmatched or ambiguous instructions 
+                // Can be optimized to address ambiguity if needed
+                if(matchvec.size() != 1 )
+                    continue;
+
+                irinst = matchvec[0]; 
+
+                (*inst)->trainEquivClass(irinst);
+
+                // asmvec = (*inst)->getUsers();
+                // irvec  = irinst->getUsers();
+            
+            }
+
+            if((*inst)->ifMatched()){
+                auto res = (*inst)->QualifiedForMatch();
+                if(res){
+                    auto it = (*inst)->getMatchedInst().rbegin();
+                    (*inst)->trainEquivClass(*it);
+                }
+            }
+               
+
+           
+
+           
+
+            
+            // SKIP STORE INSTRUCTIONS
+            // else{
+            //     // TODO: RISC-V places val in rs2 for Store instruction
+            //     // This may change for ARM or X86. We may need a unified
+            //     // load store protocols for ASM TIR of different ISAs
+            //     asmvec = (*inst)->getOperandList()[1]->getUsers();
+            //     irvec  = irinst->getOperandList()[0]->getUsers();
+            // }
+
+            // if(asmvec.size() == 0 || irvec.size()== 0)
+            //     continue;   
+            
+            // for(auto it = asmvec.begin(); it != asmvec.end(); it++){
+            //     retvec = (*it)->findMatchedInst(irvec);
+
+            //     // TODO: Ambiguous cases can be addressed if adding further hash check
+            //     if(retvec.size() == 1)
+            //         for(auto itt = retvec.begin();itt!=retvec.end();itt++)
+            //             (*inst)->trainInst(*itt);
+            // }
+
+        }
+
+        return this;
+    }
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.

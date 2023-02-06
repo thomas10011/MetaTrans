@@ -244,6 +244,10 @@ protected:
 
     std::string dataRoot = "";
 
+    std::vector<MetaInst*> MatchedInst;
+
+    int FuseID;
+
     public:
 
     MetaInst();
@@ -332,6 +336,29 @@ protected:
     void resetEquivClass();
 
     bool ifMatched();
+
+    std::vector<MetaInst*>& findMatchedInst(std::vector<MetaInst*> irvec);
+
+    MetaInst& trainInst(MetaInst* irinst);
+
+    MetaInst& buildMapping(std::vector<MetaInst*> fused);
+
+    MetaInst& buildMapping(MetaInst* inst);
+
+    int getFuseID();
+
+    MetaInst* QualifiedForMatch();
+
+    MetaInst* trainControlFlow();
+
+    MetaInst* trainEquivClass(MetaInst* inst);
+
+    std::vector<MetaInst*> getMatchedInst();
+
+
+    
+
+
 };
 
 /// represent a phi node.
@@ -466,6 +493,8 @@ public:
     std::vector<MetaBB*>::iterator next_begin();
 
     std::vector<MetaBB*>::iterator next_end();
+
+    MetaBB* trainBB(MetaBB* irbb);
 
 };
 
