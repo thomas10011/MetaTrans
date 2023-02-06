@@ -1,6 +1,6 @@
 #include "meta/MetaMatcher.h"
 #include <unordered_set>
-
+#include "meta/MetaUtils.h"
 
 namespace MetaTrans {
 
@@ -46,16 +46,17 @@ MetaMatcher& MetaMatcher::matchBB() {
 
 MetaMatcher& MetaMatcher::matchNextBB(int& i, int& j, std::vector<MetaBB*>& bbs_x, std::vector<MetaBB*>& bbs_y, std::unordered_set<MetaBB*>& visited_x, std::unordered_set<MetaBB*>& visited_y) {
     MetaBB* bb_x = bbs_x[i]; int k = j;
-    while (k++ < bbs_y.size()) {
-        MetaBB* bb_k = bbs_y[k];
-        if (visited_y.find(bb_k) != visited_y.end()) continue;
-        if (bb_x->similarity(*bb_k) > 0.99) {
-            bbMap[bb_x] = bb_k;
-            visited_x.insert(bb_x);
-            visited_y.insert(bb_k);
-            i++; j += (k == j); // j 每次只移动一次，防止出现交错的情况
-            break;
-        }
+    for (; k < bbs_y.size(); k++) {
+        MetaBB* bb_z = bbs_y[k];
+        if (visited_y.find(bb_z) != visited_y.end()) continue;
+        if (bb_x->similarity(*bb_z) < 0.99) continue;
+
+        visited_x.insert(bb_x);
+        visited_y.insert(bb_z);
+        bbMap[bb_x] = bb_z;
+        i += 1; j += (k == j); // j 每次最多只移动一次，防止出现交错的情况
+
+        break;
     }
     // if didn't find a matched bb for bb_x
     if (k == bbs_y.size()) {
@@ -76,6 +77,13 @@ MetaMatcher& MetaMatcher::matchInst() {
 }
 
 std::pair<MetaInst*, MetaInst*> MetaMatcher::matchInstGraph(MetaBB& u, MetaBB& v) {
+    for (auto inst = u.inst_begin(); inst != u.inst_end(); inst++) {
+        MetaInst& instRef = **inst;
+        if (instRef.isLoad() || instRef.isStore()) {
+            std::vector<MetaInst*> matchedInsts = instRef.findTheSameInst(&v);
+            MetaUtil::printVector(matchedInsts, "=========== Matched Inst For " + MetaUtil::toString(instRef.getInstType()) + " ===========");
+        }
+    }
 
 }
 

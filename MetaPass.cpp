@@ -41,6 +41,7 @@ namespace MetaTrans {
                                                                     .matchInst()
                                                                     .getBBMatchResult()
                                                                     ;
+                    // print match result.
                     for (auto pair = result.begin(); pair != result.end(); ++pair) {
                         printf("%d--->>>%d\n", pair->first->getID(), pair->second->getID());
                     }
@@ -220,16 +221,13 @@ namespace MetaTrans {
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b) {
-        outs() << "creating instructions in Basic Block " << b;
         MetaBB& newBB = *(mF->buildBB());
         assert(bbMap.insert({&b, &newBB}).second);
         for (auto i = b.begin(); i != b.end(); ++i) {
-            outs() << "instruction with type: " << i->getOpcodeName() << "\n";
             (*this)
                 .createMetaInst(*i, newBB)
                 .createMetaOperand(*i);
         }
-        outs() << "\n";
         return *this;
     }
     
@@ -310,7 +308,7 @@ namespace MetaTrans {
 
     }
 
-}
+} // namespace MetaTrans
 
 
 static RegisterPass<MetaTrans::MetaFunctionPass> X("meta-trans", "MetaTrans Pass",
