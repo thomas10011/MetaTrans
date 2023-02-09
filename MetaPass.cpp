@@ -23,8 +23,9 @@ namespace MetaTrans {
         std::string asmStr = MetaUtil::readFromFile("/opt/BinaryTranslation/test/asm.json");
         
         llvm::Expected<json::Value> expect = json::parse(asmStr);
-        if (expect.takeError()) {
-            std::cout << "parse function json error!" << "\n";
+        if (Error e = expect.takeError()) {
+            // std::cout << "parse function json error!" << "\n";
+            logAllUnhandledErrors(std::move(e), outs(), "[JSON Error] ");
             return;
         }
         json::Array& funcArr = *(expect.get().getAsArray());

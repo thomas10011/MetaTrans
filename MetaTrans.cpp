@@ -338,7 +338,7 @@ namespace MetaTrans {
                 break;
             } else if (type[0] == InstType::STORE && (i == 0 || i == 1)) {
                 if(paths.size() > i) {
-                    if (i == 1 && paths[0]) path += ",";
+                    if (i == 1 && paths[0] && paths[i]) path += ",";
                     Path *p = paths[i];
                     if(p) path += "[" + std::to_string(p->type) + "," +std::to_string(p->numLoad) + "," +std::to_string(p->numStore) + "," +std::to_string(p->numPHI) + "," +std::to_string(p->numGEP) + "]";
                 }
