@@ -201,7 +201,12 @@ namespace MetaTrans {
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaElements() {
         // create all meta basic block and instructions recursively.
         for (auto bb = F->begin(); bb != F->end(); ++bb) {
-            (*this).createMetaBB(*bb);
+            (*this)
+                .createMetaBB(*bb);
+        }
+        // create all arguments;
+        for (auto arg_iter = F->arg_begin(); arg_iter != F->arg_end(); ++arg_iter) {
+            argMap[&*arg_iter] = new MetaArgument();
         }
         return *this;
     }
@@ -247,17 +252,13 @@ namespace MetaTrans {
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaOperand(Instruction& i) {
-        // create all arg and constant.
+        // create all constants.
         for (auto op = i.op_begin(); op != i.op_end(); ++op) {
             Value* value = op->get();
             // Ugly, but works.
-            if (Argument* a = dyn_cast<Argument>(value)) {
-                if (MetaArgument* mA = MetaUtil::createValue(a, argMap))
-                    mF->addArgument(mA);
-            }
-            else if (Constant* c = dyn_cast<Constant>(value)) {
-                if (MetaConstant* mC = MetaUtil::createValue(c, constantMap))
-                    mF->addConstant(mC);
+            if (Constant* c = dyn_cast<Constant>(value)) {
+                if (constantMap.find(c) != constantMap.end()) continue;
+                mF->addConstant(constantMap[c] = new MetaConstant());
             }
         }
         return *this;
