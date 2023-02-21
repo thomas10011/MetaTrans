@@ -2,7 +2,7 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "yaml-cpp/yaml.h"
-#include "meta/MetaTrans.h"
+#include "MetaTrans.h"
 
 #include <iostream>
 #include <unordered_map>
@@ -233,8 +233,11 @@ namespace MetaTrans {
             static void paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p);
 
             static void paintColor(MetaFunction* mF, int startColor);
-            static unsigned long hashCode(std::vector<MetaInst*> instList);
         
+            static unsigned long hashCode(std::vector<MetaInst*> instList);
+
+            static unsigned long long getAvailableMemory();
+
     };
 
 

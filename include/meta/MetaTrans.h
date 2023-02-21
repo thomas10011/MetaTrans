@@ -84,7 +84,7 @@ class MetaOperand {
 private:
 protected:
 
-    int id;
+    int id = -1;
 
     // record those instructions that use this operand.
     std::vector<MetaInst*> users;
@@ -94,6 +94,9 @@ public:
     MetaOperand& setID(int id);
 
     MetaOperand& addUser(MetaInst* user);
+
+    // remove user from user list.
+    MetaOperand& removeUser(MetaInst* user);
 
     std::vector<MetaInst*> getUsers();
 
