@@ -50,6 +50,17 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaOperand& MetaOperand::removeUser(MetaInst* user) {
+        for (auto it = users.begin(); it != users.end(); ++it) {
+            if (*it == user) {
+                printf("removed user %d!\n", user);
+                users.erase(it);
+                break;
+            }
+        }
+        return *this;
+    }
+    
     std::vector<MetaInst*> MetaOperand::getUsers() {
         return users;
     }
@@ -64,7 +75,7 @@ namespace MetaTrans {
 
     MetaOperand& MetaOperand::setID(int id) { this->id = id; return* this; }
 
-    int MetaOperand::getID() { return id; }
+    int MetaOperand::getID() { /*assert(id != -1);*/ return id; }
 
     bool MetaOperand::isMetaConstant() { return false; }
 
@@ -358,7 +369,6 @@ namespace MetaTrans {
             originInst + "\"" +
             ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
             "\"operandList\":" + opList + "," + "\"userList\":" + userList + "," + "\"path\":" + path + ",\"hashCode\":" + std::to_string(hashCode) + ",\"dataRoot\":\"" + dataRoot + "\"}";
-        std::cout << str << std::endl;
         return str;
     }
 
@@ -925,6 +935,8 @@ namespace MetaTrans {
             // 连上 Meta Instruction 之间的边
             for (int j = 0; j < ops.size(); ++j) {
                 int64_t op_id = ops[j].getAsInteger().getValue();
+                assert(instList[i]);
+                printf("inst address: %d, op_id: %d, operand address: %d \n", instList[i], op_id, tempOperandMap[op_id]);
                 instList[i]->addOperand(tempOperandMap[op_id]);
             }
             instList[i]->buildFromJSON(*(insts[i].getAsObject()), tempBBMap, tempOperandMap);
@@ -956,7 +968,7 @@ namespace MetaTrans {
 
     MetaFunction* MetaBB::getParent() { return parent; }
 
-    int MetaBB::getID() { return id; }
+    int MetaBB::getID() { assert(id != -1); return id; }
 
     double MetaBB::getModular() { return modular; }
 
@@ -1168,7 +1180,6 @@ namespace MetaTrans {
 
     MetaFunction::MetaFunction(std::string JSON) {
         std::cout << "MetaFunction::MetaFunction(std::string JSON)" << std::endl;
-        std::cout << JSON << std::endl;
         llvm::Expected<json::Value> expect = json::parse(JSON);
         if (expect.takeError()) {
             std::cout << "parse function json error!" << "\n";

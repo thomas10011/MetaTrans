@@ -53,7 +53,6 @@ namespace MetaTrans {
                     }
                     printf("-----------------------------------\n");
 
-
                 }
                 
 
@@ -206,7 +205,9 @@ namespace MetaTrans {
         }
         // create all arguments;
         for (auto arg_iter = F->arg_begin(); arg_iter != F->arg_end(); ++arg_iter) {
-            argMap[&*arg_iter] = new MetaArgument();
+            MetaArgument* arg = new MetaArgument();
+            argMap[&*arg_iter] = arg;
+            mF->addArgument(arg);
         }
         return *this;
     }
