@@ -337,13 +337,17 @@ protected:
 
     bool ifMatched();
 
-    std::vector<MetaInst*>& findMatchedInst(std::vector<MetaInst*> irvec);
+    std::vector<MetaInst*> findMatchedInst(std::vector<MetaInst*> irvec);
 
     MetaInst& trainInst(MetaInst* irinst);
 
-    MetaInst& buildMapping(std::vector<MetaInst*> fused);
+    MetaInst& buildMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
 
     MetaInst& buildMapping(MetaInst* inst);
+
+    MetaInst& buildOperandMapping(MetaInst* inst);
+
+    MetaInst& buildOperandMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
 
     int getFuseID();
 

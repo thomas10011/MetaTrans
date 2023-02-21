@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include "meta/MetaTrans.h"
 #include "meta/MetaUtils.h"
+#include <utility>
 
 namespace MetaTrans { 
     
@@ -526,7 +527,37 @@ namespace MetaTrans {
 
     }
 
-    MetaInst& MetaInst::buildMapping(std::vector<MetaInst*> fused){
+    int ifFind(MetaInst* inst, std::vector<MetaInst*> vec){
+        if(inst == NULL){
+            std::cout << "Warning:: NULL Metainst in ifFind()!\n";
+            return -1;
+        }
+        for(int i = 0; i < vec.size(); i++){
+            if(inst == vec[i])
+                return i;
+        }  
+        return -1;
+    }
+
+    int ifFind(MetaOperand* inst, std::vector<MetaOperand*> vec){
+        if(inst == NULL){
+            std::cout << "Warning:: NULL MetaOperand in ifFind()!\n";
+            return -1;
+        }
+        for(int i = 0; i < vec.size(); i++){
+            if(inst == vec[i])
+                return i;
+        }  
+        return -1;
+    }
+
+    void dumpMapping(std::string mapping){
+
+        std::cout << "\nCreate Instruction Mapping:\n" << mapping << std::endl;
+        std::cout << std::endl;
+    }
+
+    MetaInst& MetaInst::buildMapping(std::vector<MetaInst*> fused, std::string ASMorIR){
         std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
         if(!fused.size()){
             std::cout << "\n\nERROR:: In MetaInst::buildMapping(), Empty Fused Instruction Vector!\n\n";
@@ -562,8 +593,155 @@ namespace MetaTrans {
 
     }
 
+
+    //std::pair<std::string, std::string> 
+    MetaInst& MetaInst::buildOperandMapping(std::vector<MetaInst*> Fuse, std::string ASMorIR){
+
+
+        int                         opNum      = this->getOperandNum();
+        MetaInst*                   match      = NULL;
+        int                         find       = -1;
+        std::vector<MetaOperand*>   asmOpVec;
+        std::vector<MetaOperand*>   irOpVec;
+        std::string                 str;
+        std::string                 tmp;
+        std::vector<MetaInst*>      fused;
+
+        // Mapping dump instruction information
+        if(ASMorIR == "IR"){
+            str         =  this->getOriginInst() + " : ";
+            asmOpVec    =  this->getOperandList();
+        }
+        else{
+            irOpVec     =  this->getOperandList();
+            for(auto it =  Fuse.begin(); it != Fuse.end(); it++)
+                str     += (*it)->getOriginInst() + "  ";
+            str         += " : " + this->getOriginInst() + "  ";
+        }
+
+        // Fused Insts are LLVM IR
+        // 1 ASM inst <-> N IR Insts
+        if(ASMorIR == "IR"){
+            fused = Fuse;
+        }
+        // Fused Insts are ASM
+        // N ASM insts <-> 1 IR int
+        else
+            fused.push_back(this);
+
+            for(int i = 0; i < fused.size(); i++){
+                str         += fused[i]->getOriginInst() + "  ";
+                // irOpVec  =  fused[i]->getOperandList();
+                auto vec    =  dynamic_cast<MetaInst*>(fused[i])->getOperandList();
+                auto tmpvec =  asmOpVec;
+
+                for( int id = 0; id < vec.size(); id++ ){
+                    // Check if RS points to any RD in the fused instructions
+                    int ret = ifFind(dynamic_cast<MetaInst*>(vec[id]),fused);
+                    if( ret != -1 )
+                        str += std::to_string(ret+1)+ "." + "rd  ";
+                    else if (ret > i)
+                        std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
+
+                    // Find matched ASM instruction of such "operand" 
+                    auto AsmMatch  = dynamic_cast<MetaInst*>(vec[i])->getMatchedInst();
+
+                    // Check RS matching between ASM and LLVM IR
+                    if(ASMorIR == "IR"){
+                        
+                        for(int idd = 0; idd < tmpvec.size(); idd++){
+
+                            find = ifFind (dynamic_cast<MetaInst*>(tmpvec[idd]), AsmMatch);
+                     
+                            if (find !=-1){
+                                str += std::to_string(idd+1) + " ";
+                                // Handle the Case like add a1, a0, a0, wherein a0 has been used twice
+                                // We assume the reg mapping of the same inst will only hit once
+                                tmpvec[idd] = NULL;
+                                break;
+                            }
+                        }
+                    }
+                    else{
+                        // tmpvec.clear();
+                        for( int idd = 0; idd < Fuse.size(); idd++ ){
+                            asmOpVec =  Fuse[i]->getOperandList();
+                            
+                            for( int opid = 0; opid < asmOpVec.size(); opid++ ){
+
+                                find  = ifFind(dynamic_cast<MetaInst*>(asmOpVec[opid]), AsmMatch);
+
+                                if ( find != -1 ){
+                                    // Skip the mapped operands of the same instruction
+                                    // to address the case of like add a1, a0, a0, 
+                                    // wherein a0 has been used twice
+                                    if(ifFind( asmOpVec[opid],tmpvec)){
+                                        asmOpVec[opid]  = NULL;
+                                        continue;
+                                    }
+                                    // Instruction Id + "." + Op ID.
+                                    // E.g. 1.1, 2.1, 2.2, etc.
+                                    str += std::to_string(idd+1) + "." + std::to_string(opid+1);
+                                    tmpvec.push_back(asmOpVec[find]);
+                                    break;
+                                }
+                            }
+                            if(find != -1)
+                                break;
+                        }
+                        asmOpVec.clear();
+                    }       
+                }
+            }
+
+        dumpMapping(str);
+    }
+
+
+    //std::pair<std::string, std::string> 
+    MetaInst& MetaInst::buildOperandMapping(MetaInst* inst){
+
+        int         opNum      = this->getOperandNum();
+        auto        asmOpVec   = this->getOperandList();
+        auto        irOpVec    = inst->getOperandList();
+        auto        asmVec     = this->getMatchedInst();
+        auto        irVec      = inst->getMatchedInst();
+        std::string str        = this->getOriginInst();
+        MetaInst*   match      = NULL;
+
+        // Mapping dump instruction information
+        str += " : ";
+        str += inst->getOriginInst() + "  ";
+
+        // <ASM OP ID, IR OP ID>
+        std::map<int, int> mapping;
+
+        // 1-1 Mapping
+        if(asmVec.size() == 1 && irVec.size() == 1){
+            for(int id = 0; id < asmOpVec.size(); id++){
+                auto vec = dynamic_cast<MetaInst*>(asmOpVec[id])->getMatchedInst();
+                for(int ir = 0; ir < irOpVec.size(); ir++){
+                    if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
+                        mapping.insert(std::make_pair(id, ir));
+                        break;
+                    }
+                }
+            }
+        }
+
+        for(int i = 0; i < opNum; i++){
+            str += std::to_string(mapping.find(i)->second);
+        }
+
+        dumpMapping(str);
+    }
+
+
+
     MetaInst& MetaInst::trainInst(MetaInst* irinst){
         
+        std::cout << "DEBUG:: Entering function trainInst().....\n";
+
         int  flag       = 0;
         auto asmOpVec   = this->getInstType();
         auto irOpVec    = irinst->getInstType();
@@ -573,7 +751,6 @@ namespace MetaTrans {
         // std::vector<MetaInst*> tmp;
         std::vector<MetaInst*> fused;
 
-        std::cout << "DEBUG:: Entering function trainInst().....\n";
 
 
         //Perfect Match Case: 1-1 or N-N operation mapping
@@ -584,14 +761,14 @@ namespace MetaTrans {
         // Fuse IR TIR instructions
         if(asmOpCnt > irOpCnt){
             if(fuseInst(asmOpVec, irinst, fused))
-                this->buildMapping(fused);
+                this->buildMapping(fused,"IR");
             std::cout << "DEBUG:: Leaving function fuseInst().....\n";
 
         }
         // Fuse ASM TIR instructions
         else{
             if(fuseInst(irOpVec, this ,fused))
-                irinst->buildMapping(fused);
+                irinst->buildMapping(fused, "ASM");
         }
         // else if(asmOpCnt > irOpCnt){
 
@@ -612,7 +789,7 @@ namespace MetaTrans {
         return (*this);
     }
 
-    std::vector<MetaInst*>& MetaInst::findMatchedInst(std::vector<MetaInst*> irvec){
+    std::vector<MetaInst*> MetaInst::findMatchedInst(std::vector<MetaInst*> irvec){
         
         std::cout << "DEBUG:: Enter function findMatchedInst().....\n";
 
@@ -666,10 +843,10 @@ namespace MetaTrans {
 
         std::cout << "DEBUG:: Enter function trainEquivClass().....\n";
         //if(inst->getInstType()[0] == InstType::LOAD){
-        // asmvec = this->getUsers();
-        // irvec  = irinst->getUsers();
-        this->getUsers();
-        irinst->getUsers();
+        asmvec = this->getUsers();
+        irvec  = irinst->getUsers();
+        // this->getUsers();
+        // irinst->getUsers();
         std::cout << "DEBUG:: asmvec.size() = "<< asmvec.size() <<std::endl;
         std::cout << "DEBUG:: irvec.size() = "<< irvec.size() <<std::endl;
         std::cout << "DEBUG:: trainEquivClass:: getUsers() completes \n";
@@ -690,7 +867,7 @@ namespace MetaTrans {
         //std::cout << "DEBUG:: trainEquivClass:: asmvec size check completes \n";
 
         for(auto it = asmvec.begin(); it != asmvec.end(); it++){
-            // std::cout << "DEBUG:: trainEquivClass:: enter loops \n";
+             std::cout << "DEBUG:: trainEquivClass:: enter loops \n";
             
             if(!(*it)->getInstType().size())
                 continue;
@@ -703,6 +880,8 @@ namespace MetaTrans {
             
 
             retvec = (*it)->findMatchedInst(irvec);
+
+            std::cout << "findMatchedInst returns the vector size = " << retvec.size() << std::endl;
 
             // TODO: Ambiguous cases can be addressed if adding further hash check
                 if(retvec.size() == 1)
@@ -1060,6 +1239,8 @@ namespace MetaTrans {
                 irinst = matchvec[0]; 
                 std::cout << "DEBUG:: Calling function trainEquivClass().....\n";
                 (*inst)->trainEquivClass(irinst);
+                std::cout << "\nDEBUG:: TrainBB Completes the trainEquivClass().....\n";
+
 
                 // asmvec = (*inst)->getUsers();
                 // irvec  = irinst->getUsers();
