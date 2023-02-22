@@ -6,6 +6,15 @@
 #include "meta/MetaUtils.h"
 #include <utility>
 
+const std::string RED("\033[31m");
+const std::string GRN("\033[32m");
+const std::string YEL("\033[33m");
+const std::string CYN("\033[36m");
+const std::string MAG("\033[35m");
+const std::string RST("\033[0m");
+const std::string BOLD("\033[1m");
+
+
 namespace MetaTrans { 
     
 //===-------------------------------------------------------------------------------===//
@@ -563,7 +572,7 @@ namespace MetaTrans {
 
     void dumpMapping(std::string mapping){
 
-        std::cout << "\nCreate Instruction Mapping:\n" << mapping << std::endl;
+        std::cout <<  "\nCreate Instruction Mapping:\n" << BOLD << GRN << mapping << RST <<std::endl;
         std::cout << std::endl;
     }
 
@@ -588,6 +597,7 @@ namespace MetaTrans {
     }
 
     MetaInst& MetaInst::buildMapping(MetaInst* inst){
+        
 
         std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
 
@@ -599,7 +609,14 @@ namespace MetaTrans {
     
         std::cout <<"DEBUG:: Calling function buildOperandMapping().....\n";
 
-        this->buildOperandMapping(inst);
+        if(this->getOriginInst()!="PHI")
+            this->buildOperandMapping(inst);
+        else{ 
+            std::cout << "DEBUG:: Encounter PHI Node, Skip Operand Mapping\n";
+            dumpMapping(this->getOriginInst() + " : " + inst->getOriginInst());
+        }
+            
+       
 
         std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
 
@@ -763,7 +780,8 @@ namespace MetaTrans {
             if(it!=mapping.end())
                 str += std::to_string(it->second+1) + "  ";
             else{
-                std::cout << "\nERROR!! Unmapped Operand!! Invalid Mapping!!!\n";
+                std::cout << BOLD << RED << "\nERROR!! Unmapped Operand!! Invalid Mapping of "
+                          << this->getOriginInst() << " : " << inst->getOriginInst() << RST << std::endl;
                 break;
             }
         }
@@ -932,6 +950,9 @@ namespace MetaTrans {
             if( (*it)->getInstType()[0] == InstType::LOAD || (*it)->getInstType()[0] == InstType::STORE || 
                 (*it)->getInstType()[0] == InstType::BRANCH )
                 continue;
+
+            if( (*it)->getInstType()[0] == InstType::PHI)
+                (*it)->setOriginInst("PHI");
             
 
             retvec = (*it)->findMatchedInst(irvec);
@@ -941,7 +962,7 @@ namespace MetaTrans {
             // TODO: Ambiguous cases can be addressed if adding further hash check
                 if(retvec.size() == 1)
                     for(auto itt = retvec.begin();itt!=retvec.end();itt++)
-                        (*it)->trainInst(*itt);
+                            (*it)->trainInst(*itt);
             }
 
         return this;
