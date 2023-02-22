@@ -320,17 +320,17 @@ protected:
 
     unsigned long getHashcode();
 
-    void setHashcode(unsigned long hashCode);
+    MetaInst& setHashcode(unsigned long hashCode);
 
     std::string getDataRoot();
 
-    void setDataRoot(std::string s);
+    MetaInst& setDataRoot(std::string s);
     
     std::vector<Path *> &getAllPath();
 
     Path* getPath(int type);
 
-    void addToPath(Path* p);
+    MetaInst& addToPath(Path* p);
     
     std::vector<MetaInst *> findTheSameInst(MetaBB *bb);
 
@@ -463,7 +463,9 @@ public:
 
     MetaBB& setID(int id);
 
-    MetaBB& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
+    MetaBB& buildInstFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
+
+    MetaBB& buildInstGraphFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
 
     std::vector<int> getFeature();
 
