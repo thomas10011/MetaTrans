@@ -1,0 +1,672 @@
+
+
+<<== Coloring TIR for CFG: main ==>>
+-- Coloring Meta BB:  --
+IsBranch
+
+
+-- Coloring Meta BB End! S/L/B= 0, 0, 1 --
+-- Coloring Meta BB:  --
+IsStore 2
+Color: 0, Type: Data Compute
+8e80aa0(0) STORE,  -> 
+  8e76000(0) CALL,  -> 
+8e76000, type: 0, numLoad: 0, numStore: 0, numPHI: 0, numGEP: 0
+Color: 1, Type: Addressing
+8e80aa0(1) STORE,  -> 
+  8e857f0(1) ADD, MOV,  -> 
+    8e75b00(1) PHI,  -> 
+8e857f0, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: -1970315976
+IsStore 2
+Color: 2, Type: Data Compute
+8e82f10(2) STORE,  -> 
+  8e81fa0(2) REMAINDER,  -> 
+    8e81070(2) CALL,  -> 
+8e81fa0, type: 0, numLoad: 0, numStore: 0, numPHI: 0, numGEP: 0
+Color: 3, Type: Addressing
+8e82f10(3) STORE,  -> 
+  8e825a0(3) ADD, MOV,  -> 
+    8e75b00(3) PHI,  -> 
+8e825a0, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: -1040444653
+IsLoad 1
+Color: 4, Type: Addressing
+8e84080(4) LOAD,  -> 
+  8e83ab0(4) ADD, MOV,  -> 
+    8e834e0(4) ADD,  -> 
+      8e75b00(4) PHI,  -> 
+8e83ab0, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: -2012205123
+IsLoad 1
+Color: 5, Type: Addressing
+8e851f0(5) LOAD,  -> 
+  8e84c20(5) ADD, MOV,  -> 
+    8e84650(5) ADD,  -> 
+      8e75b00(5) PHI,  -> 
+8e84c20, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: -2012205123
+IsStore 2
+Color: 6, Type: Data Compute
+8e86f00(6) STORE,  -> 
+  8e86360(6) DIV,  -> 
+    8e85d90(6) MUL,  -> 
+      8e851f0(6) LOAD,  -> 
+      8e84080(6) LOAD,  -> 
+    8e81fa0(6) REMAINDER,  -> 
+      8e81070(6) CALL,  -> 
+8e86360, type: 0, numLoad: 2, numStore: 0, numPHI: 0, numGEP: 0
+Color: 7, Type: Addressing
+8e86f00(7) STORE,  -> 
+  8e86930(7) ADD, MOV,  -> 
+    8e75b00(7) PHI,  -> 
+8e86930, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: 429150111
+IsBranch
+Color: 8, Type: Control Flow
+8e87aa0(8) BRANCH,  -> 
+  8e874d0(8) COMPARE,  -> 
+    8e834e0(8) ADD,  -> 
+      8e75b00(8) PHI,  -> 
+8e874d0, type: 2, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+
+
+-- Coloring Meta BB End! S/L/B= 3, 2, 1 --
+-- Coloring Meta BB:  --
+IsLoad 1
+Color: 9, Type: Addressing
+8e88c10(9) LOAD,  -> 
+  8e880f0(9) ADD, MOV,  -> 
+    8e88640(9) PHI,  -> 
+8e880f0, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: -1970415827
+IsStore 2
+Color: 10, Type: Data Compute
+8e899a0(10) STORE,  -> 
+  8e893d0(10) SHIFT,  -> 
+    8e88c10(10) LOAD,  -> 
+8e893d0, type: 0, numLoad: 1, numStore: 0, numPHI: 0, numGEP: 0
+Color: 11, Type: Addressing
+8e899a0(11) STORE,  -> 
+  8e880f0(11) ADD, MOV,  -> 
+    8e88640(11) PHI,  -> 
+8e880f0, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: 470949594
+IsLoad 1
+Color: 12, Type: Addressing
+8e8a540(12) LOAD,  -> 
+  8e89f70(12) ADD, MOV,  -> 
+    8e88640(12) PHI,  -> 
+8e89f70, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: -1431815780
+IsLoad 1
+Color: 13, Type: Addressing
+8e89010(13) LOAD,  -> 
+  8e88e00(13) ADD, MOV,  -> 
+    8e88640(13) PHI,  -> 
+8e88e00, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: -2012218760
+IsStore 2
+Color: 14, Type: Data Compute
+8e83880(14) STORE,  -> 
+  8e836d0(14) XOR,  -> 
+    8e80e00(14) SUB,  -> 
+      8e808e0(14) AND,  -> 
+        8e891c0(14) ADD,  -> 
+          8e8c6a0(14) SHIFT,  -> 
+            8e8c0d0(14) MUL,  -> 
+              8e8a540(14) LOAD,  -> 
+              8e8a540(14) LOAD,  -> 
+            8e893d0(14) SHIFT,  -> 
+              8e88c10(14) LOAD,  -> 
+          8e89010(14) LOAD,  -> 
+        8e806c0(14) ADD,  -> 
+          8e8a540(14) LOAD,  -> 
+      8e893d0(14) SHIFT,  -> 
+        8e88c10(14) LOAD,  -> 
+    8e8a540(14) LOAD,  -> 
+8e836d0, type: 0, numLoad: 7, numStore: 0, numPHI: 0, numGEP: 0
+Color: 15, Type: Addressing
+8e83880(15) STORE,  -> 
+  8e89f70(15) ADD, MOV,  -> 
+    8e88640(15) PHI,  -> 
+8e89f70, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: 429172085
+IsStore 2
+Color: 16, Type: Data Compute
+8e84270(16) STORE,  -> 
+  8e83e50(16) OR,  -> 
+    8e83ca0(16) ADD,  -> 
+      8e836d0(16) XOR,  -> 
+        8e80e00(16) SUB,  -> 
+          8e808e0(16) AND,  -> 
+            8e891c0(16) ADD,  -> 
+              8e8c6a0(16) SHIFT,  -> 
+                8e8c0d0(16) MUL,  -> 
+                  8e8a540(16) LOAD,  -> 
+                  8e8a540(16) LOAD,  -> 
+                8e893d0(16) SHIFT,  -> 
+                  8e88c10(16) LOAD,  -> 
+              8e89010(16) LOAD,  -> 
+            8e806c0(16) ADD,  -> 
+              8e8a540(16) LOAD,  -> 
+          8e893d0(16) SHIFT,  -> 
+            8e88c10(16) LOAD,  -> 
+        8e8a540(16) LOAD,  -> 
+      8e893d0(16) SHIFT,  -> 
+        8e88c10(16) LOAD,  -> 
+    8e80c90(16) ADD,  -> 
+      8e808e0(16) AND,  -> 
+        8e891c0(16) ADD,  -> 
+          8e8c6a0(16) SHIFT,  -> 
+            8e8c0d0(16) MUL,  -> 
+              8e8a540(16) LOAD,  -> 
+              8e8a540(16) LOAD,  -> 
+            8e893d0(16) SHIFT,  -> 
+              8e88c10(16) LOAD,  -> 
+          8e89010(16) LOAD,  -> 
+        8e806c0(16) ADD,  -> 
+          8e8a540(16) LOAD,  -> 
+8e83e50, type: 0, numLoad: 13, numStore: 0, numPHI: 0, numGEP: 0
+Color: 17, Type: Addressing
+8e84270(17) STORE,  -> 
+  8e88e00(17) ADD, MOV,  -> 
+    8e88640(17) PHI,  -> 
+8e88e00, type: 1, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+hashCode: 241559165
+IsBranch
+Color: 18, Type: Control Flow
+8e849f0(18) BRANCH,  -> 
+  8e84840(18) COMPARE,  -> 
+    8e84420(18) ADD,  -> 
+      8e88640(18) PHI,  -> 
+8e84840, type: 2, numLoad: 0, numStore: 0, numPHI: 1, numGEP: 0
+
+
+-- Coloring Meta BB End! S/L/B= 3, 3, 1 --
+-- Coloring Meta BB:  --
+IsLoad 1
+Color: 19, Type: Addressing
+8e85f80(19) LOAD,  -> 
+  8e85b40(19) ADD, MOV,  -> 
+    8e859b0(19) CONVERT,  -> 
+      8e84fe0(19) REMAINDER,  -> 
+        8e84e10(19) CALL,  -> 
+8e85b40, type: 1, numLoad: 0, numStore: 0, numPHI: 0, numGEP: 0
+hashCode: -116714101
+IsBranch
+
+
+-- Coloring Meta BB End! S/L/B= 0, 1, 1 --
+
+
+<<== Coloring TIR for CFG End!  ==>>
+MetaFunction::MetaFunction(std::string JSON)
+inst address: 149840208, op_id: 0, operand address: 149605120 
+inst address: 149840208, op_id: 1, operand address: 149605552 
+inst address: 149840208, op_id: 1, operand address: 149605552 
+inst address: 149840208, op_id: 2, operand address: 149605632 
+inst address: 149932384, op_id: 3, operand address: 149605760 
+inst address: 149932384, op_id: 28, operand address: 149935776 
+inst address: 149932880, op_id: 4, operand address: 149605840 
+inst address: 149933280, op_id: 5, operand address: 149702624 
+inst address: 149933280, op_id: 3, operand address: 149605760 
+inst address: 149933280, op_id: 20, operand address: 149932384 
+inst address: 149933696, op_id: 21, operand address: 149932880 
+inst address: 149933696, op_id: 22, operand address: 149933280 
+inst address: 149934096, op_id: 4, operand address: 149605840 
+inst address: 149934576, op_id: 24, operand address: 149934096 
+inst address: 149934576, op_id: 6, operand address: 149702704 
+inst address: 149934976, op_id: 7, operand address: 149702784 
+inst address: 149934976, op_id: 3, operand address: 149605760 
+inst address: 149934976, op_id: 20, operand address: 149932384 
+inst address: 149935376, op_id: 25, operand address: 149934576 
+inst address: 149935376, op_id: 26, operand address: 149934976 
+inst address: 149935776, op_id: 20, operand address: 149932384 
+inst address: 149935776, op_id: 8, operand address: 149702864 
+inst address: 149936176, op_id: 7, operand address: 149702784 
+inst address: 149936176, op_id: 3, operand address: 149605760 
+inst address: 149936176, op_id: 28, operand address: 149935776 
+inst address: 149936576, op_id: 29, operand address: 149936176 
+inst address: 149936976, op_id: 20, operand address: 149932384 
+inst address: 149936976, op_id: 9, operand address: 149702544 
+inst address: 149937376, op_id: 7, operand address: 149702784 
+inst address: 149937376, op_id: 3, operand address: 149605760 
+inst address: 149937376, op_id: 31, operand address: 149936976 
+inst address: 149937776, op_id: 32, operand address: 149937376 
+inst address: 149938176, op_id: 33, operand address: 149937776 
+inst address: 149938176, op_id: 30, operand address: 149936576 
+inst address: 149938576, op_id: 34, operand address: 149938176 
+inst address: 149938576, op_id: 25, operand address: 149934576 
+inst address: 149938976, op_id: 10, operand address: 149702944 
+inst address: 149938976, op_id: 3, operand address: 149605760 
+inst address: 149938976, op_id: 20, operand address: 149932384 
+inst address: 149940016, op_id: 35, operand address: 149938576 
+inst address: 149940016, op_id: 36, operand address: 149938976 
+inst address: 149940416, op_id: 28, operand address: 149935776 
+inst address: 149940416, op_id: 11, operand address: 149703024 
+inst address: 149940816, op_id: 38, operand address: 149940416 
+inst address: 149876912, op_id: 61, operand address: 149973312 
+inst address: 149876912, op_id: 3, operand address: 149605760 
+inst address: 149877344, op_id: 7, operand address: 149702784 
+inst address: 149877344, op_id: 3, operand address: 149605760 
+inst address: 149877344, op_id: 40, operand address: 149876912 
+inst address: 149877744, op_id: 41, operand address: 149877344 
+inst address: 149878160, op_id: 42, operand address: 149877744 
+inst address: 149878160, op_id: 12, operand address: 149703104 
+inst address: 149878560, op_id: 43, operand address: 149878160 
+inst address: 149878560, op_id: 41, operand address: 149877344 
+inst address: 149966640, op_id: 10, operand address: 149702944 
+inst address: 149966640, op_id: 3, operand address: 149605760 
+inst address: 149966640, op_id: 40, operand address: 149876912 
+inst address: 149967040, op_id: 45, operand address: 149966640 
+inst address: 149967440, op_id: 46, operand address: 149967040 
+inst address: 149967440, op_id: 46, operand address: 149967040 
+inst address: 149967840, op_id: 47, operand address: 149967440 
+inst address: 149967840, op_id: 43, operand address: 149878160 
+inst address: 149968240, op_id: 5, operand address: 149702624 
+inst address: 149968240, op_id: 3, operand address: 149605760 
+inst address: 149968240, op_id: 40, operand address: 149876912 
+inst address: 149968640, op_id: 49, operand address: 149968240 
+inst address: 149969040, op_id: 48, operand address: 149967840 
+inst address: 149969040, op_id: 50, operand address: 149968640 
+inst address: 149969440, op_id: 46, operand address: 149967040 
+inst address: 149969440, op_id: 13, operand address: 149703184 
+inst address: 149969840, op_id: 51, operand address: 149969040 
+inst address: 149969840, op_id: 52, operand address: 149969440 
+inst address: 149970240, op_id: 53, operand address: 149969840 
+inst address: 149970240, op_id: 14, operand address: 149703264 
+inst address: 149970640, op_id: 53, operand address: 149969840 
+inst address: 149970640, op_id: 43, operand address: 149878160 
+inst address: 149971040, op_id: 55, operand address: 149970640 
+inst address: 149971040, op_id: 46, operand address: 149967040 
+inst address: 149971712, op_id: 56, operand address: 149971040 
+inst address: 149971712, op_id: 45, operand address: 149966640 
+inst address: 149972112, op_id: 56, operand address: 149971040 
+inst address: 149972112, op_id: 43, operand address: 149878160 
+inst address: 149972512, op_id: 58, operand address: 149972112 
+inst address: 149972512, op_id: 54, operand address: 149970240 
+inst address: 149972912, op_id: 59, operand address: 149972512 
+inst address: 149972912, op_id: 49, operand address: 149968240 
+inst address: 149973312, op_id: 40, operand address: 149876912 
+inst address: 149973312, op_id: 8, operand address: 149702864 
+inst address: 149973712, op_id: 61, operand address: 149973312 
+inst address: 149973712, op_id: 11, operand address: 149703024 
+inst address: 149974112, op_id: 62, operand address: 149973712 
+inst address: 149883440, op_id: 4, operand address: 149605840 
+inst address: 149844832, op_id: 64, operand address: 149883440 
+inst address: 149844832, op_id: 6, operand address: 149702704 
+inst address: 149845232, op_id: 65, operand address: 149844832 
+inst address: 149842224, op_id: 10, operand address: 149702944 
+inst address: 149842224, op_id: 3, operand address: 149605760 
+inst address: 149842224, op_id: 66, operand address: 149845232 
+inst address: 149842624, op_id: 67, operand address: 149842224 
+inst address: 149843024, op_id: 15, operand address: 149703344 
+inst address: 149843024, op_id: 68, operand address: 149842624 
+inst address: 149843024, op_id: 2, operand address: 149605632 
+inst address: 149843424, op_id: 1, operand address: 149605552 
+inst address: 149422832, op_id: 1, operand address: 149470192 
+inst address: 149943728, op_id: 6, operand address: 149943392 
+inst address: 149944400, op_id: 8, operand address: 149944064 
+inst address: 149837824, op_id: 10, operand address: 149944736 
+inst address: 149875872, op_id: 12, operand address: 149838160 
+inst address: 149875872, op_id: 36, operand address: 149585200 
+inst address: 149875408, op_id: 7, operand address: 149943728 
+inst address: 149875408, op_id: 35, operand address: 149584800 
+inst address: 149874928, op_id: 9, operand address: 149944400 
+inst address: 149874928, op_id: 31, operand address: 149985168 
+inst address: 149874528, op_id: 10, operand address: 149944736 
+inst address: 149874528, op_id: 33, operand address: 149985968 
+inst address: 149636960, op_id: 11, operand address: 149837824 
+inst address: 149636960, op_id: 37, operand address: 149585600 
+inst address: 149914928, op_id: 18, operand address: 149875872 
+inst address: 149914928, op_id: 17, operand address: 149875408 
+inst address: 149915728, op_id: 21, operand address: 149915328 
+inst address: 149916128, op_id: 22, operand address: 149915728 
+inst address: 149916528, op_id: 21, operand address: 149915328 
+inst address: 149916528, op_id: 23, operand address: 149916128 
+inst address: 149916928, op_id: 24, operand address: 149916528 
+inst address: 149983168, op_id: 21, operand address: 149915328 
+inst address: 149983168, op_id: 25, operand address: 149916928 
+inst address: 149983568, op_id: 16, operand address: 149874928 
+inst address: 149983968, op_id: 16, operand address: 149874928 
+inst address: 149984368, op_id: 21, operand address: 149915328 
+inst address: 149984368, op_id: 25, operand address: 149916928 
+inst address: 149984768, op_id: 29, operand address: 149984368 
+inst address: 149984768, op_id: 16, operand address: 149874928 
+inst address: 149985168, op_id: 16, operand address: 149874928 
+inst address: 149985568, op_id: 28, operand address: 149983968 
+inst address: 149985568, op_id: 27, operand address: 149983568 
+inst address: 149985968, op_id: 32, operand address: 149985568 
+inst address: 149985968, op_id: 26, operand address: 149983168 
+inst address: 149584400, op_id: 33, operand address: 149985968 
+inst address: 149584400, op_id: 15, operand address: 149874528 
+inst address: 149584800, op_id: 15, operand address: 149874528 
+inst address: 149585200, op_id: 14, operand address: 149636960 
+inst address: 149585600, op_id: 18, operand address: 149875872 
+inst address: 149586000, op_id: 36, operand address: 149585200 
+inst address: 149919216, op_id: 39, operand address: 149975808 
+inst address: 149838832, op_id: 41, operand address: 149919696 
+inst address: 149635232, op_id: 43, operand address: 149839200 
+inst address: 149636432, op_id: 46, operand address: 149636032 
+inst address: 149597936, op_id: 45, operand address: 149635632 
+inst address: 149597936, op_id: 69, operand address: 149541456 
+inst address: 149597392, op_id: 40, operand address: 149919216 
+inst address: 149597392, op_id: 67, operand address: 149540656 
+inst address: 149596896, op_id: 42, operand address: 149838832 
+inst address: 149596896, op_id: 68, operand address: 149541056 
+inst address: 149596432, op_id: 44, operand address: 149635232 
+inst address: 149596432, op_id: 70, operand address: 149541856 
+inst address: 149598400, op_id: 51, operand address: 149597936 
+inst address: 149535056, op_id: 50, operand address: 149597392 
+inst address: 149535456, op_id: 49, operand address: 149596896 
+inst address: 149535856, op_id: 52, operand address: 149598400 
+inst address: 149535856, op_id: 52, operand address: 149598400 
+inst address: 149536256, op_id: 55, operand address: 149535856 
+inst address: 149536256, op_id: 53, operand address: 149535056 
+inst address: 149536656, op_id: 54, operand address: 149535456 
+inst address: 149536656, op_id: 56, operand address: 149536256 
+inst address: 149537056, op_id: 52, operand address: 149598400 
+inst address: 149537456, op_id: 57, operand address: 149536656 
+inst address: 149537456, op_id: 58, operand address: 149537056 
+inst address: 149537856, op_id: 59, operand address: 149537456 
+inst address: 149538256, op_id: 59, operand address: 149537456 
+inst address: 149538256, op_id: 53, operand address: 149535056 
+inst address: 149538656, op_id: 61, operand address: 149538256 
+inst address: 149538656, op_id: 52, operand address: 149598400 
+inst address: 149539056, op_id: 62, operand address: 149538656 
+inst address: 149539056, op_id: 51, operand address: 149597936 
+inst address: 149539456, op_id: 62, operand address: 149538656 
+inst address: 149539456, op_id: 53, operand address: 149535056 
+inst address: 149539856, op_id: 64, operand address: 149539456 
+inst address: 149539856, op_id: 60, operand address: 149537856 
+inst address: 149540256, op_id: 65, operand address: 149539856 
+inst address: 149540256, op_id: 49, operand address: 149596896 
+inst address: 149540656, op_id: 49, operand address: 149596896 
+inst address: 149541056, op_id: 50, operand address: 149597392 
+inst address: 149541456, op_id: 48, operand address: 149596432 
+inst address: 149541856, op_id: 51, operand address: 149597936 
+inst address: 149542256, op_id: 69, operand address: 149541456 
+inst address: 149976240, op_id: 72, operand address: 149595760 
+inst address: 149976640, op_id: 73, operand address: 149976240 
+inst address: 149977056, op_id: 72, operand address: 149595760 
+inst address: 149977056, op_id: 74, operand address: 149976640 
+inst address: 149977856, op_id: 75, operand address: 149977056 
+inst address: 149977856, op_id: 76, operand address: 149977456 
+inst address: 149600336, op_id: 72, operand address: 149595760 
+inst address: 149600336, op_id: 77, operand address: 149977856 
+inst address: 149602080, op_id: 78, operand address: 149600336 
+inst address: 149514496, op_id: 80, operand address: 149602480 
+inst address: 149514896, op_id: 79, operand address: 149602080 
+inst address: 149514896, op_id: 81, operand address: 149514496 
+inst address: 149515296, op_id: 82, operand address: 149514896 
+inst address: 149516096, op_id: 84, operand address: 149515696 
+inst address: 149517696, op_id: 86, operand address: 149516496 
+x modular: 1.000000, id:0 y modular: 1.000000, id: 0
+x modular: 4.242641, id:1 y modular: 26.267851, id: 1
+x modular: 1.414214, id:2 y modular: 26.267851, id: 1
+x modular: 4.242641, id:3 y modular: 26.267851, id: 1
+x modular: 1.414214, id:4 y modular: 26.267851, id: 1
+0--->>>0
+-----------------------------------
+MetaBB: 0 <-> 0, Training Strats
+
+DEBUG:: Entering function trainBB.....
+DEBUG:: Checking Inst: ADDI
+DEBUG:: Checking Inst: LUI
+DEBUG:: Checking Inst: ADDI
+DEBUG:: Checking Inst: ADDI
+DEBUG:: Checking Inst: ADDI
+DEBUG:: Checking Inst: JAL
+DEBUG:: Checking Inst: LUI
+DEBUG:: Checking Inst: ADDI
+DEBUG:: Checking Inst: LUI
+DEBUG:: Checking Inst: ADDI
+DEBUG:: Checking Inst: LUI
+DEBUG:: Checking Inst: ADDI
+DEBUG:: Checking Inst: LUI
+DEBUG:: Checking Inst: LUI
+running MetaInst pass on function main ... 
+creating edges in graph...
+inst 0x8e75980,  type: call
+value address: 0x8e5e540; real type: Constant; operand number: 0#
+value address: 0x8e5e7d0; real type: Constant; operand number: 1#
+value address: 0x8e5e7d0; real type: Constant; operand number: 2#
+value address: 0x8e5e808; real type: Constant; operand number: 3#
+inst 0x8e75e80,  type: br
+value address: 0x8e5e970; real type: BasicBlock; operand number: 0#
+copying phi node chain ...
+basic block: 0x8e5eb10; value: 0x8e5e4b0; basic block: 0x8e5eb18; value: 0x8e60400; 
+value address: 0x8e5e4b0; real type: Constant; operand number: 0#
+value address: 0x8e60400; real type: Instruction; operand number: 1#
+
+inst 0x8e75b00,  type: phi
+value address: 0x8e5e4b0; real type: Constant; operand number: 0#
+value address: 0x8e60400; real type: Instruction; operand number: 1#
+inst 0x8e76000,  type: call
+value address: 0x8e5eb38; real type: Constant; operand number: 0#
+inst 0x8e857f0,  type: getelementptr
+value address: 0x8e5d950; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e5ea88; real type: Instruction; operand number: 2#
+inst 0x8e80aa0,  type: store
+value address: 0x8e5ec90; real type: Instruction; operand number: 0#
+value address: 0x8e5edc0; real type: Instruction; operand number: 1#
+inst 0x8e81070,  type: call
+value address: 0x8e5eb38; real type: Constant; operand number: 0#
+inst 0x8e81fa0,  type: srem
+value address: 0x8e5fa10; real type: Instruction; operand number: 0#
+value address: 0x8e5fb70; real type: Constant; operand number: 1#
+inst 0x8e825a0,  type: getelementptr
+value address: 0x8e5d9f0; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e5ea88; real type: Instruction; operand number: 2#
+inst 0x8e82f10,  type: store
+value address: 0x8e5fbe0; real type: Instruction; operand number: 0#
+value address: 0x8e5fc90; real type: Instruction; operand number: 1#
+inst 0x8e834e0,  type: add
+value address: 0x8e5ea88; real type: Instruction; operand number: 0#
+value address: 0x8e60390; real type: Constant; operand number: 1#
+inst 0x8e83ab0,  type: getelementptr
+value address: 0x8e5d9f0; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e60400; real type: Instruction; operand number: 2#
+inst 0x8e84080,  type: load
+value address: 0x8e604b0; real type: Instruction; operand number: 0#
+inst 0x8e84650,  type: add
+value address: 0x8e5ea88; real type: Instruction; operand number: 0#
+value address: 0x8e5de70; real type: Constant; operand number: 1#
+inst 0x8e84c20,  type: getelementptr
+value address: 0x8e5d9f0; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e605c0; real type: Instruction; operand number: 2#
+inst 0x8e851f0,  type: load
+value address: 0x8e60670; real type: Instruction; operand number: 0#
+inst 0x8e85d90,  type: mul
+value address: 0x8e606f0; real type: Instruction; operand number: 0#
+value address: 0x8e60530; real type: Instruction; operand number: 1#
+inst 0x8e86360,  type: sdiv
+value address: 0x8e5fb20; real type: Instruction; operand number: 0#
+value address: 0x8e5fbe0; real type: Instruction; operand number: 1#
+inst 0x8e86930,  type: getelementptr
+value address: 0x8e5da90; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e5ea88; real type: Instruction; operand number: 2#
+inst 0x8e86f00,  type: store
+value address: 0x8e60780; real type: Instruction; operand number: 0#
+value address: 0x8e60830; real type: Instruction; operand number: 1#
+inst 0x8e874d0,  type: icmp
+value address: 0x8e60400; real type: Instruction; operand number: 0#
+value address: 0x8e60920; real type: Constant; operand number: 1#
+inst 0x8e87aa0,  type: br
+value address: 0x8e60990; real type: Instruction; operand number: 0#
+value address: 0x8e5e970; real type: BasicBlock; operand number: 1#
+value address: 0x8e5ea30; real type: BasicBlock; operand number: 2#
+copying phi node chain ...
+basic block: 0x8e60c60; value: 0x8e61ad0; basic block: 0x8e60c68; value: 0x8e5e4b0; 
+value address: 0x8e61ad0; real type: Instruction; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+
+inst 0x8e88640,  type: phi
+value address: 0x8e61ad0; real type: Instruction; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+inst 0x8e880f0,  type: getelementptr
+value address: 0x8e5d9f0; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e60bd8; real type: Instruction; operand number: 2#
+inst 0x8e88c10,  type: load
+value address: 0x8e60ce0; real type: Instruction; operand number: 0#
+inst 0x8e893d0,  type: shl
+value address: 0x8e60d60; real type: Instruction; operand number: 0#
+value address: 0x8e60db0; real type: Constant; operand number: 1#
+inst 0x8e899a0,  type: store
+value address: 0x8e60e20; real type: Instruction; operand number: 0#
+value address: 0x8e60ce0; real type: Instruction; operand number: 1#
+inst 0x8e89f70,  type: getelementptr
+value address: 0x8e5da90; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e60bd8; real type: Instruction; operand number: 2#
+inst 0x8e8a540,  type: load
+value address: 0x8e60f60; real type: Instruction; operand number: 0#
+inst 0x8e8c0d0,  type: mul
+value address: 0x8e60fe0; real type: Instruction; operand number: 0#
+value address: 0x8e60fe0; real type: Instruction; operand number: 1#
+inst 0x8e8c6a0,  type: lshr
+value address: 0x8e61070; real type: Instruction; operand number: 0#
+value address: 0x8e60e20; real type: Instruction; operand number: 1#
+inst 0x8e88e00,  type: getelementptr
+value address: 0x8e5d950; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e60bd8; real type: Instruction; operand number: 2#
+inst 0x8e89010,  type: load
+value address: 0x8e611b0; real type: Instruction; operand number: 0#
+inst 0x8e891c0,  type: add
+value address: 0x8e61100; real type: Instruction; operand number: 0#
+value address: 0x8e61230; real type: Instruction; operand number: 1#
+inst 0x8e806c0,  type: add
+value address: 0x8e60fe0; real type: Instruction; operand number: 0#
+value address: 0x8e61520; real type: Constant; operand number: 1#
+inst 0x8e808e0,  type: and
+value address: 0x8e612c0; real type: Instruction; operand number: 0#
+value address: 0x8e61590; real type: Instruction; operand number: 1#
+inst 0x8e80c90,  type: add
+value address: 0x8e61620; real type: Instruction; operand number: 0#
+value address: 0x8e61670; real type: Constant; operand number: 1#
+inst 0x8e80e00,  type: sub
+value address: 0x8e61620; real type: Instruction; operand number: 0#
+value address: 0x8e60e20; real type: Instruction; operand number: 1#
+inst 0x8e836d0,  type: xor
+value address: 0x8e61770; real type: Instruction; operand number: 0#
+value address: 0x8e60fe0; real type: Instruction; operand number: 1#
+inst 0x8e83880,  type: store
+value address: 0x8e61800; real type: Instruction; operand number: 0#
+value address: 0x8e60f60; real type: Instruction; operand number: 1#
+inst 0x8e83ca0,  type: add
+value address: 0x8e61800; real type: Instruction; operand number: 0#
+value address: 0x8e60e20; real type: Instruction; operand number: 1#
+inst 0x8e83e50,  type: or
+value address: 0x8e61920; real type: Instruction; operand number: 0#
+value address: 0x8e616e0; real type: Instruction; operand number: 1#
+inst 0x8e84270,  type: store
+value address: 0x8e619b0; real type: Instruction; operand number: 0#
+value address: 0x8e611b0; real type: Instruction; operand number: 1#
+inst 0x8e84420,  type: add
+value address: 0x8e60bd8; real type: Instruction; operand number: 0#
+value address: 0x8e60390; real type: Constant; operand number: 1#
+inst 0x8e84840,  type: icmp
+value address: 0x8e61ad0; real type: Instruction; operand number: 0#
+value address: 0x8e60920; real type: Constant; operand number: 1#
+inst 0x8e849f0,  type: br
+value address: 0x8e61b60; real type: Instruction; operand number: 0#
+value address: 0x8e5ea30; real type: BasicBlock; operand number: 1#
+value address: 0x8e61bb0; real type: BasicBlock; operand number: 2#
+inst 0x8e84e10,  type: call
+value address: 0x8e5eb38; real type: Constant; operand number: 0#
+inst 0x8e84fe0,  type: srem
+value address: 0x8e61e20; real type: Instruction; operand number: 0#
+value address: 0x8e5fb70; real type: Constant; operand number: 1#
+inst 0x8e859b0,  type: sext
+value address: 0x8e61f30; real type: Instruction; operand number: 0#
+inst 0x8e85b40,  type: getelementptr
+value address: 0x8e5da90; real type: Constant; operand number: 0#
+value address: 0x8e5e4b0; real type: Constant; operand number: 1#
+value address: 0x8e61fa0; real type: Instruction; operand number: 2#
+inst 0x8e85f80,  type: load
+value address: 0x8e62050; real type: Instruction; operand number: 0#
+inst 0x8e86180,  type: call
+value address: 0x8e62180; real type: Constant; operand number: 0#
+value address: 0x8e620d0; real type: Instruction; operand number: 1#
+value address: 0x8e5e808; real type: Constant; operand number: 2#
+inst 0x8e86550,  type: ret
+value address: 0x8e5e7d0; real type: Constant; operand number: 0#
+successor number of 0x8e653c0 is 1
+degree of 0x8e75980 { call } is 0; oprand number is 4
+degree of 0x8e75e80 { branch } is 0; oprand number is 0
+successor number of 0x8e8c9c0 is 2
+degree of 0x8e75b00 { phi } is 5; oprand number is 2
+degree of 0x8e76000 { call } is 1; oprand number is 1
+degree of 0x8e857f0 { add, mov } is 1; oprand number is 3
+degree of 0x8e80aa0 { store } is 0; oprand number is 2
+degree of 0x8e81070 { call } is 1; oprand number is 1
+degree of 0x8e81fa0 { remainder } is 2; oprand number is 2
+degree of 0x8e825a0 { add, mov } is 1; oprand number is 3
+degree of 0x8e82f10 { store } is 0; oprand number is 2
+degree of 0x8e834e0 { add } is 3; oprand number is 2
+degree of 0x8e83ab0 { add, mov } is 1; oprand number is 3
+degree of 0x8e84080 { load } is 1; oprand number is 1
+degree of 0x8e84650 { add } is 1; oprand number is 2
+degree of 0x8e84c20 { add, mov } is 1; oprand number is 3
+degree of 0x8e851f0 { load } is 1; oprand number is 1
+degree of 0x8e85d90 { mul } is 1; oprand number is 2
+degree of 0x8e86360 { div } is 1; oprand number is 2
+degree of 0x8e86930 { add, mov } is 1; oprand number is 3
+degree of 0x8e86f00 { store } is 0; oprand number is 2
+degree of 0x8e874d0 { compare } is 1; oprand number is 2
+degree of 0x8e87aa0 { branch } is 0; oprand number is 1
+successor number of 0x8e88070 is 2
+degree of 0x8e88640 { phi } is 4; oprand number is 2
+degree of 0x8e880f0 { add, mov } is 2; oprand number is 3
+degree of 0x8e88c10 { load } is 1; oprand number is 1
+degree of 0x8e893d0 { shift } is 4; oprand number is 2
+degree of 0x8e899a0 { store } is 0; oprand number is 2
+degree of 0x8e89f70 { add, mov } is 2; oprand number is 3
+degree of 0x8e8a540 { load } is 4; oprand number is 1
+degree of 0x8e8c0d0 { mul } is 1; oprand number is 2
+degree of 0x8e8c6a0 { shift } is 1; oprand number is 2
+degree of 0x8e88e00 { add, mov } is 2; oprand number is 3
+degree of 0x8e89010 { load } is 1; oprand number is 1
+degree of 0x8e891c0 { add } is 1; oprand number is 2
+degree of 0x8e806c0 { add } is 1; oprand number is 2
+degree of 0x8e808e0 { and } is 2; oprand number is 2
+degree of 0x8e80c90 { add } is 1; oprand number is 2
+degree of 0x8e80e00 { sub } is 1; oprand number is 2
+degree of 0x8e836d0 { xor } is 2; oprand number is 2
+degree of 0x8e83880 { store } is 0; oprand number is 2
+degree of 0x8e83ca0 { add } is 1; oprand number is 2
+degree of 0x8e83e50 { or } is 1; oprand number is 2
+degree of 0x8e84270 { store } is 0; oprand number is 2
+degree of 0x8e84420 { add } is 2; oprand number is 2
+degree of 0x8e84840 { compare } is 1; oprand number is 2
+degree of 0x8e849f0 { branch } is 0; oprand number is 1
+successor number of 0x8e84b80 is 0
+degree of 0x8e84e10 { call } is 1; oprand number is 1
+degree of 0x8e84fe0 { remainder } is 1; oprand number is 2
+degree of 0x8e859b0 { convert } is 1; oprand number is 1
+degree of 0x8e85b40 { add, mov } is 1; oprand number is 3
+degree of 0x8e85f80 { load } is 1; oprand number is 1
+degree of 0x8e86180 { call } is 0; oprand number is 3
+degree of 0x8e86550 { branch } is 0; oprand number is 1
+
+BCÀŞ5     b0$MY¾fmû´OÈ$D2 !  Ã  !       #‘AÈI29’„%‹b€EB’B¤28K
+2RˆHpÄ!#D‡ŒA’dÈ± CFˆ É2R„*(*1|°\‘ ÅÈ   ‰      2"H	 d…“"¤„“"ã„¡LŠŒ„¤LXsHº 
+s`€€ƒHV 2•aŒDª
++Á 70G 
+S # 4æ Q  ­   Â"øÿÿÿÿs‡ph‡rhxx‡tpz(y ÜáÜ¡ ¢ÒÁÚ€ÊáÂÚÀÊaèáä¡î!ÈĞ€€p‡whz‡p€xHw8‡6h‡p t èAê¡ bè!ÆaÚ äáè¡ÆŞAÚ@êÁÌ¡ä¡æ!ô¡ < zy8‡r ‡60‡rz¨y(‡y ÖÀè@ÒØ`ÂÖ€Ø`ÌÖ Ø`ä¡Ø!ğÚ`ÂÁÊ¡ä¡æŞAÊØ@ €m † À6„ , µ!%Šÿÿÿÿ ? $Âä!Ú¡Ú Ş!ÜÊA wxw(€p‡whz‡p€xHw8‡6h‡p t èAê¡ bè!ÆaÚ äáè¡ÆŞAÚ@êÁÌ¡ä¡æ!ô¡ < zy8‡r ‡60‡rz¨y(‡y ÖÀè@ÒØ`ÂÖ€Ø`ÌÖ Ø`ä¡Ø!ğÚ`ÂÁÊ¡ä¡æŞAÊØ` @
+ ¶9`H¨6œòÿÿÿÿ æ áĞåĞğğéàôPò ¸Ã;¸C9 „;¼CĞƒ<„<ÀC:¸Ã9´A;„= @òPå ó@á0ëĞğ ï@å0ôğòĞâPæ`å m0é å à@ĞC8ÈÃ9”=´9”C8ĞC=ÈC9Ì°v@âôÀkl°äÀk`l°íÀk åÀá€lĞóöPm å0ôğòPÀ†#	€3Ò Ø@(€m –À6Ìÿÿÿÿ€I     ˆ@ˆ	CaD˜@‰²LaÂ $
+   .yH‡y{°:hƒzp‡up‡w¸whƒzp‡up‡w¸wØ`åĞí åĞğ v@z`tĞé`t v@mq x q xĞî`tĞ³r€J’A†Œ4B¶`ËvH I     °C"BP€      €R‚     ìŒ€`  @   `‡tÆ°$    @@ Cª†P          `H   €     ©.Â`      €   ‰…  ²@    2˜LŒ	&GÆC
+ÚEv¹]vÓAîz[\–ƒàe9(,—‡ó ¨Dn²@Ó´¾êJdPS¨ 2@F)*º¢§ÛeĞø=§ƒÒsP‰¬ Q…PG    ±  —   3€Äáf=ˆC8„ÃŒB€yxs˜qæ íô€3BÂÁÎ¡f0=ˆC8„ƒÌ=ÈC=Œ=ÌxŒtp{yH‡ppzpvx‡p ‡Ììá0n0ãğğP3ÄŞ!Ø!Âaf0‰;¼ƒ;ĞC9´<¼ƒ<„;Ìğv`{h7h‡rh7€‡p‡p`v(vøvx‡w€‡_‡q‡r˜‡y˜,îğîàõÀì0bÈ¡ä¡Ì¡ä¡ÜaÊ!ÄÊaÖC9ÈC9˜C9ÈC9¸Ã8”C8ˆ;”Ã/¼ƒ<ü‚;Ô;°ÃÇi‡pX‡rpƒthx`‡t‡t ‡ÎSî òPäã@á ìP3 (ÜÁÂAÒ!ÜÜàäáêfQ8°C:œƒ;ÌP$v`{h7`‡wxx˜QLôğP3jÊaè!ŞÁ~ä¡Ì!ğaT…ƒ8ÌÃ;°C=ĞC9üÂ<äC;ˆÃ;°ÃŒÅ
+‡y˜‡w‡tz(r˜\ãìÀåPó0#ÁÒAäáØáŞfH;°ƒ=´ƒ„Ã8ŒC9ÌÃ<¸Á9ÈÃ;Ô<ÌH´qv`q‡qX‡ÛÆì`íàğ å0å öPnã0å0óàéàäPø0#âìaÂØáì!æ!Ä!Ø!è!f ;¼C=¸9”ƒ9ÌX¼ppwxzzH‡wp  y   @   rH Cˆ	r2H #Œ‘‘ÑD (d<12B!£X 7ŠR8è    wchar_sizetarget-abilp64dSmallDataLimitclang version 13.0.1 (https://github.com/llvm/llvm-project.git 75e33f71c2dae584b13a7d1186ae0a038ba98838) #Ã2‚00#C3Ã`Çƒ!3Ì2˜ ŒØØìÚ\ÚŞÈêØÊ\ÌØÂÎæFDI…Í®Í%¬Ìn”` ©     
+r(‡w€zXp˜C=¸Ã8°C9ĞÃ‚æÆ¡èAÂÁæ!è!ŞÁ4ã`çPá ä@á çPô°€y(‡p`vx‡qz(rXpœÃ8´;¤ƒ=”   Ñ     Ì<¤ƒ;œ;”= ƒ<”C8Ã   a      D,   
+   „†:ˆœÈ¡1P€€K 
+P€Fùÿÿê0"r"    ñ0     "GÈQD    ÃY intomnipotent charSimple C/C++ TBAAllvm.loop.mustprogress   „ÈY!HØ
+aÂ6Ï†Á¡¢CSEËŠ6    #‚`ÀLÈqÌ4ÁˆQ„ 8T'ÃæÃD ÀˆQ„ 8Ö‹u2tQ1l@Â  ÁÀ@'Ã7Œ‰b`Œ!$ÔÉPš3l@Â 7$Ì2A0P•€A'Ctc\7l@Á t2¬ŒA ØÉd€P0 áÀ	bÀ €Â(<l@0Á `Ğ€ÀÄJ0 (¡7g ³ƒŒE‚s°e¥“Áæ  `ŒÃA0`ú`‚•ƒ€   [†"°¶I`m˜ÀÚ2<µe˜kËPIÑ–¬-ƒX[.°¶`X[†3¬-ƒÖ–¡$iË   !1     ! ’0…q ‰²0@Ğ8     q      2"„Æ        e  I   ”8         2   L      X       X            M      d                                          ÿÿÿÿ $              ÿÿÿÿ$              ÿÿÿÿ$  i             ÿÿÿÿ               ÿÿÿÿ               ÿÿÿÿ               ÿÿÿÿ   o            ÿÿÿÿ       ]  !   ”÷    .strabc.str.1mainprintfrand12.0.0git 3ff663a86b297658a066731c075993a4e24063e8riscv64-unknown-unknownmix.c.L.str.L.str.1     -----------------------------------

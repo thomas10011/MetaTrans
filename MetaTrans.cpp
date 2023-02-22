@@ -597,6 +597,10 @@ namespace MetaTrans {
         this->MatchedInst.push_back(inst);
         inst->MatchedInst.push_back(this);
     
+        std::cout <<"DEBUG:: Calling function buildOperandMapping().....\n";
+
+        this->buildOperandMapping(inst);
+
         std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
 
         return *this;
@@ -607,6 +611,7 @@ namespace MetaTrans {
     //std::pair<std::string, std::string> 
     MetaInst& MetaInst::buildOperandMapping(std::vector<MetaInst*> Fuse, std::string ASMorIR){
 
+        std::cout <<"DEBUG:: Entering function buildOperandMapping().....\n";
 
         int                         opNum      = this->getOperandNum();
         MetaInst*                   match      = NULL;
@@ -705,11 +710,15 @@ namespace MetaTrans {
             }
 
         dumpMapping(str);
+        std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
+
     }
 
 
     //std::pair<std::string, std::string> 
     MetaInst& MetaInst::buildOperandMapping(MetaInst* inst){
+        
+        std::cout <<"DEBUG:: Entering function buildOperandMapping().....\n";
 
         int         opNum      = this->getOperandNum();
         auto        asmOpVec   = this->getOperandList();
@@ -718,6 +727,7 @@ namespace MetaTrans {
         auto        irVec      = inst->getMatchedInst();
         std::string str        = this->getOriginInst();
         MetaInst*   match      = NULL;
+        int         find       = 0;
 
         // Mapping dump instruction information
         str += " : ";
@@ -733,17 +743,34 @@ namespace MetaTrans {
                 for(int ir = 0; ir < irOpVec.size(); ir++){
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
                         mapping.insert(std::make_pair(id, ir));
+                        find++;
                         break;
                     }
                 }
             }
         }
 
+        // Handle the case that only one LOAD parent instruction is matched
+        // And two RS cannot be naturally matched
+        if(find == 1 && opNum == 2){
+            int i  = opNum - mapping.begin()->first - 1;
+            int ii = opNum - mapping.begin()->second - 1 ;
+            mapping.insert(std::make_pair(i, ii));
+        }
+
         for(int i = 0; i < opNum; i++){
-            str += std::to_string(mapping.find(i)->second);
+            auto it = mapping.find(i);
+            if(it!=mapping.end())
+                str += std::to_string(it->second+1) + "  ";
+            else{
+                std::cout << "\nERROR!! Unmapped Operand!! Invalid Mapping!!!\n";
+                break;
+            }
         }
 
         dumpMapping(str);
+        std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
+
     }
 
 
@@ -764,12 +791,22 @@ namespace MetaTrans {
 
 
         //Perfect Match Case: 1-1 or N-N operation mapping
+        // CASE: (asmOpCnt  ==  irOpCnt)
         if(this->hasSameType(irinst)){
+            std::cout << "DEBUG:: trainInst() found the Same Type between IR and ASM \n";
             this->buildMapping(irinst);
         }
 
         // Fuse IR TIR instructions
-        if(asmOpCnt > irOpCnt){
+        else if(asmOpCnt > irOpCnt){
+            std::cout << "DEBUG:: asmOpCnt = " << asmOpCnt
+                      << ", irOpCnt = " << irOpCnt
+                      << "\n        asminst = " << this->getOriginInst()
+                      << ", asm->type[0] = " << this->getInstType()[0]
+                      << "\n        irinst = " << irinst->getOriginInst()
+                      << ", ir->type[0] = " << irinst->getInstType()[0]
+                      << std::endl;
+
             if(fuseInst(asmOpVec, irinst, fused))
                 this->buildMapping(fused,"IR");
             std::cout << "DEBUG:: Leaving function fuseInst().....\n";
@@ -777,6 +814,14 @@ namespace MetaTrans {
         }
         // Fuse ASM TIR instructions
         else{
+            std::cout << "DEBUG:: asmOpCnt = " << asmOpCnt
+                      << ", irOpCnt = " << irOpCnt
+                      << "\n        asminst = " << this->getOriginInst()
+                      << ", asm->type[0] = " << this->getInstType()[0]
+                      << "\n        irinst = " << irinst->getOriginInst()
+                      << ", ir->type[0] = " << irinst->getInstType()[0]
+                      << std::endl;
+
             if(fuseInst(irOpVec, this ,fused))
                 irinst->buildMapping(fused, "ASM");
         }
@@ -896,7 +941,7 @@ namespace MetaTrans {
             // TODO: Ambiguous cases can be addressed if adding further hash check
                 if(retvec.size() == 1)
                     for(auto itt = retvec.begin();itt!=retvec.end();itt++)
-                        this->trainInst(*itt);
+                        (*it)->trainInst(*itt);
             }
 
         return this;
@@ -1211,7 +1256,8 @@ namespace MetaTrans {
             //if((*inst)->getInstType()[0] !=InstType::LOAD && (*inst)->getInstType()[0] !=InstType::STORE)
             std::cout << "DEBUG:: Checking Inst: "<< (*inst)->getOriginInst()<< std::endl;
 
-            if((*inst)->ifMatched()){
+            if((*inst)->ifMatched() && (*inst)->getInstType()[0] != InstType::LOAD){
+                
                 std::cout << "DEBUG:: Calling function QualifiedForMatch().....\n";
                 auto res = (*inst)->QualifiedForMatch();
                 if(res){
@@ -1235,9 +1281,22 @@ namespace MetaTrans {
                 (*inst)->trainControlFlow();
             
 
-            if((*inst)->getInstType()[0] == InstType::LOAD && !(*inst)->ifMatched()){
+            if((*inst)->getInstType()[0] == InstType::LOAD ){
+                std::vector<MetaInst*> matchvec;
                 // TODO:: CHECK If implict LOAD/STORE operations within an instruction can be traversed correctly
-                auto matchvec = (*inst)->findTheSameInst(irbb);
+                if((*inst)->ifMatched()){
+                    matchvec = (*inst)->getMatchedInst();
+                    std::cout << "DEBUG:: In trainBB():: ASM instruction: " << (*inst)->getOriginInst()
+                              << " has been mathced to IR instruction: " <<  matchvec[0]->getOriginInst()
+                              << std::endl;
+                }                 
+                else{
+                    matchvec = (*inst)->findTheSameInst(irbb);
+                    if(matchvec.size() != 0 )
+                        std::cout   << "DEBUG:: In trainBB():: ASM LOAD: " << (*inst)->getOriginInst()
+                                    << " Find a new match in IR: " <<  matchvec[0]->getOriginInst()
+                                    << std::endl;
+                }
                 // Skip unmatched or ambiguous instructions 
                 // Can be optimized to address ambiguity if needed
                 if(matchvec.size() != 1 ){

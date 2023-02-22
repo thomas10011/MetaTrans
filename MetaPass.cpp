@@ -12,7 +12,9 @@ namespace MetaTrans {
 
     MetaFunctionPass::~MetaFunctionPass() {
         std::string funcs = MetaUtil::vectorToJsonString(metaFuncs);
-        MetaUtil::writeToFile(funcs, "/opt/BinaryTranslation/test/IR.json");
+        std::string name = getenv("HOME");
+        std::string IRJSON = name + "/ir.json";
+        MetaUtil::writeToFile(funcs, IRJSON);
 
         processMatch();
 
@@ -20,7 +22,9 @@ namespace MetaTrans {
     }
 
     void MetaFunctionPass::processMatch() {
-        std::string asmStr = MetaUtil::readFromFile("/opt/BinaryTranslation/test/asm.json");
+        std::string name = getenv("HOME");
+        std::string ASMJSON = name + "/asm.json";
+        std::string asmStr = MetaUtil::readFromFile(ASMJSON);
         
         llvm::Expected<json::Value> expect = json::parse(asmStr);
         if (Error e = expect.takeError()) {
