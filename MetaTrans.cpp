@@ -269,12 +269,23 @@ namespace MetaTrans {
     }
 
     MetaInst& MetaInst::buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+
+        std::string     originInst  = JSON["originInst"].getAsString().getValue().str();
+        std::string     dataRoot    = JSON["dataRoot"]  .getAsString().getValue().str();
+        unsigned long   hashCode    = JSON.getInteger("hashCode").getValue();
+        int64_t         id          = JSON.getInteger("id")      .getValue();
+
+        (*this)
+            .setOriginInst (originInst)
+            .setHashcode   (hashCode)
+            .setDataRoot   (dataRoot)
+            .setID         (id)
+            ;
+
         json::Array& ops = *(JSON["type"].getAsArray());
-        std::string originInst = JSON["originInst"].getAsString().getValue().str();
-        (*this).setOriginInst(originInst);
         for (int i = 0; i < ops.size(); ++i) {
-            std::string op = ops[i].getAsString().getValue().str();
-            addInstType(MetaUtil::stringToInstType(op));
+            std::string op_str = ops[i].getAsString().getValue().str();
+            addInstType(MetaUtil::stringToInstType(op_str));
         }
 
         this->paths.resize(3);
@@ -288,10 +299,6 @@ namespace MetaTrans {
             }
         }
 
-        unsigned long _hashCode = JSON.getInteger("hashCode").getValue();
-        this->hashCode = _hashCode;
-        std::string dataRoot = JSON["dataRoot"].getAsString().getValue().str();
-        this->dataRoot = dataRoot;
         return *this;
     }
 
@@ -386,11 +393,14 @@ namespace MetaTrans {
 
     unsigned long MetaInst::getHashcode() {return hashCode;}
 
-    void MetaInst::setHashcode(unsigned long _hashCode) {hashCode = _hashCode;}
+    MetaInst& MetaInst::setHashcode(unsigned long _hashCode) {
+        hashCode = _hashCode;
+        return *this;
+    }
 
     std::string MetaInst::getDataRoot() {return dataRoot;}
 
-    void MetaInst::setDataRoot(std::string s) {dataRoot = s;}
+    MetaInst& MetaInst::setDataRoot(std::string s) { dataRoot = s; return *this; }
 
     std::vector<Path *>& MetaInst::getAllPath() { return paths; }
 
@@ -402,8 +412,9 @@ namespace MetaTrans {
             paths[index]->numStore << paths[index]->numPHI << paths[index]->numGEP << std::endl;
     }
 
-    void MetaInst::addToPath(Path* p) {
+    MetaInst& MetaInst::addToPath(Path* p) {
         paths[p->type] = p;
+        return *this;
     }
 
     std::vector<MetaInst *> MetaInst::findTheSameInst(MetaBB *bb) {
@@ -1091,25 +1102,12 @@ namespace MetaTrans {
 
     MetaBB& MetaBB::setID(int id) { this->id = id; return* this; }
 
-    MetaBB& MetaBB::buildFromJSON(json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
-
+    MetaBB& MetaBB::buildInstGraphFromJSON(json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
         json::Array& insts = *(JSON["instList"].getAsArray());
-
-        for (auto iter = insts.begin(); iter != insts.end(); ++iter) {
-            int64_t inst_id = (*iter).getAsObject()->getInteger("id").getValue();
-            bool isMetaPhi = (*iter).getAsObject()->getBoolean("isMetaPhi").getValue();
-            MetaInst& newInst = isMetaPhi ? *buildPhi(true) : *buildInstruction();
-            tempOperandMap[inst_id] = &newInst;
-            // 构建 Meta Instruction
-            newInst
-                .setParent(this)
-                .setID(inst_id)
-                ;
-        }
 
         for (int i = 0; i < insts.size(); ++i) {
             json::Object& inst = *(insts[i].getAsObject());
-            json::Array& ops = *(inst.getArray("operandList"));
+            json::Array&  ops  = *(inst.getArray("operandList"));
             
             // 连上 Meta Instruction 之间的边
             for (int j = 0; j < ops.size(); ++j) {
@@ -1117,16 +1115,33 @@ namespace MetaTrans {
                 assert(instList[i]);
                 instList[i]->addOperand(tempOperandMap[op_id]);
             }
-            instList[i]->buildFromJSON(*(insts[i].getAsObject()), tempBBMap, tempOperandMap);
+        }
+
+    }
+
+    MetaBB& MetaBB::buildInstFromJSON(json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+
+        json::Array& insts = *(JSON["instList"].getAsArray());
+
+        for (auto iter = insts.begin(); iter != insts.end(); ++iter) {
+            int64_t     inst_id     = (*iter).getAsObject()->getInteger("id").getValue();
+            bool        isMetaPhi   = (*iter).getAsObject()->getBoolean("isMetaPhi").getValue();
+            MetaInst*   newInst     = isMetaPhi ? buildPhi(true) : buildInstruction();
+            tempOperandMap[inst_id] = newInst;
+            // 构建 Meta Instruction
+            (*newInst)
+                .setParent     (this)
+                .buildFromJSON (*(iter->getAsObject()), tempBBMap, tempOperandMap)
+                ;
         }
 
         (*this)
-            .addFeature(JSON["load"].getAsInteger().getValue())
-            .addFeature(JSON["store"].getAsInteger().getValue())
-            .addFeature(JSON["in"].getAsInteger().getValue())
-            .addFeature(JSON["out"].getAsInteger().getValue())
-            .setEntry((MetaInst*)tempOperandMap[JSON["entry"].getAsInteger().getValue()])
-            .setTerminator((MetaInst*)tempOperandMap[JSON["terminator"].getAsInteger().getValue()])
+            .addFeature     (JSON["load"]   .getAsInteger().getValue())
+            .addFeature     (JSON["store"]  .getAsInteger().getValue())
+            .addFeature     (JSON["in"]     .getAsInteger().getValue())
+            .addFeature     (JSON["out"]    .getAsInteger().getValue())
+            .setEntry       ((MetaInst*)tempOperandMap[JSON["entry"]     .getAsInteger().getValue()])
+            .setTerminator  ((MetaInst*)tempOperandMap[JSON["terminator"].getAsInteger().getValue()])
             ;
     }
 
@@ -1334,6 +1349,8 @@ namespace MetaTrans {
                 .setParent(this)
                 .setID(bbID)
                 ;
+            // 递归构建 Meta BB
+            newBB.buildInstFromJSON(*((*iter).getAsObject()), tempBBMap, tempOperandMap);
         }
 
         for (int i = 0; i < blocks.size(); ++i) {
@@ -1345,8 +1362,7 @@ namespace MetaTrans {
                 assert(tempBBMap[suc_id]);
                 bbs[i]->addNextBB(tempBBMap[suc_id]);
             }
-            // 递归构建 Meta BB
-            bbs[i]->buildFromJSON(*(blocks[i].getAsObject()), tempBBMap, tempOperandMap);
+            bbs[i]->buildInstGraphFromJSON(*(blocks[i].getAsObject()), tempBBMap, tempOperandMap);
         }
 
         (*this)
