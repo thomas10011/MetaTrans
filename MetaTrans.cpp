@@ -1115,7 +1115,6 @@ namespace MetaTrans {
             for (int j = 0; j < ops.size(); ++j) {
                 int64_t op_id = ops[j].getAsInteger().getValue();
                 assert(instList[i]);
-                printf("inst address: %d, op_id: %d, operand address: %d \n", instList[i], op_id, tempOperandMap[op_id]);
                 instList[i]->addOperand(tempOperandMap[op_id]);
             }
             instList[i]->buildFromJSON(*(insts[i].getAsObject()), tempBBMap, tempOperandMap);
