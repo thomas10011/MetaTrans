@@ -47,10 +47,21 @@ namespace MetaTrans {
                                                                     .getBBMatchResult()
                                                                     ;
                     // print match result.
+                    printf("<<<<<<<<<<<<<<<<<<<< BB Match Result >>>>>>>>>>>>>>>>>>>>\n");
+                    printf("\nFunction Name: %s\n\n", mF->getFunctionName().c_str());
                     for (auto pair = result.begin(); pair != result.end(); ++pair) {
-                        printf("%d--->>>%d\n", pair->first->getID(), pair->second->getID());
+                        MetaBB& x = *(pair->first);
+                        MetaBB& y = *(pair->second);
+                        std::vector<int> x_f = x.getFeature();
+                        std::vector<int> y_f = y.getFeature();
+                        printf(
+                            "ASM BB num: %d --->>> IR BB num: %d  ||  features: [%d, %d, %d, %d], features: [%d, %d, %d, %d]\n",
+                            x.getID(), y.getID(),
+                            x_f[0], x_f[1], x_f[2], x_f[3],
+                            y_f[0], y_f[1], y_f[2], y_f[3]
+                        );
                     }
-                    printf("-----------------------------------\n");
+                    printf("\n<<<<<<<<<<<<<<<<<<<< End Match Result >>>>>>>>>>>>>>>>>>>>\n\n");
                     for (auto pair = result.begin(); pair != result.end(); ++pair) {
                         printf("MetaBB: %d <-> %d, Training Strats\n",pair->first->getID(), pair->second->getID() );
                         pair->first->trainBB(pair->second);
