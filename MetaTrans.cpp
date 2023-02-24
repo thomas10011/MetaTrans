@@ -546,6 +546,28 @@ namespace MetaTrans {
 
     }
 
+    bool ifOrderMatters(InstType type){
+        
+        switch(type){
+            case InstType::ADD:
+            case InstType::LOAD:
+            case InstType::CALL:
+            case InstType::JUMP:
+            case InstType::MUL:
+            case InstType::AND:
+            case InstType::OR:
+            case InstType::XOR:
+            case InstType::SWAP:
+            case InstType::MAX:
+            case InstType::MIN:
+            case InstType::NEG:
+                return false;
+            default:
+                return true;
+        }
+        
+    }
+
     int ifFind(MetaInst* inst, std::vector<MetaInst*> vec){
         if(inst == NULL){
             std::cout << "Warning:: NULL Metainst in ifFind()!\n";
@@ -752,6 +774,26 @@ namespace MetaTrans {
 
         // <ASM OP ID, IR OP ID>
         std::map<int, int> mapping;
+        std::cout << "DEBUG:: buildOperandMapping() This->getOperandNum = " << opNum << std::endl;
+        std::cout << "DEBUG:: buildOperandMapping() inst->getOperandNum = " << inst->getOperandNum() << std::endl;
+
+        if(opNum != inst->getOperandNum()){
+            std::cout << BOLD << RED << "ERROR:: Operand Number mismatched between IR & ASM! STOP buildOperandMapping()!\n" << RST;
+            return *this;
+        }
+           
+
+        if(this->getInstType().size() == 1 && inst->getInstType().size() == 1)
+            // Unordered Operations can directly dump sequence
+            if(!ifOrderMatters(this->getInstType()[0])){
+                std::cout << "DEBUG:: Operand Ordering Unnecessary according to InstType check\n";
+                for(int i = 0; i < opNum; i++)
+                    str +=  std::to_string(i+1) + " ";
+                dumpMapping(str);
+                return *this;
+            }  
+
+
 
         // 1-1 Mapping
         if(asmVec.size() == 1 && irVec.size() == 1){
@@ -760,6 +802,8 @@ namespace MetaTrans {
                 for(int ir = 0; ir < irOpVec.size(); ir++){
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
                         mapping.insert(std::make_pair(id, ir));
+                        std::cout << "DEBUG:: buildOperandMapping() builds operand pair < "
+                        << id << ", " << ir << " >"<<std::endl;
                         find++;
                         break;
                     }
@@ -789,6 +833,7 @@ namespace MetaTrans {
         dumpMapping(str);
         std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
 
+        return *this;
     }
 
 
