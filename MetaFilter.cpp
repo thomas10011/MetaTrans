@@ -27,7 +27,14 @@ namespace MetaTrans {
     void MetaConstantFilter::doFilter(FilterTarget& target, FilterChain& chain) {
         MetaFunctionBuilder& builder = dynamic_cast<MetaFunctionBuilder&>(target);
         // do something
-
+        Module& module = *(builder.F->getParent());
+        std::unordered_map<Constant*, MetaConstant*> map = builder.constantMap;
+        
+        printf("number of global values: %d\nnumber of alias: %d\n", module.getGlobalList().size(), module.getAliasList().size());
+        for (auto& global : module.getGlobalList()) {
+            printf("meta address for global var %s is: %d\n", global.getName().str().c_str(), map[&global]);
+        }
+        
         chain.doFilter(target);
     }
 
