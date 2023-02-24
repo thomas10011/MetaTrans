@@ -122,6 +122,10 @@ class MetaConstant : public MetaOperand {
 private:
 protected:
 
+    std::string name;
+
+    bool global;
+
     DataType type;
 
     DataUnion value;
@@ -159,8 +163,16 @@ public:
     MetaConstant& setValue(double v);
 
     MetaConstant& setParent(MetaFunction* p);
+
+    MetaConstant& setName(std::string name);
+
+    MetaConstant& setGlobal(bool v);
+
+    bool isGlobal();
     
     virtual bool isMetaConstant() override;
+
+    std::string getName();
 
     std::string virtual toString() override;
 

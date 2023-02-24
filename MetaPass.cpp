@@ -166,7 +166,7 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function Builder implementation.
 
-    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr), typeMap(nullptr) {
+    MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr), typeMap(nullptr), buildCount(0) {
         filterManager
             .addFilter(new MetaArgFilter())
             .addFilter(new MetaConstantFilter())
@@ -181,8 +181,8 @@ namespace MetaTrans {
     MetaFunctionBuilder& MetaFunctionBuilder::clearAuxMaps() {
         bbMap       .clear();
         instMap     .clear();
-        constantMap .clear();
         argMap      .clear();
+        // constantMap .clear();
         return *this;
     }
 
@@ -203,7 +203,10 @@ namespace MetaTrans {
             .buildMetaElements()
             .buildGraph()
             .buildMetaData();
+
         MetaUtil::paintColor(mF, globalColor++);
+        buildCount++;
+
         return mF;
     }
 
@@ -214,15 +217,13 @@ namespace MetaTrans {
 
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaElements() {
         // create all meta basic block and instructions recursively.
+        (*this)
+            .createGlobalVar()
+            .createMetaArgs()
+            ;
+                
         for (auto bb = F->begin(); bb != F->end(); ++bb) {
-            (*this)
-                .createMetaBB(*bb);
-        }
-        // create all arguments;
-        for (auto arg_iter = F->arg_begin(); arg_iter != F->arg_end(); ++arg_iter) {
-            MetaArgument* arg = new MetaArgument();
-            argMap[&*arg_iter] = arg;
-            mF->addArgument(arg);
+            createMetaBB(*bb);
         }
         return *this;
     }
@@ -247,6 +248,34 @@ namespace MetaTrans {
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaData() {
         filterManager.filter(*this);
         return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::createGlobalVar() {
+        if (buildCount > 0) return *this;
+
+        Module& m = *(F->getParent());
+
+        for (auto& global : m.getGlobalList()) {
+            MetaConstant* mc = new MetaConstant();
+            (*mc)
+                .setGlobal(true)
+                .setName(global.getName().str())
+                ;
+
+            mF->addConstant(constantMap[&global] = mc);
+            // printf("meta address for global var %s is: %d\n", global.getName().str().c_str(), map[&global]);
+        }
+
+        return *this;
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaArgs() {
+        // create all arguments;
+        for (auto arg_iter = F->arg_begin(); arg_iter != F->arg_end(); ++arg_iter) {
+            mF->addArgument(argMap[&*arg_iter] = new MetaArgument());
+        }
+        return *this;
+
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b) {
@@ -274,6 +303,7 @@ namespace MetaTrans {
             // Ugly, but works.
             if (Constant* c = dyn_cast<Constant>(value)) {
                 if (constantMap.find(c) != constantMap.end()) continue;
+                printf("WARN: creating constant when process operand.\n");
                 mF->addConstant(constantMap[c] = new MetaConstant());
             }
         }

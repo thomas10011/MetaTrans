@@ -116,6 +116,10 @@ namespace MetaTrans {
 
     MetaFunction* MetaConstant::getParent() { return parent; }
 
+    MetaConstant& MetaConstant::setName(std::string name) { this->name = name; return *this; }
+
+    MetaConstant& MetaConstant::setGlobal(bool v) { global = v; return *this; }
+
     MetaConstant& MetaConstant::setValue(int8_t v) {
         if (type != DataType::INT) return *this;
         value.int_8_val = v; 
@@ -158,6 +162,10 @@ namespace MetaTrans {
     }
 
     bool MetaConstant::isMetaConstant() { return true; }
+
+    bool MetaConstant::isGlobal() { return global; }
+
+    std::string MetaConstant::getName() { return name; }
 
     std::string MetaConstant::toString() {
         std::string str = "";

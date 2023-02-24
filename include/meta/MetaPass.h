@@ -8,98 +8,108 @@ extern int globalColor;
 
 namespace MetaTrans {
     
-    /// An simple implementation of Builder Pattern.
-    /// This class is used to create Instruction Graph for each Function. 
-    class MetaFunctionBuilder : public FilterTarget {
+/// An simple implementation of Builder Pattern.
+/// This class is used to create Instruction Graph for each Function. 
+class MetaFunctionBuilder : public FilterTarget {
 
-        protected:
+private:
 
-            friend class MetaArgFilter;
-            friend class MetaConstantFilter;
-            friend class MetaInstFilter;
-            friend class MetaBBFilter;
-            friend class MetaFuncFilter;
-            friend class MetaIDFilter;
-            friend class MetaFeatureFilter;
+    int buildCount;
 
-            Function* F;
+protected:
 
-            MetaFunction* mF;
+    friend class MetaArgFilter;
+    friend class MetaConstantFilter;
+    friend class MetaInstFilter;
+    friend class MetaBBFilter;
+    friend class MetaFuncFilter;
+    friend class MetaIDFilter;
+    friend class MetaFeatureFilter;
 
-            std::unordered_map<unsigned, std::vector<InstType>>*    typeMap;
+    Function* F;
 
-            // Auxiliary map, record the reflection between primitive type and Meta type.
-            std::unordered_map<BasicBlock*, MetaBB*>                bbMap;
+    MetaFunction* mF;
 
-            std::unordered_map<Instruction*, MetaInst*>             instMap;
+    std::unordered_map<unsigned, std::vector<InstType>>*    typeMap;
 
-            std::unordered_map<Constant*, MetaConstant*>            constantMap;
+    // Auxiliary map, record the reflection between primitive type and Meta type.
+    std::unordered_map<BasicBlock*, MetaBB*>                bbMap;
 
-            std::unordered_map<Argument*, MetaArgument*>            argMap;
+    std::unordered_map<Instruction*, MetaInst*>             instMap;
 
-            FilterManager                                           filterManager;
+    std::unordered_map<Constant*, MetaConstant*>            constantMap;
 
-            MetaFunctionBuilder&    clearAuxMaps                    ();
+    std::unordered_map<Argument*, MetaArgument*>            argMap;
 
-            MetaFunctionBuilder&    buildMetaFunction               ();
-            
-            MetaFunctionBuilder&    buildMetaElements               ();
-                                                                    
-            // build denpendency graph between instructions.
-            MetaFunctionBuilder&    buildGraph                      ();
+    FilterManager                                           filterManager;
 
-            // use responsibility pattern to create meta data.
-            MetaFunctionBuilder&    buildMetaData                   ();
-            
-            // create a meta bb correspond to a llvm bb insde a meta function.
-            MetaFunctionBuilder&    createMetaBB                    (BasicBlock& b);
+    MetaFunctionBuilder&    clearAuxMaps                    ();
 
-            // create a meta instruction correspond to a llvm instruction inside a meta bb. 
-            MetaFunctionBuilder&    createMetaInst                  (Instruction& i, MetaBB& b);
+    MetaFunctionBuilder&    buildMetaFunction               ();
+    
+    MetaFunctionBuilder&    buildMetaElements               ();
+                                                            
+    // build denpendency graph between instructions.
+    MetaFunctionBuilder&    buildGraph                      ();
 
-            // create meta operand for an llvm instruction.
-            MetaFunctionBuilder&    createMetaOperand               (Instruction& i);
+    // use responsibility pattern to create meta data.
+    MetaFunctionBuilder&    buildMetaData                   ();
 
-            MetaOperand*            findMetaOperand                  (Value* v);
+    MetaFunctionBuilder&    createMetaArgs                  ();
 
-            // copy instruction dependencies from LLVM IR.
-            void                    copyDependencies                (Instruction* curInst);
+    MetaFunctionBuilder&    createGlobalVar                 ();
+    
+    // create a meta bb correspond to a llvm bb insde a meta function.
+    MetaFunctionBuilder&    createMetaBB                    (BasicBlock& b);
 
-            void                    copyDependencies                (PHINode* curInst);
+    // create a meta instruction correspond to a llvm instruction inside a meta bb. 
+    MetaFunctionBuilder&    createMetaInst                  (Instruction& i, MetaBB& b);
 
-        public:
-            
-                                    MetaFunctionBuilder             ();
+    // create meta operand for an llvm instruction.
+    MetaFunctionBuilder&    createMetaOperand               (Instruction& i);
 
-            MetaFunctionBuilder&    setFunction                     (Function* F);
+    MetaOperand*            findMetaOperand                  (Value* v);
 
-            MetaFunctionBuilder&    setTypeMap                      (std::unordered_map<unsigned, std::vector<InstType>>* typeMap);
+    int                     getNumFuncs                     ();
 
-            MetaFunction*           build                           ();
+    // copy instruction dependencies from LLVM IR.
+    void                    copyDependencies                (Instruction* curInst);
 
-    };
+    void                    copyDependencies                (PHINode* curInst);
 
-    struct MetaFunctionPass : public llvm::FunctionPass {
+public:
+    
+                            MetaFunctionBuilder             ();
 
-        static char ID;
+    MetaFunctionBuilder&    setFunction                     (Function* F);
 
-        static std::unordered_map<std::string, unsigned int> str_inst_map;
+    MetaFunctionBuilder&    setTypeMap                      (std::unordered_map<unsigned, std::vector<InstType>>* typeMap);
 
-        // singleton type map.
-        // Providing a map from LLVM Instruction type to TIR Instruction type.
-        std::unordered_map<unsigned, std::vector<InstType>>* typeMap;
+    MetaFunction*           build                           ();
 
-        MetaFunctionBuilder builder;
+};
 
-        std::vector<MetaFunction*> metaFuncs;
+struct MetaFunctionPass : public llvm::FunctionPass {
 
-        MetaFunctionPass();
+    static char ID;
 
-        ~MetaFunctionPass();
+    static std::unordered_map<std::string, unsigned int> str_inst_map;
 
-        bool runOnFunction(Function & F) override;
+    // singleton type map.
+    // Providing a map from LLVM Instruction type to TIR Instruction type.
+    std::unordered_map<unsigned, std::vector<InstType>>* typeMap;
 
-        void processMatch();
+    MetaFunctionBuilder builder;
 
-    };
+    std::vector<MetaFunction*> metaFuncs;
+
+    MetaFunctionPass();
+
+    ~MetaFunctionPass();
+
+    bool runOnFunction(Function & F) override;
+
+    void processMatch();
+
+};
 }
