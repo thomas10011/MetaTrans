@@ -257,6 +257,8 @@ protected:
 
     std::string dataRoot = "";
 
+    std::string globalSymbolName = "";
+
     std::vector<MetaInst*> MatchedInst;
 
     int FuseID;
@@ -332,7 +334,11 @@ protected:
 
     std::string getDataRoot();
 
+    std::string getGlobalSymbolName();
+
     MetaInst& setDataRoot(std::string s);
+
+    MetaInst& setGlobalSymbolName(std::string s);
     
     std::vector<Path *> &getAllPath();
 
@@ -364,7 +370,7 @@ protected:
 
     MetaInst* QualifiedForMatch();
 
-    MetaInst* trainControlFlow();
+    MetaInst* trainControlFlow(MetaInst* irinst);
 
     MetaInst* trainEquivClass(MetaInst* inst);
 
@@ -506,6 +512,8 @@ public:
     std::vector<MetaInst*>::iterator inst_begin();
 
     std::vector<MetaInst*>::iterator inst_end();
+
+    MetaInst* inst_last();
 
     std::vector<MetaBB*>::iterator next_begin();
 

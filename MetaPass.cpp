@@ -15,6 +15,7 @@ namespace MetaTrans {
         std::string name = getenv("HOME");
         std::string IRJSON = name + "/ir.json";
         MetaUtil::writeToFile(funcs, IRJSON);
+        std::cout << "MetaFunctionPass::~MetaFunctionPass ir.json IRJSON :: " << std::endl << funcs << std::endl;
 
         processMatch();
 
@@ -205,6 +206,7 @@ namespace MetaTrans {
             .buildMetaData();
 
         MetaUtil::paintColor(mF, globalColor++);
+        MetaUtil::setDataRoot(mF);
         buildCount++;
 
         return mF;

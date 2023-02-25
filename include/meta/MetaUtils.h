@@ -238,6 +238,12 @@ namespace MetaTrans {
 
             static unsigned long long getAvailableMemory();
 
+            static void setDataRoot(MetaFunction* MF);
+
+            static std::string findDataRoot(MetaInst* inst);
+
+            static std::string findDataRootRecursive(MetaOperand* inst, std::unordered_set<MetaOperand*> set);
+
     };
 
 

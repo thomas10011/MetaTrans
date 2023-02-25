@@ -278,6 +278,7 @@ namespace MetaTrans {
 
         std::string     originInst  = JSON["originInst"].getAsString().getValue().str();
         std::string     dataRoot    = JSON["dataRoot"]  .getAsString().getValue().str();
+        std::string     globalSymbolName    = JSON["globalSymbolName"]  .getAsString().getValue().str();
         unsigned long   hashCode    = JSON.getInteger("hashCode").getValue();
         int64_t         id          = JSON.getInteger("id")      .getValue();
 
@@ -285,6 +286,7 @@ namespace MetaTrans {
             .setOriginInst (originInst)
             .setHashcode   (hashCode)
             .setDataRoot   (dataRoot)
+            .setGlobalSymbolName   (globalSymbolName)
             .setID         (id)
             ;
 
@@ -355,19 +357,19 @@ namespace MetaTrans {
         for (MetaOperand* user : users) { userList = userList + std::to_string(user->getID()) + ","; }
         std::string path = "[";
         for (int i = 0; i < 3; i++) {
-            if(type[0] == InstType::LOAD && i == 1) {
+            if(this->isType(InstType::LOAD) && i == 1) {
                 if(paths.size() > i) {
                     Path *p = paths[i];
                     if(p) path += "[" + std::to_string(p->type) + "," +std::to_string(p->numLoad) + "," +std::to_string(p->numStore) + "," +std::to_string(p->numPHI) + "," +std::to_string(p->numGEP) + "]";
                 }
                 break;
-            } else if (type[0] == InstType::STORE && (i == 0 || i == 1)) {
+            } else if (this->isType(InstType::STORE) && (i == 0 || i == 1)) {
                 if(paths.size() > i) {
                     if (i == 1 && paths[0] && paths[i]) path += ",";
                     Path *p = paths[i];
                     if(p) path += "[" + std::to_string(p->type) + "," +std::to_string(p->numLoad) + "," +std::to_string(p->numStore) + "," +std::to_string(p->numPHI) + "," +std::to_string(p->numGEP) + "]";
                 }
-            } else if (type[0] == InstType::BRANCH && (i == 2)) {
+            } else if (this->isType(InstType::BRANCH) && (i == 2)) {
                 if(paths.size() > i) {
                     Path *p = paths[i];
                     if(p) path += "[" + std::to_string(p->type) + "," +std::to_string(p->numLoad) + "," +std::to_string(p->numStore) + "," +std::to_string(p->numPHI) + "," +std::to_string(p->numGEP) + "]";
@@ -382,7 +384,7 @@ namespace MetaTrans {
         str = str + "{" + "\"id\":" + std::to_string(id) + ",\"originInst\":" + "\"" +
             originInst + "\"" +
             ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
-            "\"operandList\":" + opList + "," + "\"userList\":" + userList + "," + "\"path\":" + path + ",\"hashCode\":" + std::to_string(hashCode) + ",\"dataRoot\":\"" + dataRoot + "\"}";
+            "\"operandList\":" + opList + "," + "\"userList\":" + userList + "," + "\"path\":" + path + ",\"hashCode\":" + std::to_string(hashCode) + ",\"dataRoot\":\"" + dataRoot + "\",\"globalSymbolName\":\"" + globalSymbolName + "\"}";
         return str;
     }
 
@@ -406,7 +408,11 @@ namespace MetaTrans {
 
     std::string MetaInst::getDataRoot() {return dataRoot;}
 
+    std::string MetaInst::getGlobalSymbolName() {return globalSymbolName;}
+
     MetaInst& MetaInst::setDataRoot(std::string s) { dataRoot = s; return *this; }
+
+    MetaInst& MetaInst::setGlobalSymbolName(std::string s) { globalSymbolName = s; return *this; }
 
     std::vector<Path *>& MetaInst::getAllPath() { return paths; }
 
@@ -423,10 +429,38 @@ namespace MetaTrans {
         return *this;
     }
 
+    // According to <Learning-Phase Algorithm> - Match Load/Store
     std::vector<MetaInst *> MetaInst::findTheSameInst(MetaBB *bb) {
-        std::cout << "Enter findTheSameInst" << std::endl;
+        std::cout << "Enter findTheSameInst for asmInst: " << std::hex << this << std::oct << std::endl;
         std::vector<MetaInst *> ans;
-        // Compare with hashCode
+
+        // 1. if only one load/store/branch, directly match
+        // Each bb only have 1 branch or jump and it's in the end instruction
+        if(this->isType(InstType::BRANCH)) {
+            if(bb->inst_last()->isType(InstType::BRANCH)) {
+                ans.push_back(bb->inst_last());
+                return ans;
+            }
+        }
+
+        // 2. TODO: Compare with dataRoot: if global->match name;
+        if(dataRoot == "RISCV_GLOBAL") {
+            std::string asmGlobalName = globalSymbolName;
+            for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
+                MetaInst *IRinst = *it;
+                // std::string rootAns = MetaUtil::findDataRoot(IRinst);
+                if(IRinst->getDataRoot() == "TIR_GLOBAL") {
+                    std::string rootAns = this->getGlobalSymbolName();
+                    if(rootAns == asmGlobalName) {
+                        std::cout << "findTheSameGlobalVariable " << rootAns << ": " << std::hex << IRinst << std::oct << std::endl;
+                        ans.push_back(IRinst);
+                        return ans;
+                    }
+                }
+            }
+        }
+
+        // 3. Compare with hashCode
         if(hashCode != 0) {
             for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
                 MetaInst *inst = *it;
@@ -436,13 +470,14 @@ namespace MetaTrans {
                 }
             }
         }
-        // Find the instruction has same path: each /data compute/addressing/control flow/ path has the same numLoad, numStore, numPHI, numGEP
+
+        // 4. (Optional) Find the instruction has same path: each data compute/addressing/control flow path has the same numLoad, numStore, numPHI, numGEP be seen as the same Path
         for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
             MetaInst *inst = *it;
             std::vector<Path *> anotherPath = inst->getAllPath();
             // std::cout << inst->toString() << std::endl;
-            if (inst->isType(type[0])) {
-                if(type[0] == InstType::BRANCH) {
+            if (inst->isType(type[0])) { // TODO: fix if is the same type, not to use index 0 in case of AMO instr.
+                if(this->isType(InstType::BRANCH)) {
                   if(paths[2] != nullptr && anotherPath[2] != nullptr) {
                     inst->dumpPath(2);
                     if (*(paths[2]) == *(anotherPath[2])) { // control flow
@@ -454,7 +489,7 @@ namespace MetaTrans {
                     if(paths[1] != nullptr && anotherPath[1] != nullptr){
                         inst->dumpPath(1);
                         if(*(paths[1]) == *(anotherPath[1])) { // addressing
-                            if(type[0] == InstType::STORE) {
+                            if(this->isType(InstType::STORE)) {
                                 if(paths[0] != nullptr && anotherPath[0] != nullptr){
                                     inst->dumpPath(0);
                                     if(*(paths[0]) == *(anotherPath[0])) { // data compute
@@ -1040,8 +1075,38 @@ namespace MetaTrans {
 
     std::vector<MetaInst*> MetaInst::getMatchedInst(){return this->MatchedInst;}
 
-    MetaInst* MetaInst::trainControlFlow(){
+
+    MetaInst* MetaInst::trainControlFlow(MetaInst* irinst){
+    // Used for train branch <-> icmp + branch
+        std::vector<MetaInst*> asmvec;
+        std::vector<MetaInst*> irvec;
+        std::vector<MetaInst*> retvec;
+        std::vector<MetaOperand*> asmOperands = this->getOperandList();
+        std::vector<MetaOperand*> irOperands = irinst->getOperandList();
+        for(auto it = asmOperands.begin(); it != asmOperands.end(); it++) if((*it)->isMetaInst()) asmvec.push_back((MetaInst*)(*it));
+        for(auto it = irOperands.begin(); it != irOperands.end(); it++) if((*it)->isMetaInst()) irvec.push_back((MetaInst*)(*it));
+
+        std::cout << "DEBUG:: Enter function trainControlFlow().....\n";
+        std::cout << "DEBUG:: asmvec.size() = "<< asmvec.size() <<std::endl;
+        std::cout << "DEBUG:: irvec.size() = "<< irvec.size() <<std::endl;
+
+        if(asmvec.size() == 0 || irvec.size()== 0)
+            return NULL;   
         
+        if(asmvec.size() == 1 && (asmvec[0])->isType(InstType::COMPARE)) {
+            // Either asmvec is 'icmp' instruction
+            retvec = (asmvec[0])->findMatchedInst(irvec);
+        }else {
+            // asmvec is arithmetic calculate for branch
+            // Train the current 'branch' instruction with irvec
+            retvec = this->findMatchedInst(irvec);
+        }
+
+        if(retvec.size() == 1)
+            for(auto itt = retvec.begin();itt!=retvec.end();itt++)
+                this->trainInst(*itt);
+
+        return this;
     }
 
 
@@ -1291,6 +1356,8 @@ namespace MetaTrans {
     std::vector<MetaInst*>::iterator MetaBB::inst_begin() { return instList.begin(); }
 
     std::vector<MetaInst*>::iterator MetaBB::inst_end() { return instList.end(); }
+    
+    MetaInst* MetaBB::inst_last() { return instList.back(); }
 
     std::vector<MetaBB*>::iterator MetaBB::next_begin() { return successors.begin(); }
 
@@ -1354,8 +1421,19 @@ namespace MetaTrans {
                 }
             }
                
-            if((*inst)->getInstType()[0] == InstType::BRANCH)
-                (*inst)->trainControlFlow();
+            if((*inst)->isType(InstType::BRANCH)) {
+                auto matchvec = (*inst)->findTheSameInst(irbb);
+                if(matchvec.size() != 1 ){
+                    if(matchvec.size() > 1)
+                        std::cout << "DEBUG:: Matched more than one branch instruction!\n";
+                    else
+                        std::cout << "DEBUG:: No branch instruction is matched!\n";
+                    continue;
+                }
+                irinst = matchvec[0]; 
+                std::cout << "DEBUG:: Calling function trainControlFlow().....\n";
+                (*inst)->trainControlFlow(irinst);
+            }
             
 
             if((*inst)->getInstType()[0] == InstType::LOAD ){
