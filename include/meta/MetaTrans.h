@@ -12,6 +12,7 @@
 #include "llvm/IR/Operator.h"
 
 #include "MetaData.h"
+#include "MetaStream.h"
 
 #include <vector>
 #include <unordered_map>
@@ -126,6 +127,8 @@ protected:
 
     bool global;
 
+    bool imm;
+
     DataType type;
 
     DataUnion value;
@@ -168,7 +171,11 @@ public:
 
     MetaConstant& setGlobal(bool v);
 
+    MetaConstant& setImm(bool v);
+
     bool isGlobal();
+
+    bool isImm();
     
     virtual bool isMetaConstant() override;
 
@@ -505,6 +512,8 @@ public:
 
     double similarity(MetaBB& bb);
 
+    Stream<MetaInst*> stream();
+
     std::vector<MetaInst*>::iterator begin();
 
     std::vector<MetaInst*>::iterator end();
@@ -590,6 +599,8 @@ public:
     MetaConstant* buildConstant();
 
     std::string toString();
+
+    Stream<MetaBB*> stream();
     
     std::vector<MetaBB*>& getBB();
 
@@ -643,9 +654,6 @@ public:
     // ...
     std::vector<std::map<std::string, std::string>> MTable;
 
-
-public:
-
     MappingTable* setName(std::string path);
     
     MappingTable* initTableMeta();
@@ -657,9 +665,42 @@ public:
     std::string getTableName(int id);
 
 
+};
+
+
+class MetaUnit {
+
+private:
+protected:
+
+    std::vector<MetaFunction*> funcs;
+
+    std::vector<MetaConstant*> globalVar;
+
+
+public:
+
+    MetaUnit();
+
+    MetaUnit& addFunc(MetaFunction* f);
+    
+    MetaUnit& addGlobalVar(MetaConstant* c);
+
+    Stream<MetaFunction*> stream(); 
+
+    std::vector<MetaFunction*>& getFuncList();
+
+    std::vector<MetaConstant*>& getGlobalVarList();
+    
+    std::vector<MetaFunction*>::iterator begin();
+
+    std::vector<MetaFunction*>::iterator end();
+
+    std::string toString();
 
 
 };
+
 
 
 } // namespace MetaTrans

@@ -106,13 +106,13 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Constant implementation.
 
-    MetaConstant::MetaConstant() : parent(nullptr) { }
+    MetaConstant::MetaConstant() : parent(nullptr), global(false), imm(false) { }
 
-    MetaConstant::MetaConstant(MetaFunction* p) : parent(p) { }
+    MetaConstant::MetaConstant(MetaFunction* p) : parent(p), global(false), imm(false) { }
 
     MetaConstant::~MetaConstant() { }
 
-    MetaConstant::MetaConstant(DataType ty) : type(ty) { }
+    MetaConstant::MetaConstant(DataType ty) : type(ty), parent(nullptr), global(false), imm(false) { }
 
     MetaConstant& MetaConstant::setDataType(DataType ty) { type = ty; }
 
@@ -125,6 +125,8 @@ namespace MetaTrans {
     MetaConstant& MetaConstant::setName(std::string name) { this->name = name; return *this; }
 
     MetaConstant& MetaConstant::setGlobal(bool v) { global = v; return *this; }
+
+    MetaConstant& MetaConstant::setImm(bool v) { imm = v; return *this; }
 
     MetaConstant& MetaConstant::setValue(int8_t v) {
         if (type != DataType::INT) return *this;
@@ -171,13 +173,17 @@ namespace MetaTrans {
 
     bool MetaConstant::isGlobal() { return global; }
 
+    bool MetaConstant::isImm() { return imm; }
+
     std::string MetaConstant::getName() { return name; }
 
     std::string MetaConstant::toString() {
         std::string str = "";
         return str + "{" 
-            + "\"id\":" + std::to_string(id) +
-            "}";
+            + "\"id\":" + std::to_string(id) + ","
+            + "\"isGloabl\":" + (global ? "true" : "false") + ","
+            + "\"isImm\":" + (imm ? "true" : "false")
+            + "}";
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -455,7 +461,7 @@ namespace MetaTrans {
             for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
                 MetaInst *IRinst = *it;
                 // std::string rootAns = MetaUtil::findDataRoot(IRinst);
-                if(IRinst->getDataRoot() == "TIR_GLOBAL") {
+                if(this->hasSameType(IRinst) && IRinst->getDataRoot() == "TIR_GLOBAL") {
                     std::string rootAns = this->getGlobalSymbolName();
                     if(rootAns == asmGlobalName) {
                         std::cout << "findTheSameGlobalVariable " << rootAns << ": " << std::hex << IRinst << std::oct << std::endl;
@@ -1370,6 +1376,8 @@ namespace MetaTrans {
         return dot / (bb.getModular() * bb.getModular());
     }
 
+    Stream<MetaInst*> MetaBB::stream() { Stream<MetaInst*> s(instList); return s; }
+
     std::vector<MetaInst*>::iterator MetaBB::begin() { return inst_begin(); }
 
     std::vector<MetaInst*>::iterator MetaBB::end() { return inst_end(); }
@@ -1714,6 +1722,8 @@ namespace MetaTrans {
             "}";
     }
 
+    Stream<MetaBB*> MetaFunction::stream() { Stream<MetaBB*> s(bbs); return s; }
+
     std::vector<MetaBB*>::iterator MetaFunction::begin() { return bb_begin(); }
 
     std::vector<MetaBB*>::iterator MetaFunction::end() { return bb_end(); }
@@ -1867,4 +1877,29 @@ namespace MetaTrans {
         return MappingName[id];
     }
 
-}
+//===-------------------------------------------------------------------------------===//
+/// MetaUnit implementation.
+
+    MetaUnit::MetaUnit() { }
+
+    MetaUnit& MetaUnit::addFunc(MetaFunction* f) { funcs.push_back(f); return *this; }
+
+    MetaUnit& MetaUnit::addGlobalVar(MetaConstant* c) { globalVar.push_back(c); return *this; }
+
+    Stream<MetaFunction*> MetaUnit::stream() { Stream<MetaFunction*> s(funcs); return s; } 
+
+    std::vector<MetaFunction*>& MetaUnit::getFuncList() { return funcs; }
+
+    std::vector<MetaConstant*>& MetaUnit::getGlobalVarList() { return globalVar; }
+    
+    std::vector<MetaFunction*>::iterator MetaUnit::begin() { return funcs.begin(); }
+
+    std::vector<MetaFunction*>::iterator MetaUnit::end() { return funcs.end(); }
+
+    std::string MetaUnit::toString() {
+        return "";
+    }
+
+
+
+} // end namespace MetaTrans
