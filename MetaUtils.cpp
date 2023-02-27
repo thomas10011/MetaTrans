@@ -401,7 +401,7 @@ namespace MetaTrans {
                         }
                     }
                 else {
-                    // TODO
+                    // TODO: isMetaPhi
                 }
             };
             std::cout << "\n\n-- Coloring Meta BB End! S/L/B= " << std::get<0>(counts) << ", " << std::get<1>(counts) << ", " << std::get<2>(counts) << " --" << "\n";
@@ -449,4 +449,45 @@ namespace MetaTrans {
         return (pages * page_size);
     }
 
+    void MetaUtil::setDataRoot(MetaFunction* mF) {
+        for (auto func_iter = mF->bb_begin(); func_iter != mF->bb_end(); ++func_iter) {
+            MetaBB* bb = *func_iter;
+            std::cout << "-- setDataRoot for MetaFunction: " << " --" << "\n";
+            for (auto bb_iter = bb->inst_begin(); bb_iter != bb->inst_end(); ++bb_iter) { 
+                MetaInst* inst = *bb_iter;
+                std::string ans = MetaUtil::findDataRoot(inst);
+                if(ans != "") {
+                    std::cout << "\t -- setDataRoot for inst: " << inst << ", ans -- " << ans << "\n";
+                    inst->setDataRoot("TIR_GLOBAL");
+                    inst->setGlobalSymbolName(ans);
+                }
+            }
+        }
+    }
+
+    std::string MetaUtil::findDataRoot(MetaInst* inst) {
+        std::unordered_set<MetaOperand*> s;
+        std::string ans = MetaUtil::findDataRootRecursive(inst, s);
+        return ans;
+    }
+
+    std::string MetaUtil::findDataRootRecursive(MetaOperand* inst, std::unordered_set<MetaOperand*> set) {
+        if(!inst || set.count(inst)) return "";
+        set.insert(inst);
+        if(inst->isMetaConstant()) {
+            if(((MetaConstant*)inst)->isGlobal()) {
+                return ((MetaConstant*)inst)->getName();
+            }
+        }
+        std::string ans = "";
+        if(inst->isMetaInst()) {
+            auto list = ((MetaInst*)inst)->getOperandList();
+            for(auto it = list.begin(); it != list.end(); it++) {
+                ans = findDataRootRecursive(*it, set);
+                if(ans != "") return ans;
+            }
+        }
+        set.erase(inst);
+        return ans;
+    }
 }

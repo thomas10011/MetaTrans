@@ -152,6 +152,13 @@ public:
 
     static void printInstOperand(Instruction* inst);
 
+    static void setDataRoot(MetaFunction* MF);
+
+    static std::string findDataRoot(MetaInst* inst);
+
+    static std::string findDataRootRecursive(MetaOperand* inst, std::unordered_set<MetaOperand*> set);
+
+
     template<typename T>
     static std::string typeVecToString(std::vector<T> type_vector) {
         static_assert(
