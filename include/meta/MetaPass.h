@@ -103,6 +103,8 @@ struct MetaFunctionPass : public llvm::FunctionPass {
 
     std::vector<MetaFunction*> metaFuncs;
 
+    MetaUnit* unit;
+
     MetaFunctionPass();
 
     ~MetaFunctionPass();

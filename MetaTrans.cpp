@@ -100,13 +100,13 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Constant implementation.
 
-    MetaConstant::MetaConstant() : parent(nullptr) { }
+    MetaConstant::MetaConstant() : parent(nullptr), global(false), imm(false) { }
 
-    MetaConstant::MetaConstant(MetaFunction* p) : parent(p) { }
+    MetaConstant::MetaConstant(MetaFunction* p) : parent(p), global(false), imm(false) { }
 
     MetaConstant::~MetaConstant() { }
 
-    MetaConstant::MetaConstant(DataType ty) : type(ty) { }
+    MetaConstant::MetaConstant(DataType ty) : type(ty), parent(nullptr), global(false), imm(false) { }
 
     MetaConstant& MetaConstant::setDataType(DataType ty) { type = ty; }
 
@@ -119,6 +119,8 @@ namespace MetaTrans {
     MetaConstant& MetaConstant::setName(std::string name) { this->name = name; return *this; }
 
     MetaConstant& MetaConstant::setGlobal(bool v) { global = v; return *this; }
+
+    MetaConstant& MetaConstant::setImm(bool v) { imm = v; return *this; }
 
     MetaConstant& MetaConstant::setValue(int8_t v) {
         if (type != DataType::INT) return *this;
@@ -165,13 +167,17 @@ namespace MetaTrans {
 
     bool MetaConstant::isGlobal() { return global; }
 
+    bool MetaConstant::isImm() { return imm; }
+
     std::string MetaConstant::getName() { return name; }
 
     std::string MetaConstant::toString() {
         std::string str = "";
         return str + "{" 
-            + "\"id\":" + std::to_string(id) +
-            "}";
+            + "\"id\":" + std::to_string(id) + ","
+            + "\"isGloabl\":" + (global ? "true" : "false") + ","
+            + "\"isImm\":" + (imm ? "true" : "false")
+            + "}";
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -1586,4 +1592,30 @@ namespace MetaTrans {
 
     std::vector<MetaArgument*>::iterator MetaFunction::arg_end() { return args.end(); }
 
-}
+
+//===-------------------------------------------------------------------------------===//
+/// MetaUnit implementation.
+
+    MetaUnit::MetaUnit() { }
+
+    MetaUnit& MetaUnit::addFunc(MetaFunction* f) { funcs.push_back(f); return *this; }
+
+    MetaUnit& MetaUnit::addGlobalVar(MetaConstant* c) { globalVar.push_back(c); return *this; }
+
+    Stream<MetaFunction*> MetaUnit::stream() { Stream<MetaFunction*> s(funcs); return s; } 
+
+    std::vector<MetaFunction*>& MetaUnit::getFuncList() { return funcs; }
+
+    std::vector<MetaConstant*>& MetaUnit::getGlobalVarList() { return globalVar; }
+    
+    std::vector<MetaFunction*>::iterator MetaUnit::begin() { return funcs.begin(); }
+
+    std::vector<MetaFunction*>::iterator MetaUnit::end() { return funcs.end(); }
+
+    std::string MetaUnit::toString() {
+        return "";
+    }
+
+
+
+} // end namespace MetaTrans

@@ -12,6 +12,7 @@
 #include "llvm/IR/Operator.h"
 
 #include "MetaData.h"
+#include "MetaStream.h"
 
 #include <vector>
 #include <unordered_map>
@@ -126,6 +127,8 @@ protected:
 
     bool global;
 
+    bool imm;
+
     DataType type;
 
     DataUnion value;
@@ -168,7 +171,11 @@ public:
 
     MetaConstant& setGlobal(bool v);
 
+    MetaConstant& setImm(bool v);
+
     bool isGlobal();
+
+    bool isImm();
     
     virtual bool isMetaConstant() override;
 
@@ -602,6 +609,41 @@ public:
     std::vector<MetaArgument*>::iterator arg_end();
 
 };
+
+class MetaUnit {
+
+private:
+protected:
+
+    std::vector<MetaFunction*> funcs;
+
+    std::vector<MetaConstant*> globalVar;
+
+
+public:
+
+    MetaUnit();
+
+    MetaUnit& addFunc(MetaFunction* f);
+    
+    MetaUnit& addGlobalVar(MetaConstant* c);
+
+    Stream<MetaFunction*> stream(); 
+
+    std::vector<MetaFunction*>& getFuncList();
+
+    std::vector<MetaConstant*>& getGlobalVarList();
+    
+    std::vector<MetaFunction*>::iterator begin();
+
+    std::vector<MetaFunction*>::iterator end();
+
+    std::string toString();
+
+
+};
+
+
 
 } // namespace MetaTrans
 

@@ -10,15 +10,24 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function pass implementation, Will be invoked by LLVM pass manager.
 
+    void printName(MetaFunction* func) {
+        printf("printing func: %s\n", func->getFunctionName().c_str());
+    }
+
     MetaFunctionPass::~MetaFunctionPass() {
         std::string funcs = MetaUtil::vectorToJsonString(metaFuncs);
         std::string name = getenv("HOME");
         std::string IRJSON = name + "/ir.json";
         MetaUtil::writeToFile(funcs, IRJSON);
+        
+        // check out functions
+        printf("PRINTING FUNC NAME ... \n");
+        (*unit).stream().forEach(printName);
 
         processMatch();
 
         for (MetaFunction* mF : metaFuncs) delete mF;
+        delete unit;
     }
 
     void MetaFunctionPass::processMatch() {
@@ -77,6 +86,7 @@ namespace MetaTrans {
     }
 
     MetaFunctionPass::MetaFunctionPass() : FunctionPass(MetaFunctionPass::ID) {
+        unit = new MetaUnit();
         typeMap = YamlUtil::parseMapConfig("ir.yml", MetaFunctionPass::str_inst_map);
     }
 
@@ -86,6 +96,7 @@ namespace MetaTrans {
                                     .setFunction(&F)
                                     .setTypeMap(typeMap)
                                     .build();
+        unit->addFunc(metaFunc);
         metaFuncs.push_back(metaFunc);
         MetaFunction f(metaFunc->toString());
         return true;
