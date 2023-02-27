@@ -449,7 +449,7 @@ namespace MetaTrans {
             for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
                 MetaInst *IRinst = *it;
                 // std::string rootAns = MetaUtil::findDataRoot(IRinst);
-                if(IRinst->getDataRoot() == "TIR_GLOBAL") {
+                if(this->hasSameType(IRinst) && IRinst->getDataRoot() == "TIR_GLOBAL") {
                     std::string rootAns = this->getGlobalSymbolName();
                     if(rootAns == asmGlobalName) {
                         std::cout << "findTheSameGlobalVariable " << rootAns << ": " << std::hex << IRinst << std::oct << std::endl;
