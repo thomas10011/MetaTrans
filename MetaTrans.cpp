@@ -1355,6 +1355,8 @@ namespace MetaTrans {
         return dot / (bb.getModular() * bb.getModular());
     }
 
+    Stream<MetaInst*> MetaBB::stream() { Stream<MetaInst*> s(instList); return s; }
+
     std::vector<MetaInst*>::iterator MetaBB::begin() { return inst_begin(); }
 
     std::vector<MetaInst*>::iterator MetaBB::end() { return inst_end(); }
@@ -1698,6 +1700,8 @@ namespace MetaTrans {
             "\"basicBlocks\":" + bbStr +
             "}";
     }
+
+    Stream<MetaBB*> MetaFunction::stream() { Stream<MetaBB*> s(bbs); return s; }
 
     std::vector<MetaBB*>::iterator MetaFunction::begin() { return bb_begin(); }
 

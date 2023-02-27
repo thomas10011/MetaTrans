@@ -512,6 +512,8 @@ public:
 
     double similarity(MetaBB& bb);
 
+    Stream<MetaInst*> stream();
+
     std::vector<MetaInst*>::iterator begin();
 
     std::vector<MetaInst*>::iterator end();
@@ -597,6 +599,8 @@ public:
     MetaConstant* buildConstant();
 
     std::string toString();
+
+    Stream<MetaBB*> stream();
     
     std::vector<MetaBB*>& getBB();
 
