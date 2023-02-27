@@ -5,6 +5,9 @@
 #include "meta/MetaTrans.h"
 #include "meta/MetaUtils.h"
 #include <utility>
+#include <iostream>
+#include <fstream>
+#include <string>
 
 const std::string RED("\033[31m");
 const std::string GRN("\033[32m");
@@ -14,6 +17,9 @@ const std::string MAG("\033[35m");
 const std::string RST("\033[0m");
 const std::string BOLD("\033[1m");
 
+
+// Create a Global Map Table;
+MetaTrans::MappingTable* MapTable = NULL;
 
 namespace MetaTrans { 
     
@@ -643,7 +649,7 @@ namespace MetaTrans {
 
     void dumpMapping(std::string mapping){
 
-        std::cout <<  "\nCreate Instruction Mapping:\n" << BOLD << GRN << mapping << RST <<std::endl;
+        std::cout <<  "\nDEBUG:: Create Instruction Mapping:\n" << BOLD << GRN << mapping << RST <<std::endl;
         std::cout << std::endl;
     }
 
@@ -671,9 +677,10 @@ namespace MetaTrans {
         
 
         std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
-
+        std::string str = "";
         this->Matched   = true;
         inst->Matched   = true;
+
 
         this->MatchedInst.push_back(inst);
         inst->MatchedInst.push_back(this);
@@ -681,13 +688,26 @@ namespace MetaTrans {
         std::cout <<"DEBUG:: Calling function buildOperandMapping().....\n";
 
         if(this->getOriginInst()!="PHI")
-            this->buildOperandMapping(inst);
+            str = this->buildOperandMapping(inst);
         else{ 
             std::cout << "DEBUG:: Encounter PHI Node, Skip Operand Mapping\n";
             dumpMapping(this->getOriginInst() + " : " + inst->getOriginInst());
         }
-            
-       
+        
+
+        //Update MTable of 1-N mapping
+        auto it = MapTable->MTable[1].find(this->getOriginInst());
+        // std:: cout << "DEBUG::buildMapping() checked the MTable\n";
+        // std:: cout << "DEBUG::buildOperandMapping returns string = " << str << std::endl;
+        if(it != MapTable->MTable[1].end())
+            std:: cout << "DEBUG::MTable contains the mapping for " << this->getOriginInst() 
+                       << " : "<<it->second << std::endl;
+
+        if(str != "" && it == MapTable->MTable[1].end()){
+            std:: cout << "DEBUG::buildMapping() Writing to MTable " << MapTable->getTableName(1) << std::endl;
+            MapTable->MTable[1][this->getOriginInst()] = inst->getOriginInst();
+            MetaUtil::writeMapping(str, MapTable->getTableName(1));
+        }
 
         std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
 
@@ -697,7 +717,7 @@ namespace MetaTrans {
 
 
     //std::pair<std::string, std::string> 
-    MetaInst& MetaInst::buildOperandMapping(std::vector<MetaInst*> Fuse, std::string ASMorIR){
+    std::string MetaInst::buildOperandMapping(std::vector<MetaInst*> Fuse, std::string ASMorIR){
 
         std::cout <<"DEBUG:: Entering function buildOperandMapping().....\n";
 
@@ -799,12 +819,13 @@ namespace MetaTrans {
 
         dumpMapping(str);
         std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
+        return str;
 
     }
 
 
     //std::pair<std::string, std::string> 
-    MetaInst& MetaInst::buildOperandMapping(MetaInst* inst){
+    std::string MetaInst::buildOperandMapping(MetaInst* inst){
         
         std::cout <<"DEBUG:: Entering function buildOperandMapping().....\n";
 
@@ -828,7 +849,7 @@ namespace MetaTrans {
 
         if(opNum != inst->getOperandNum()){
             std::cout << BOLD << RED << "ERROR:: Operand Number mismatched between IR & ASM! STOP buildOperandMapping()!\n" << RST;
-            return *this;
+            return "";
         }
            
 
@@ -839,7 +860,7 @@ namespace MetaTrans {
                 for(int i = 0; i < opNum; i++)
                     str +=  std::to_string(i+1) + " ";
                 dumpMapping(str);
-                return *this;
+                return str;
             }  
 
 
@@ -875,14 +896,14 @@ namespace MetaTrans {
             else{
                 std::cout << BOLD << RED << "\nERROR!! Unmapped Operand!! Invalid Mapping of "
                           << this->getOriginInst() << " : " << inst->getOriginInst() << RST << std::endl;
-                break;
+                return "";
             }
         }
 
         dumpMapping(str);
         std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
 
-        return *this;
+        return str;
     }
 
 
@@ -1719,6 +1740,142 @@ namespace MetaTrans {
 
     std::vector<MetaArgument*>::iterator MetaFunction::arg_end() { return args.end(); }
 
+
+
+//===-------------------------------------------------------------------------------===//
+/// Mapping Table implementation.
+
+
+    MappingTable* MappingTable::initTableMeta(){
+
+        std::ifstream file(this->MappingName[0]);
+        if(!file){
+            std::ofstream new_file(this->MappingName[0]);
+            new_file.close();
+            std::cout << "Mapping Table " << this->MappingName[0] << "does not exist! Creating a new one! \n";
+            return this;
+        }
+        // Check if the file was opened successfully
+        if (!file.is_open()) {
+            std::cout << "Error: Could not open file " << this->MappingName[0] << std::endl;
+            return NULL;
+        }
+
+        std::string line;
+        while (std::getline(file, line)) {
+        // Split the line into two parts - the string and the integer
+            std::string::size_type pos = line.find(' ');
+            if (pos == std::string::npos) {
+                std::cerr << "Error: Invalid line format." << std::endl;
+                continue;
+            }
+            std::string str = line.substr(0, pos);
+            std::string int_str = line.substr(pos+1);
+
+            // Convert the string to a std::string and the integer to an int
+            int value;
+            try {
+                value = std::stoi(int_str);
+            } catch (std::invalid_argument& e) {
+                std::cerr << "Error: Invalid integer value." << std::endl;
+                continue;
+            } catch (std::out_of_range& e) {
+                std::cerr << "Error: Integer value out of range." << std::endl;
+                continue;
+            }
+
+            // Store the mapping in the map
+            this->TableMata[str] = value;
+        }
+        return this;
+    }
+
+    MappingTable* MappingTable::loadMappingTable(){    
+
+        std::cout << "\n\n\n\n"
+                  << "======================"
+                  << "Loading Mapping Table"
+                  << "======================"
+                  << "\n\n\n\n";
+
+        // Fill the MTable[0] first
+        std::map<std::string, std::string> filler;
+        filler[" "] = " ";
+        this->MTable.push_back(filler);
+
+        for(int i = 1; i < this->max; i++){
+
+            std::ifstream file(this->MappingName[i]);
+            if (!file) {
+                std::ofstream new_file(this->MappingName[i]);
+                new_file.close();
+                std::cout << "Mapping Table " << this->MappingName[i] << "does not exist! Creating a new one! \n";
+                continue;
+            }
+            // Check if the file was opened successfully
+            if (!file.is_open()) {
+                std::cerr << "Error: Could not open file "<< this->MappingName[i] << std::endl;
+                continue;
+            }
+
+            std::map<std::string, std::string> map;
+            std::string line;
+            while (std::getline(file, line)) {
+            // Split the line into two parts - the string and the integer
+                std::string::size_type pos = line.find(' : ');
+                if (pos == std::string::npos) {
+                    std::cerr << "Error: Invalid line format." << std::endl;
+                    continue;
+                }
+                std::string str = line.substr(0, pos);
+                std::string ir =  line.substr(pos+3);
+                std::cout << "DEBUG:: loadMappingTable() is Parsing string " << str
+                          << " and " << ir << std::endl;  
+
+                // Store the mapping in the map
+                map[str] = ir;
+            }
+            this->MTable.push_back(map);
+        }
+
+
+        std::cout << "\n\n\n\n"
+                  << "==========================="
+                  << "Mapping Table Loading Done!"
+                  << "==========================="
+                  << "\n\n\n\n";
+
+        return this;
+    }
+
+
+    int MappingTable::locateMappingTable(std::string InstName){
+
+        auto ptr = this->TableMata.find(InstName);
+
+        if(ptr != TableMata.end())
+            return ptr->second;
+        else
+            return 0;
+
+    }
+
+    MappingTable* MappingTable::setName(std::string path){
+
+        this->MappingName.push_back(path + "TableMata.mapping");
+        for(int i = 1; i <= this->max; i++)
+            this->MappingName.push_back(path + std::to_string(i) + "-N.mapping");
+        return this;
+    }
+
+
+    std::string MappingTable::getTableName(int id){
+        if(id > this->max){
+            std::cout << "ERROR:: getTableName() exceeds the range of vector MappingName!\n";
+            return "";
+        }
+        return MappingName[id];
+    }
 
 //===-------------------------------------------------------------------------------===//
 /// MetaUnit implementation.

@@ -2,9 +2,12 @@
 #include "meta/MetaFilter.h"
 #include "llvm/Support/JSON.h"
 #include "meta/MetaMatcher.h"
+#include "meta/MetaTrans.h"
 
 using namespace llvm;
 int globalColor = 0;
+extern MetaTrans::MappingTable* MapTable;
+
 namespace MetaTrans {
     
 //===-------------------------------------------------------------------------------===//
@@ -20,11 +23,13 @@ namespace MetaTrans {
         std::string IRJSON = name + "/ir.json";
         MetaUtil::writeToFile(funcs, IRJSON);
         std::cout << "MetaFunctionPass::~MetaFunctionPass ir.json IRJSON :: " << std::endl << funcs << std::endl;
+ 
         
         // check out functions
         printf("PRINTING FUNC NAME ... \n");
         (*unit).stream().forEach(printName);
 
+        
         processMatch();
 
         for (MetaFunction* mF : metaFuncs) delete mF;
@@ -35,6 +40,14 @@ namespace MetaTrans {
         std::string name = getenv("HOME");
         std::string ASMJSON = name + "/asm.json";
         std::string asmStr = MetaUtil::readFromFile(ASMJSON);
+
+        MapTable = new MappingTable();
+
+        MapTable->setName(name+"/")
+                ->initTableMeta()
+                ->loadMappingTable();
+
+
         
         llvm::Expected<json::Value> expect = json::parse(asmStr);
         if (Error e = expect.takeError()) {

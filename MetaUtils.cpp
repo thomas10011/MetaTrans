@@ -1,6 +1,8 @@
 #include "meta/MetaUtils.h"
 #include <fstream>
+#include <iostream>
 #include <unistd.h>
+
 
 namespace MetaTrans {
 
@@ -192,6 +194,13 @@ namespace MetaTrans {
         str[str.length() - 1] = ']';
 
         return str;
+    }
+
+    void MetaUtil::writeMapping(std::string data, std::string file) {
+        std::ofstream out;
+        out.open(file,std::ios::app);
+        out << data << std::endl;
+        out.close();
     }
 
     void MetaUtil::writeToFile(std::string data, std::string file) {

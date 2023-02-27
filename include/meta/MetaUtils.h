@@ -213,6 +213,8 @@ public:
 
     static DataType stringToDataType(std::string str);
 
+    static void writeMapping(std::string, std::string file);
+
     static std::string toString(InstType type);
 
     static std::string upper(std::string s);
@@ -242,7 +244,7 @@ public:
     static void paintColor(MetaFunction* mF, int startColor);
 
     static unsigned long hashCode(std::vector<MetaInst*> instList);
-
+    
     static unsigned long long getAvailableMemory();
 
 };
