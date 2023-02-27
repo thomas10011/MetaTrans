@@ -362,9 +362,9 @@ protected:
 
     MetaInst& buildMapping(MetaInst* inst);
 
-    MetaInst& buildOperandMapping(MetaInst* inst);
+    std::string buildOperandMapping(MetaInst* inst);
 
-    MetaInst& buildOperandMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
+    std::string buildOperandMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
 
     int getFuseID();
 
@@ -610,6 +610,57 @@ public:
     std::vector<MetaArgument*>::iterator arg_end();
 
 };
+
+
+class MappingTable{
+
+
+public:
+
+    // MappingName[0]: TableMata.mapping
+    // MappingName[1]: 1-N.mapping
+    // MappingName[2]: 2-N.mapping
+    // MappingName[3]: 3-N.mapping
+    // ...
+    std::vector<std::string> MappingName;
+
+    // <Inst Name, Bitmap>
+    // The bitmap records which mapping table contains such instruction
+    // 0001 -> 1-N
+    // 0010 -> 2-N
+    // 0100 -> 3-N
+    // O110 -> 2-N & 3-N
+    // 0011 -> 1-N & 2-N
+    std::map<std::string, int> TableMata;
+
+    // Max ASM Inst count in a mapping entry
+    int max = 5;
+
+
+    // MTable[0]: Empty
+    // MTable[1]: 1-N Mapping
+    // MTable[2]: 2-N Mapping
+    // ...
+    std::vector<std::map<std::string, std::string>> MTable;
+
+
+public:
+
+    MappingTable* setName(std::string path);
+    
+    MappingTable* initTableMeta();
+
+    int locateMappingTable(std::string InstName);
+
+    MappingTable* loadMappingTable();
+
+    std::string getTableName(int id);
+
+
+
+
+};
+
 
 } // namespace MetaTrans
 

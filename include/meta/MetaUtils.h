@@ -218,6 +218,8 @@ namespace MetaTrans {
 
             static int extractDataWidth(Type& dataType);
 
+            static void writeMapping(std::string, std::string file);
+
             static void writeToFile(std::string, std::string file);
 
             static std::string readFromFile(std::string file);
@@ -245,8 +247,6 @@ namespace MetaTrans {
             static std::string findDataRootRecursive(MetaOperand* inst, std::unordered_set<MetaOperand*> set);
 
     };
-
-
 
 }
 
