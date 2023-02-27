@@ -896,7 +896,7 @@ namespace MetaTrans {
             else{
                 std::cout << BOLD << RED << "\nERROR!! Unmapped Operand!! Invalid Mapping of "
                           << this->getOriginInst() << " : " << inst->getOriginInst() << RST << std::endl;
-                break;
+                return "";
             }
         }
 
