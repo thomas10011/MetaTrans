@@ -387,6 +387,8 @@ protected:
 
     std::vector<MetaInst*> getMatchedInst();
 
+    MetaInst* updateMappingTable(std::string mapstr, std::string asmInst, std::string ir, int index);
+
 
     
 

@@ -653,6 +653,30 @@ namespace MetaTrans {
         std::cout << std::endl;
     }
 
+    MetaInst* MetaInst::updateMappingTable(std::string mapstr, std::string asmInst, std::string irInst,  int index){
+
+        std::cout <<  "\nDEBUG:: Entering updateMappingTable()....\n" <<std::endl;
+
+        //Update MTable of 1-N mapping
+        auto it = MapTable->MTable[index].find(asmInst);
+        // std:: cout << "DEBUG::buildMapping() checked the MTable\n";
+        // std:: cout << "DEBUG::buildOperandMapping returns string = " << str << std::endl;
+        if(it != MapTable->MTable[index].end())
+            std:: cout << "DEBUG::MTable contains the mapping for " << this->getOriginInst() 
+                       << " : "<<it->second << std::endl;
+
+        if(mapstr != "" && it == MapTable->MTable[index].end()){
+            std:: cout << "DEBUG::buildMapping() Writing to MTable " << MapTable->getTableName(index) << std::endl;
+            MapTable->MTable[index][asmInst] = irInst;
+            MetaUtil::writeMapping(mapstr, MapTable->getTableName(index));
+        }
+
+        std::cout <<  "\nDEBUG:: Leaving updateMappingTable()....\n" <<std::endl;
+
+        return this;
+
+    }
+
     MetaInst& MetaInst::buildMapping(std::vector<MetaInst*> fused, std::string ASMorIR){
         std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
         if(!fused.size()){
@@ -662,12 +686,34 @@ namespace MetaTrans {
 
         int fuseID      = fused[0]->getID();
         this->Matched   = true;
+        std::string str;
+        std::string ret;
+
         for(auto it = fused.begin(); it!= fused.end(); it++){
             (*it)->Matched = true;
             (*it)->FuseID  = fuseID;
             this->MatchedInst.push_back((*it));
             (*it)->MatchedInst.push_back(this);
+            str +=  (*it)->getOriginInst() + " ";
         }
+
+        ret = this->buildOperandMapping(fused, ASMorIR);
+        // 1-N Mapping
+        if(ASMorIR == "IR"){
+            this->updateMappingTable(ret, this->getOriginInst(), str, 1);
+        }
+        else{
+            int id = fused.size();
+            if( id > MapTable->max){
+                std::cout << BOLD << RED << "ERROR:: ASM inst fusion involves " << id << " instructions (More than MapTable->max)\n" << RST;
+                std::cout << "DEBUG:: No new mapping recorded & Skip the Mapping Table Updates!\n";
+                return *this;
+            }
+            // When ASMorIR = ASM, then this points to an IR TIR inst
+            this->updateMappingTable(ret, str, this->getOriginInst(), id);
+        }
+
+
         std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
 
         return *this;
@@ -695,19 +741,22 @@ namespace MetaTrans {
         }
         
 
-        //Update MTable of 1-N mapping
-        auto it = MapTable->MTable[1].find(this->getOriginInst());
-        // std:: cout << "DEBUG::buildMapping() checked the MTable\n";
-        // std:: cout << "DEBUG::buildOperandMapping returns string = " << str << std::endl;
-        if(it != MapTable->MTable[1].end())
-            std:: cout << "DEBUG::MTable contains the mapping for " << this->getOriginInst() 
-                       << " : "<<it->second << std::endl;
+        // //Update MTable of 1-N mapping
+        this->updateMappingTable(str, this->getOriginInst(), inst->getOriginInst(), 1);
 
-        if(str != "" && it == MapTable->MTable[1].end()){
-            std:: cout << "DEBUG::buildMapping() Writing to MTable " << MapTable->getTableName(1) << std::endl;
-            MapTable->MTable[1][this->getOriginInst()] = inst->getOriginInst();
-            MetaUtil::writeMapping(str, MapTable->getTableName(1));
-        }
+        // auto it = MapTable->MTable[1].find(this->getOriginInst());
+        // // std:: cout << "DEBUG::buildMapping() checked the MTable\n";
+        // // std:: cout << "DEBUG::buildOperandMapping returns string = " << str << std::endl;
+        // if(it != MapTable->MTable[1].end())
+        //     std:: cout << "DEBUG::MTable contains the mapping for " << this->getOriginInst() 
+        //                << " : "<<it->second << std::endl;
+
+        // if(str != "" && it == MapTable->MTable[1].end()){
+        //     std:: cout << "DEBUG::buildMapping() Writing to MTable " << MapTable->getTableName(1) << std::endl;
+        //     MapTable->MTable[1][this->getOriginInst()] = inst->getOriginInst();
+        //     MetaUtil::writeMapping(str, MapTable->getTableName(1));
+        // }
+
 
         std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
 
@@ -766,17 +815,15 @@ namespace MetaTrans {
                     else if (ret > i)
                         std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
 
-                    // Find matched ASM instruction of such "operand" 
+                    // Find matched ASM instsaruction of such "operand" 
                     auto AsmMatch  = dynamic_cast<MetaInst*>(vec[i])->getMatchedInst();
 
-                    // Check RS matching between ASM and LLVM IR
+                    // ASM 1-N Mapping
                     if(ASMorIR == "IR"){
-                        
+                        // Check RS matching between ASM and LLVM IR
                         for(int idd = 0; idd < tmpvec.size(); idd++){
-
                             find = ifFind (dynamic_cast<MetaInst*>(tmpvec[idd]), AsmMatch);
-                     
-                            if (find !=-1){
+                            if (find != -1){
                                 str += std::to_string(idd+1) + " ";
                                 // Handle the Case like add a1, a0, a0, wherein a0 has been used twice
                                 // We assume the reg mapping of the same inst will only hit once
