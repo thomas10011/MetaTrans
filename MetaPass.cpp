@@ -27,7 +27,6 @@ namespace MetaTrans {
         
         // check out functions
         printf("PRINTING FUNC NAME ... \n");
-        (*unit).stream().forEach(printName);
 
         
         processMatch();
