@@ -69,6 +69,8 @@ namespace MetaTrans {
         { "CONVERT",        InstType::CONVERT    },
         { "HINT",           InstType::HINT       },
         { "MOV",            InstType::MOV        },
+        { "CSR",            InstType::CSR        },
+        { "SIGN",           InstType::SIGN       },
     };
 
 //===-------------------------------------------------------------------------------===//
