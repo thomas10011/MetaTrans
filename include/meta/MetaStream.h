@@ -19,12 +19,16 @@ public:
 
     Stream(std::vector<T>& v) : s(v) { }
 
-    void forEach(void (*consumer)(T element)) {
-        for (T e : s) consumer(e);
+    Stream(std::vector<T>&& v) : s(v) { }
+
+    Stream<T>& forEach(void (*consumer)(T element)) {
+        for (T& e : s) consumer(e);
+        return *this;
     }
 
-    void forEach(const std::function<void(T)>& consumer) {
-        for (T e : s) consumer(e);
+    Stream<T>& forEach(const std::function<void(T)>& consumer) {
+        for (T& e : s) consumer(e);
+        return *this;
     }
 
     template<class UnaryPredicate>
@@ -42,24 +46,28 @@ public:
         return *this;
     }
 
-    template<class K>
-    Stream<K> map(const std::function<K(T)>& mapper) {
+    // the `mapper` parameter is a forwarding reference, which means it can accept both lvalues and rvalues.
+    // use `std::declval` to get the type of the return value of the mapper function when passed an object of type T. 
+    // use decltype, which returns the type of its argument.
+    template<class Mapper>
+    auto map(Mapper&& mapper) -> Stream<decltype(mapper(std::declval<T>()))> {
+        // Get the return type of the mapper function using `std::declval` and `decltype`.
+        using K = decltype(mapper(std::declval<T>()));
         std::vector<K> mapped;
         for (T e : s) mapped.push_back(mapper(e));
-        Stream<K> newStream(mapped);
-        return newStream;
+        // create a new string using perfect forward.
+        return Stream<K>(std::move(mapped));
     }
 
     template<class K>
     Stream<K> map(K (*mapper)(T element)) {
         std::vector<K> mapped;
         for (T e : s) mapped.push_back(mapper(e));
-        Stream<K> newStream(mapped);
-        return newStream;
+        return Stream<K>(std::move(mapped));
     }
 
     std::vector<T> collect() {
-        return s;
+        return std::move(s);
     }
 
 };
