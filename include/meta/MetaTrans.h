@@ -62,7 +62,11 @@ enum InstType {
     FENCE,
     CONVERT,
     HINT,
-    MOV
+    MOV,
+    // Arch-specific
+    CSR,
+    //Sign-inject
+    SIGN
 };
 
 // struct for path (data compute/addressing/control flow)

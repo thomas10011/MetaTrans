@@ -1464,6 +1464,11 @@ namespace MetaTrans {
                 (*inst)->trainControlFlow(irinst);
             }
             
+            if((*inst)->getInstType().size() == 0){
+                std::cout << "DEBUUG:: trainBB meets instruction " << (*inst)->getOriginInst() 
+                          << ", which has no instruction type recorded\n";
+                continue;
+            }
 
             if((*inst)->getInstType()[0] == InstType::LOAD ){
                 std::vector<MetaInst*> matchvec;
