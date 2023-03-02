@@ -239,7 +239,7 @@ public:
         return map[key] = new V();
     }
     
-    static void paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p);
+    static void paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*>& visited);
 
     static void paintColor(MetaFunction* mF, int startColor);
 

@@ -370,7 +370,7 @@ protected:
 
     std::vector<MetaInst*> findMatchedInst(std::vector<MetaInst*> irvec);
 
-    MetaInst& trainInst(MetaInst* irinst, bool isControlFlow = false);
+    MetaInst& trainInst(MetaInst* irinst);
 
     MetaInst& buildMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
 

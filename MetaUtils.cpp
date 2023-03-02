@@ -296,7 +296,9 @@ namespace MetaTrans {
         return 0;
     }
 
-    void MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p) {
+    void MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
+        if(visited.count(inst)) return;
+        visited.insert(inst);
         inst->addColor(color, type);
         for(int i = -1; i < depth; i++) {std::cout << "  ";}
         printf("%x(%d) ", inst, color);
@@ -319,12 +321,11 @@ namespace MetaTrans {
             std::vector<MetaOperand*> ops = inst->getOperandList();
             for(int i = 0; i < ops.size(); i++) {
                 if(ops[i]->isMetaInst()) {
-                    paintInsColorRecursive((MetaInst*)(ops[i]), color, type, depth + 1, p);
+                    paintInsColorRecursive((MetaInst*)(ops[i]), color, type, depth + 1, p, visited);
                 }
             }
-        }else {
-            return;
         }
+        visited.erase(inst);
     }
 
     void MetaUtil::paintColor(MetaFunction* mF, int startColor) {
@@ -350,7 +351,8 @@ namespace MetaTrans {
                                 printf("Color: %d, Type: %s\n", startColor,
                                        name[i].c_str());
                                 printf("%x(%d) STORE,  -> \n", inst, startColor);
-                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, i, 0, p);
+                                std::unordered_set<MetaInst*> set;
+                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, i, 0, p, set);
                                 printf("%x, type: %d, numLoad: %d, numStore: "
                                        "%d, numPHI: %d, numGEP: %d\n",
                                        p->firstNode, p->type, p->numLoad,
@@ -374,7 +376,8 @@ namespace MetaTrans {
                                 inst->addColor(startColor, 1);
                                 printf("Color: %d, Type: Addressing\n", startColor);
                                 printf("%x(%d) LOAD,  -> \n", inst, startColor);
-                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 1, 0, p);
+                                std::unordered_set<MetaInst*> set;
+                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 1, 0, p, set);
                                 printf("%x, type: %d, numLoad: %d, numStore: "
                                        "%d, numPHI: %d, numGEP: %d\n",
                                        p->firstNode, p->type, p->numLoad,
@@ -402,7 +405,8 @@ namespace MetaTrans {
                                 inst->addColor(startColor, 2);
                                 printf("Color: %d, Type: Control Flow\n", startColor);
                                 printf("%x(%d) BRANCH,  -> \n", inst, startColor);
-                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 2, 0, p);
+                                std::unordered_set<MetaInst*> set;
+                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 2, 0, p, set);
                                 printf("%x, type: %d, numLoad: %d, numStore: "
                                        "%d, numPHI: %d, numGEP: %d\n",
                                        p->firstNode, p->type, p->numLoad,
