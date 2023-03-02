@@ -314,8 +314,11 @@ protected:
     
     std::vector<MetaOperand*>::iterator op_end();
         
-    // return true if has same type with i.
-    bool hasSameType(MetaInst* i);
+    // return true if has absolute same type (same number of types and same type) with i.
+    bool hasStrictSameType(MetaInst* i);
+
+    // return true if has one same type with i.
+    bool hasRelaxedSameType(MetaInst* i);
     
     // return true if ty is in type vector.
     bool isType(InstType ty);
@@ -367,7 +370,7 @@ protected:
 
     std::vector<MetaInst*> findMatchedInst(std::vector<MetaInst*> irvec);
 
-    MetaInst& trainInst(MetaInst* irinst);
+    MetaInst& trainInst(MetaInst* irinst, bool isControlFlow = false);
 
     MetaInst& buildMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
 

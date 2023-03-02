@@ -342,11 +342,20 @@ namespace MetaTrans {
 
     std::vector<MetaOperand*>::iterator MetaInst::op_end() { return operandList.end(); }
 
-    bool MetaInst::hasSameType(MetaInst* i) {
+    bool MetaInst::hasStrictSameType(MetaInst* i) {
         int64_t ty = 0;
         for (InstType t : type) ty |= (1 << t);
         for (InstType t : i->getInstType()) ty ^= (1 << t);
         return ty == 0;
+    }
+
+    bool MetaInst::hasRelaxedSameType(MetaInst* i) {
+        std::unordered_set<InstType> set;
+        for (InstType t : type) set.insert(t);
+        for (InstType t : i->getInstType()) {
+            if(set.count(t)) return true;
+        }
+        return false;
     }
 
     bool MetaInst::isType(InstType ty) {
@@ -461,7 +470,7 @@ namespace MetaTrans {
             for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
                 MetaInst *IRinst = *it;
                 // std::string rootAns = MetaUtil::findDataRoot(IRinst);
-                if(this->hasSameType(IRinst) && IRinst->getDataRoot() == "TIR_GLOBAL") {
+                if(this->hasRelaxedSameType(IRinst) && IRinst->getDataRoot() == "TIR_GLOBAL") {
                     std::string rootAns = this->getGlobalSymbolName();
                     if(rootAns == asmGlobalName) {
                         std::cout << "findTheSameGlobalVariable " << rootAns << ": " << std::hex << IRinst << std::oct << std::endl;
@@ -601,6 +610,65 @@ namespace MetaTrans {
 
     }
 
+    MetaInst* fuseInstControlFlow(std::vector<InstType> vec, MetaInst* inst, std::vector<MetaInst*> &fused){
+        auto        OpVec    = inst->getInstType();
+        int         OpCnt    = OpVec.size();
+        int         cnt      = vec.size();
+        int         range    = abs(cnt-OpCnt);
+        MetaInst*   ret      = inst;
+
+        std::cout << "DEBUG:: Entering function fuseInstControlFlow()....." << std::endl;
+
+        
+        //TODO: Currently skip the bidirectional fusion
+        if(OpCnt > cnt)
+            return NULL;
+        
+        //int max = cnt >= OpCnt? cnt:OpCnt;
+
+        // for(int i = 0; i < OpCnt; i++){
+        //     if(vec[i]!=OpVec[i])
+        //         return NULL;
+        // }
+
+        // Now vec.size() >= inst->InstType, require each inst'type must in `vec` (not require the same order)
+        for(int i = 0; i < OpCnt; i++){
+            std::vector<InstType>::iterator found = find(vec.begin(), vec.end(), OpVec[i]);
+            if(found == vec.end())
+                return NULL;
+        }
+        
+        // Comply with the instruction ordering
+        fused.push_back(inst);
+
+        // Recursive Instruction Fusion
+        if(range){
+            // next round fuseInstControlFlow(): retain unmatched operations in `vec` to `v`
+            std::vector<InstType> v;
+            for(auto it = vec.begin(); it != vec.end(); it++) {
+                std::vector<InstType>::iterator found = find(OpVec.begin(), OpVec.end(), *it);
+                if(found == OpVec.end()) {
+                    v.push_back(*it);
+                }
+            }
+            auto parentOperandVec = inst->getOperandList();
+            std::vector<MetaInst*> parentVec;
+            for(auto it = parentOperandVec.begin(); it != parentOperandVec.end(); it++) if((*it)->isMetaInst()) parentVec.push_back((MetaInst*)(*it));
+            // Fused Instruction implies intermediate its result (rd) which can ONLY be reused by 1 instruction!
+            std::cout << "DEBUG:: fuseInstControlFlow() parentVec.size() = " << parentVec.size() << "....." << std::endl;
+            if(parentVec.size() != 1)
+                return NULL;
+            else
+                ret = fuseInstControlFlow(v,parentVec[0],fused);                  
+        }
+
+        if(ret)
+            return inst;
+        else
+            return NULL;
+
+    }
+
     bool ifOrderMatters(InstType type){
         
         switch(type){
@@ -678,11 +746,16 @@ namespace MetaTrans {
     }
 
     MetaInst& MetaInst::buildMapping(std::vector<MetaInst*> fused, std::string ASMorIR){
-        std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
+        std::cout <<"DEBUG:: Enterng function buildMapping(fused,\"" << ASMorIR << "\")....." << std::endl;
         if(!fused.size()){
-            std::cout << "\n\nERROR:: In MetaInst::buildMapping(), Empty Fused Instruction Vector!\n\n";
+            std::cout << "\n\nERROR:: In MetaInst::buildMapping(fused,\"" << ASMorIR << "\"), Empty Fused Instruction Vector!\n\n";
             return *this;
         }
+        std::cout << "DEBUG:: fused vec = [";
+        for(auto it = fused.begin(); it != fused.end(); it++) {
+            std::cout << (*it)->getOriginInst() << ", ";
+        }
+        std::cout << "]" << std::endl;
 
         int fuseID      = fused[0]->getID();
         this->Matched   = true;
@@ -714,7 +787,7 @@ namespace MetaTrans {
         }
 
 
-        std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
+        std::cout <<"DEBUG:: Leaving function buildMapping(fused,\"" << ASMorIR << "\")....." << std::endl;;
 
         return *this;
     }
@@ -722,7 +795,7 @@ namespace MetaTrans {
     MetaInst& MetaInst::buildMapping(MetaInst* inst){
         
 
-        std::cout <<"DEBUG:: Enterng function buildMapping().....\n";
+        std::cout <<"DEBUG:: Enterng function buildMapping(inst)....." << std::endl;;
         std::string str = "";
         this->Matched   = true;
         inst->Matched   = true;
@@ -758,7 +831,7 @@ namespace MetaTrans {
         // }
 
 
-        std::cout <<"DEBUG:: Leaving function buildMapping().....\n";
+        std::cout <<"DEBUG:: Leaving function buildMapping(inst)....." << std::endl;;
 
         return *this;
 
@@ -808,6 +881,9 @@ namespace MetaTrans {
                 auto tmpvec =  asmOpVec;
 
                 for( int id = 0; id < vec.size(); id++ ){
+                    if(!vec[id]->isMetaInst()) {
+                        continue;
+                    }
                     // Check if RS points to any RD in the fused instructions
                     int ret = ifFind(dynamic_cast<MetaInst*>(vec[id]),fused);
                     if( ret != -1 )
@@ -816,7 +892,7 @@ namespace MetaTrans {
                         std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
 
                     // Find matched ASM instsaruction of such "operand" 
-                    auto AsmMatch  = dynamic_cast<MetaInst*>(vec[i])->getMatchedInst();
+                    auto AsmMatch  = dynamic_cast<MetaInst*>(vec[id])->getMatchedInst();
 
                     // ASM 1-N Mapping
                     if(ASMorIR == "IR"){
@@ -955,9 +1031,9 @@ namespace MetaTrans {
 
 
 
-    MetaInst& MetaInst::trainInst(MetaInst* irinst){
+    MetaInst& MetaInst::trainInst(MetaInst* irinst, bool isControlFlow){
         
-        std::cout << "DEBUG:: Entering function trainInst().....\n";
+        std::cout << "DEBUG:: Entering function trainInst(), isControlFlow = " << isControlFlow << "....." << std::endl;
 
         int  flag       = 0;
         auto asmOpVec   = this->getInstType();
@@ -972,7 +1048,7 @@ namespace MetaTrans {
 
         //Perfect Match Case: 1-1 or N-N operation mapping
         // CASE: (asmOpCnt  ==  irOpCnt)
-        if(this->hasSameType(irinst)){
+        if(this->hasStrictSameType(irinst)){
             std::cout << "DEBUG:: trainInst() found the Same Type between IR and ASM \n";
             this->buildMapping(irinst);
         }
@@ -986,10 +1062,21 @@ namespace MetaTrans {
                       << "\n        irinst = " << irinst->getOriginInst()
                       << ", ir->type[0] = " << irinst->getInstType()[0]
                       << std::endl;
+            if(!isControlFlow) {
+                if(fuseInst(asmOpVec, irinst, fused))
+                    this->buildMapping(fused,"IR");
+                std::cout << "DEBUG:: Leaving function fuseInst()....." << std::endl;
+            }else {
+                if(fuseInstControlFlow(asmOpVec, irinst, fused)) {
+                    std::cout << "DEBUG:: fuseInstControlFlow() return TRUE! fused.size = " << fused.size() << std::endl;
+                    std::reverse(fused.begin(), fused.end());
+                    this->buildMapping(fused,"IR");
+                }else {
+                    std::cout << "ERROR:: fuseInstControlFlow() return FALSE! fused.size = " << fused.size() << std::endl;
+                }
+                std::cout << "DEBUG:: Leaving function fuseInst()....." << std::endl;
+            }
 
-            if(fuseInst(asmOpVec, irinst, fused))
-                this->buildMapping(fused,"IR");
-            std::cout << "DEBUG:: Leaving function fuseInst().....\n";
 
         }
         // Fuse ASM TIR instructions
@@ -1002,8 +1089,13 @@ namespace MetaTrans {
                       << ", ir->type[0] = " << irinst->getInstType()[0]
                       << std::endl;
 
-            if(fuseInst(irOpVec, this ,fused))
-                irinst->buildMapping(fused, "ASM");
+            if(!isControlFlow) {
+                if(fuseInst(irOpVec, this ,fused))
+                    irinst->buildMapping(fused, "ASM");
+            }else {
+                if(fuseInstControlFlow(irOpVec, this ,fused))
+                    irinst->buildMapping(fused, "ASM");
+            }
         }
         // else if(asmOpCnt > irOpCnt){
 
@@ -1019,7 +1111,7 @@ namespace MetaTrans {
 
         // }
 
-        std::cout << "DEBUG:: Leaving function trainInst().....\n";
+        std::cout << "DEBUG:: Leaving function trainInst()....." << std::endl;
 
         return (*this);
     }
@@ -1035,8 +1127,11 @@ namespace MetaTrans {
         std::vector<MetaInst*> tmp;
 
         // Perfect 1-1 or N-N mapping 
+        std::cout << "this: " << MetaUtil::toString(this->type) << std::endl;
+
         for( auto it = irvec.begin(); it != irvec.end(); it++){
-            if(this->hasSameType(*it)){
+            std::cout << "irvec: " << MetaUtil::toString((*it)->type) << std::endl;
+            if(this->hasStrictSameType(*it)){
                 //this->MatchedInst.push_back(*it);
                 tmp.push_back(*it);
             }
@@ -1051,10 +1146,10 @@ namespace MetaTrans {
 
                 if(asmOpCnt == irOpCnt)
                     continue;
-                int max = asmOpCnt > irOpCnt? asmOpCnt:irOpCnt;
+                int min = asmOpCnt > irOpCnt? irOpCnt : asmOpCnt;
 
-                for( int i  = 0; i < max; i++ ) bits |= 1 << asmOpVec[i];
-                for( int i  = 0; i < max; i++ ) bits ^= 1 << irOpVec[i];
+                for( int i  = 0; i < min; i++ ) bits |= 1 << asmOpVec[i];
+                for( int i  = 0; i < min; i++ ) bits ^= 1 << irOpVec[i];
                 if ( bits == 0 )
                     tmp.push_back((*it));
                     //this->MatchedInst.push_back((*it));
@@ -1159,6 +1254,7 @@ namespace MetaTrans {
         std::vector<MetaOperand*> irOperands = irinst->getOperandList();
         for(auto it = asmOperands.begin(); it != asmOperands.end(); it++) if((*it)->isMetaInst()) asmvec.push_back((MetaInst*)(*it));
         for(auto it = irOperands.begin(); it != irOperands.end(); it++) if((*it)->isMetaInst()) irvec.push_back((MetaInst*)(*it));
+        irvec.push_back(irinst);
 
         std::cout << "DEBUG:: Enter function trainControlFlow().....\n";
         std::cout << "DEBUG:: asmvec.size() = "<< asmvec.size() <<std::endl;
@@ -1175,10 +1271,11 @@ namespace MetaTrans {
             // Train the current 'branch' instruction with irvec
             retvec = this->findMatchedInst(irvec);
         }
+        std::cout << "DEBUG:: retvec.size() = "<< retvec.size() <<std::endl;
 
-        if(retvec.size() == 1)
+        // if(retvec.size() == 1)
             for(auto itt = retvec.begin();itt!=retvec.end();itt++)
-                this->trainInst(*itt);
+                this->trainInst(*itt, true);
 
         return this;
     }
