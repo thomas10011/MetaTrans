@@ -29,6 +29,12 @@ class MetaFunction;
 
 class MetaFunctionBuilder;   
 
+class MetaUnitBuildContext;
+
+class MetaUnit;
+
+class MetaScope;
+
 struct MetaFunctionPass;
 
 enum InstType {
@@ -85,8 +91,35 @@ struct Path {
     }
 };
 
+class MetaScope {
+
+private:
+
+    MetaScope* parent;
+
+    int id = -1;
+
+protected:
+public:
+                MetaScope       ()                ;
+
+    MetaScope&  setParentScope  (MetaScope* scope);
+
+    MetaScope&  setID           (int id)          ;
+
+    MetaScope*  getParentScope  ()                ;
+
+    int         getID           ()                ;
+
+    MetaScope* getRootScope     ()                ;
+
+};
+
 class MetaOperand {
 private:
+    
+    MetaScope* parentScope = nullptr;
+
 protected:
 
     int id = -1;
@@ -102,6 +135,14 @@ public:
 
     // remove user from user list.
     MetaOperand& removeUser(MetaInst* user);
+
+    MetaOperand& setParentScope(MetaScope* scope);
+
+    MetaOperand& registerToMetaUnit();
+
+    MetaScope* getParentScope();
+
+    MetaUnit& getMetaUnit();
 
     std::vector<MetaInst*> getUsers();
 
@@ -137,11 +178,11 @@ protected:
 
     DataUnion value;
 
-    MetaFunction* parent;
-
 public:
     
     MetaConstant();
+
+    MetaConstant(MetaUnitBuildContext& context);
 
     MetaConstant(MetaFunction* p);
 
@@ -155,8 +196,6 @@ public:
 
     DataUnion getValue();
 
-    MetaFunction* getParent();
-
     MetaConstant& setValue(int8_t v);
 
     MetaConstant& setValue(int16_t v);
@@ -169,13 +208,13 @@ public:
     
     MetaConstant& setValue(double v);
 
-    MetaConstant& setParent(MetaFunction* p);
-
     MetaConstant& setName(std::string name);
 
     MetaConstant& setGlobal(bool v);
 
     MetaConstant& setImm(bool v);
+
+    MetaConstant& setParentScope(MetaScope* scope);
 
     bool isGlobal();
 
@@ -201,8 +240,6 @@ protected:
 
     DataType type; 
 
-    MetaFunction* parent;
-
 public:
 
     MetaArgument();
@@ -221,7 +258,7 @@ public:
 
     MetaArgument& setWidth(int w);
 
-    MetaArgument& setParent(MetaFunction* f);
+    MetaArgument& setParentScope(MetaScope* scope);
 
     int getArgIndex();
 
@@ -230,8 +267,6 @@ public:
     int getWidth();
 
     DataType getArgType();
-
-    MetaFunction* getParent();
 
     virtual bool isMetaArgument() override;
 
@@ -244,8 +279,6 @@ private:
     std::string originInst;
 
 protected:
-
-    MetaBB* parent;
 
     // a vector to indicate the real type of a instruction.
     std::vector<InstType> type;
@@ -274,7 +307,9 @@ protected:
 
     int FuseID;
 
-    public:
+    int address;
+
+public:
 
     MetaInst();
 
@@ -292,7 +327,7 @@ protected:
 
     MetaInst& addInstType(InstType ty);
 
-    MetaInst& setParent(MetaBB* bb);
+    MetaInst& setParentScope(MetaScope* scope);
 
     void dumpPath(int index);
 
@@ -300,11 +335,9 @@ protected:
 
     std::string getOriginInst();
 
-    virtual MetaInst& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
+    virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context);
 
     int getOperandNum();
-
-    MetaBB* getParent();
 
     std::vector<InstType> getInstType();
 
@@ -342,6 +375,10 @@ protected:
     unsigned long getHashcode();
 
     MetaInst& setHashcode(unsigned long hashCode);
+
+    int getAddress();
+
+    MetaInst& setAddress(int address);
 
     std::string getDataRoot();
 
@@ -388,9 +425,6 @@ protected:
     std::vector<MetaInst*> getMatchedInst();
 
 
-    
-
-
 };
 
 /// represent a phi node.
@@ -420,7 +454,7 @@ public:
 
     bool virtual isMetaPhi() override;
 
-    virtual MetaInst& buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) override;
+    virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context) override;
 
     std::string virtual toString() override;
 
@@ -429,11 +463,9 @@ public:
     bool virtual isStore() override;
 };
 
-class MetaBB {
+class MetaBB : public MetaScope {
 private:
 protected:
-
-    int id;
 
     std::vector<MetaInst*> instList;
     
@@ -445,9 +477,6 @@ protected:
 
     // each bb end with a terminator.
     MetaInst* terminator;
-    
-    // record parent scope
-    MetaFunction* parent;
 
     std::vector<int> features;
 
@@ -458,10 +487,6 @@ public:
     MetaBB();
 
     MetaBB(MetaFunction* parent);
-
-    MetaBB(std::string JSON);
-
-    MetaBB(MetaFunction* parent, std::string JSON);
 
     ~MetaBB(); 
 
@@ -484,13 +509,15 @@ public:
 
     MetaBB& setTerminator(MetaInst* inst);
 
-    MetaBB& setParent(MetaFunction* mF);
+    MetaBB& setParentScope(MetaScope* scope);
 
-    MetaBB& setID(int id);
+    MetaBB& buildInstFromJSON(MetaUnitBuildContext& context);
 
-    MetaBB& buildInstFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
+    MetaBB& buildInstGraphFromJSON(MetaUnitBuildContext& context);
 
-    MetaBB& buildInstGraphFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap);
+    MetaBB& registerToMetaUnit();
+
+    MetaBB& setID(int64_t id);
 
     std::vector<int> getFeature();
 
@@ -501,10 +528,6 @@ public:
     MetaInst* getEntry();
 
     MetaInst* getTerminator();
-
-    MetaFunction* getParent();
-
-    int getID();
 
     std::vector<MetaInst*>& getInstList();
 
@@ -534,13 +557,12 @@ public:
 
     MetaBB* trainBB(MetaBB* irbb);
 
+    MetaUnit& getMetaUnit();
+
 };
 
-class MetaFunction {
+class MetaFunction : public MetaScope {
 private:
-    
-    void init(llvm::json::Object& object);
-
 protected:
 
     // a function should contains a set of constants.
@@ -565,9 +587,7 @@ public:
 
     MetaFunction();
 
-    MetaFunction(std::string JSON);
-
-    MetaFunction(llvm::json::Object& JSON);
+    MetaFunction(MetaUnitBuildContext& context);
 
     MetaFunction& addConstant(MetaConstant* c);
     
@@ -583,6 +603,10 @@ public:
 
     MetaFunction& expandStackSize(int s);
 
+    MetaFunction& setParentScope(MetaScope* scope);
+
+    MetaFunction& registerToMetaUnit();
+
     MetaArgument* getArgument(int index);
 
     std::string getFunctionName();
@@ -592,6 +616,8 @@ public:
     int getArgNum();
 
     DataType getReturnType();
+
+    MetaUnit& getMetaUnit();
 
     // create a new bb at the end of bb list.
     MetaBB* buildBB();
@@ -627,8 +653,7 @@ public:
 };
 
 
-class MappingTable{
-
+class MappingTable {
 
 public:
 
@@ -672,25 +697,47 @@ public:
 };
 
 
-class MetaUnit {
+class MetaUnit : public MetaScope {
 
 private:
+
+    std::vector<MetaOperand*> operands;
+
+    std::vector<MetaInst*> insts;
+
+    std::vector<MetaScope*> scopes;
+
 protected:
 
     std::vector<MetaFunction*> funcs;
 
     std::vector<MetaConstant*> globalVar;
 
-
 public:
 
     MetaUnit();
 
+    MetaUnit(std::string& JSON);
+
+    MetaUnit(std::string&& JSON);
+
+    ~MetaUnit();
+
     MetaUnit& addFunc(MetaFunction* f);
     
     MetaUnit& addGlobalVar(MetaConstant* c);
+    
+    MetaUnit& registerOperand(MetaOperand* operand);
 
-    Stream<MetaFunction*> stream(); 
+    MetaUnit& registerScope(MetaScope* scope);
+
+    MetaUnit& fillID();
+
+    Stream<MetaFunction*> func_stream(); 
+
+    Stream<MetaConstant*> global_stream(); 
+
+    Stream<MetaInst*> inst_stream(); 
 
     std::vector<MetaFunction*>& getFuncList();
 
@@ -705,6 +752,62 @@ public:
 
 };
 
+class MetaUnitBuildContext {
+private:
+
+    std::string JSON;
+
+    llvm::json::Object object;
+
+    std::vector<llvm::json::Object> objectStack;
+
+    std::vector<MetaScope*> scopeStack;
+    
+    std::unordered_map<int64_t, MetaOperand*> operandMap;
+
+    std::unordered_map<int64_t, MetaScope*> scopeMap;
+
+    MetaScope* scope;
+    
+public:
+
+    MetaUnitBuildContext(std::string);
+    
+    llvm::json::Object getHoldObject();
+
+    llvm::json::Object getJsonObject(std::string key);
+
+    llvm::json::Array getJsonArray(std::string key);
+
+    MetaScope* getScope(int64_t id);
+
+    MetaScope* getCurScope();
+    
+    MetaUnitBuildContext& setCurScope(MetaScope* scope);
+
+    MetaUnitBuildContext& setHoldObject(llvm::json::Object& o);
+
+    MetaUnitBuildContext& setHoldObject(llvm::json::Object* o);
+
+    MetaUnitBuildContext& addMetaOperand(int64_t id, MetaOperand* operand);
+
+    MetaUnitBuildContext& addMetaScope(int64_t id, MetaScope* scope);
+
+    MetaUnitBuildContext& saveContext();
+
+    MetaUnitBuildContext& restoreContext();
+
+    MetaOperand* getMetaOperand(int64_t id);
+
+    MetaConstant* getMetaConstant(int64_t id);
+
+    MetaInst* getMetaInst(int64_t id);
+
+    MetaBB* getMetaBB(int64_t id);
+
+    MetaFunction* getMetaFunction(int64_t id);
+
+};
 
 
 } // namespace MetaTrans

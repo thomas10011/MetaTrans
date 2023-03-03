@@ -14,7 +14,7 @@ class MetaFunctionBuilder : public FilterTarget {
 
 private:
 
-    int buildCount;
+    int buildCount = 0;
 
 protected:
 
@@ -25,6 +25,8 @@ protected:
     friend class MetaFuncFilter;
     friend class MetaIDFilter;
     friend class MetaFeatureFilter;
+
+    MetaUnit* unit;
 
     Function* F;
 
@@ -44,8 +46,6 @@ protected:
     FilterManager                                           filterManager;
 
     MetaFunctionBuilder&    clearAuxMaps                    ();
-
-    MetaFunctionBuilder&    buildMetaFunction               ();
     
     MetaFunctionBuilder&    buildMetaElements               ();
                                                             
@@ -59,8 +59,10 @@ protected:
 
     MetaFunctionBuilder&    createGlobalVar                 ();
     
+    MetaFunctionBuilder&    createMetaFunction              ();
+
     // create a meta bb correspond to a llvm bb insde a meta function.
-    MetaFunctionBuilder&    createMetaBB                    (BasicBlock& b);
+    MetaFunctionBuilder&    createMetaBB                    ();
 
     // create a meta instruction correspond to a llvm instruction inside a meta bb. 
     MetaFunctionBuilder&    createMetaInst                  (Instruction& i, MetaBB& b);
@@ -78,14 +80,22 @@ protected:
     void                    copyDependencies                (PHINode* curInst);
 
 public:
-    
+
                             MetaFunctionBuilder             ();
+
+                            ~MetaFunctionBuilder            ();
 
     MetaFunctionBuilder&    setFunction                     (Function* F);
 
     MetaFunctionBuilder&    setTypeMap                      (std::unordered_map<unsigned, std::vector<InstType>>* typeMap);
 
     MetaFunction*           build                           ();
+
+    std::string             getMetaUnitStr                  ();
+
+    MetaUnit*               getMetaUnit                     ();
+
+    MetaUnit&               getMetaUnitRef                  ();
 
 };
 
@@ -100,10 +110,6 @@ struct MetaFunctionPass : public llvm::FunctionPass {
     std::unordered_map<unsigned, std::vector<InstType>>* typeMap;
 
     MetaFunctionBuilder builder;
-
-    std::vector<MetaFunction*> metaFuncs;
-
-    MetaUnit* unit;
 
     MetaFunctionPass();
 

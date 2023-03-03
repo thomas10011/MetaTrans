@@ -76,7 +76,18 @@ namespace MetaTrans {
         }
         return *this;
     }
-    
+
+    MetaOperand& MetaOperand::setParentScope(MetaScope* scope) { parentScope = scope; return *this; }
+
+    MetaScope* MetaOperand::getParentScope() { return parentScope; }
+
+    MetaUnit& MetaOperand::getMetaUnit() { return *((MetaUnit*)parentScope->getRootScope()); }
+
+    MetaOperand& MetaOperand::registerToMetaUnit() {
+        getMetaUnit().registerOperand(this);
+        return *this;
+    }
+
     std::vector<MetaInst*> MetaOperand::getUsers() {
         return users;
     }
@@ -106,21 +117,37 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Constant implementation.
 
-    MetaConstant::MetaConstant() : parent(nullptr), global(false), imm(false) { }
+    MetaConstant::MetaConstant() : global(false), imm(false) { }
 
-    MetaConstant::MetaConstant(MetaFunction* p) : parent(p), global(false), imm(false) { }
+    MetaConstant::MetaConstant(MetaUnitBuildContext& context) {
+        auto    object = context.getHoldObject();
+        int64_t id     = object.getInteger("id")      .getValue();
+        bool    global = object.getBoolean("isGloabl").getValue();
+        bool    imm    = object.getBoolean("isImm")   .getValue();
+
+        (*this)
+            .setGlobal(global)
+            .setImm(imm)
+            .setParentScope(context.getCurScope())
+            .registerToMetaUnit()
+            .setID(id)
+            ;
+        context.addMetaOperand(id, this);
+    }
+
+    MetaConstant::MetaConstant(MetaFunction* p) : global(false), imm(false) {
+        setParentScope(p);
+    }
 
     MetaConstant::~MetaConstant() { }
 
-    MetaConstant::MetaConstant(DataType ty) : type(ty), parent(nullptr), global(false), imm(false) { }
+    MetaConstant::MetaConstant(DataType ty) : type(ty), global(false), imm(false) { }
 
     MetaConstant& MetaConstant::setDataType(DataType ty) { type = ty; }
 
     DataType MetaConstant::getDataType() { return type; }
 
     DataUnion MetaConstant::getValue() { return value; }
-
-    MetaFunction* MetaConstant::getParent() { return parent; }
 
     MetaConstant& MetaConstant::setName(std::string name) { this->name = name; return *this; }
 
@@ -164,8 +191,8 @@ namespace MetaTrans {
         return *this;
     }
 
-    MetaConstant& MetaConstant::setParent(MetaFunction* p) { 
-        parent = p;
+    MetaConstant& MetaConstant::setParentScope(MetaScope* scope) {
+        MetaOperand::setParentScope(scope);
         return *this;
     }
 
@@ -191,7 +218,9 @@ namespace MetaTrans {
 
     MetaArgument::MetaArgument() { }
 
-    MetaArgument::MetaArgument(MetaFunction* p) : parent(p) { }
+    MetaArgument::MetaArgument(MetaFunction* p) {
+        setParentScope(p);
+    }
 
     MetaArgument::~MetaArgument() { }
 
@@ -217,8 +246,8 @@ namespace MetaTrans {
         return *this;
     }
 
-    MetaArgument& MetaArgument::setParent(MetaFunction* f) {
-        parent = f;
+    MetaArgument& MetaArgument::setParentScope(MetaScope* scope) {
+        MetaOperand::setParentScope(scope);
         return *this;
     }
 
@@ -229,8 +258,6 @@ namespace MetaTrans {
     int MetaArgument::getWidth() { return width; }
 
     DataType MetaArgument::getArgType() { return type; }
-
-    MetaFunction* MetaArgument::getParent() { return parent; }
 
     bool MetaArgument::isMetaArgument() { return true; }
 
@@ -275,8 +302,8 @@ namespace MetaTrans {
         return *this;
     }
 
-    MetaInst& MetaInst::setParent(MetaBB* bb) {
-        parent = bb;
+    MetaInst& MetaInst::setParentScope(MetaScope* scope) {
+        MetaOperand::setParentScope(scope);
         return *this;
     }
 
@@ -286,20 +313,23 @@ namespace MetaTrans {
         return *this;
     }
 
-    MetaInst& MetaInst::buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+    MetaInst& MetaInst::buildFromJSON(MetaUnitBuildContext& context) {
+       llvm::json::Object JSON  = context.getHoldObject();
 
-        std::string     originInst  = JSON["originInst"].getAsString().getValue().str();
-        std::string     dataRoot    = JSON["dataRoot"]  .getAsString().getValue().str();
-        std::string     globalSymbolName    = JSON["globalSymbolName"]  .getAsString().getValue().str();
-        unsigned long   hashCode    = JSON.getInteger("hashCode").getValue();
-        int64_t         id          = JSON.getInteger("id")      .getValue();
+        std::string     originInst          = JSON["originInst"]         .getAsString().getValue().str();
+        std::string     dataRoot            = JSON["dataRoot"]           .getAsString().getValue().str();
+        std::string     globalSymbolName    = JSON["globalSymbolName"]   .getAsString().getValue().str();
+        unsigned long   hashCode            = JSON.getInteger("hashCode").getValue();
+        int64_t         id                  = JSON.getInteger("id")      .getValue();
+        int64_t         addr                = JSON.getInteger("address") .getValue();
 
         (*this)
-            .setOriginInst (originInst)
-            .setHashcode   (hashCode)
-            .setDataRoot   (dataRoot)
-            .setGlobalSymbolName   (globalSymbolName)
-            .setID         (id)
+            .setOriginInst          (originInst)
+            .setHashcode            (hashCode)
+            .setDataRoot            (dataRoot)
+            .setGlobalSymbolName    (globalSymbolName)
+            .setAddress             (address)
+            .setID                  (id)
             ;
 
         json::Array& ops = *(JSON["type"].getAsArray());
@@ -331,8 +361,6 @@ namespace MetaTrans {
     bool MetaInst::isStore() { for (auto ty : type) if (ty == InstType::STORE) return true; return false; }
 
     int MetaInst::getOperandNum() { return operandList.size(); }
-
-    MetaBB* MetaInst::getParent() { return parent; }
 
     std::vector<InstType> MetaInst::getInstType() { return type; }
 
@@ -392,11 +420,20 @@ namespace MetaTrans {
         path += "]";
         opList[opList.length() - 1] = ']';
         userList[userList.length() - 1] = ']';
-        std::string str = "";
-        str = str + "{" + "\"id\":" + std::to_string(id) + ",\"originInst\":" + "\"" +
-            originInst + "\"" +
-            ",\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
-            "\"operandList\":" + opList + "," + "\"userList\":" + userList + "," + "\"path\":" + path + ",\"hashCode\":" + std::to_string(hashCode) + ",\"dataRoot\":\"" + dataRoot + "\",\"globalSymbolName\":\"" + globalSymbolName + "\"}";
+        std::string str = "{";
+        str = str + 
+            "\"id\":" + std::to_string(id) + "," +
+            "\"address\":" + std::to_string(address) + "," +
+            "\"originInst\":" + "\"" +originInst + "\"" + "," +
+            "\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
+            "\"operandList\":" + opList + "," + 
+            "\"userList\":" + userList + "," + 
+            "\"path\":" + path + "," +
+            "\"hashCode\":" + std::to_string(hashCode) + "," + 
+            "\"dataRoot\":\"" + dataRoot + "\"," + 
+            "\"globalSymbolName\":\"" + globalSymbolName + "\"" +
+            "}"
+            ;
         return str;
     }
 
@@ -412,6 +449,14 @@ namespace MetaTrans {
     }
 
     unsigned long MetaInst::getHashcode() {return hashCode;}
+
+    int MetaInst::getAddress() {
+        return address;
+    }
+
+    MetaInst& MetaInst::setAddress(int address) {
+        this->address = address;
+    }
 
     MetaInst& MetaInst::setHashcode(unsigned long _hashCode) {
         hashCode = _hashCode;
@@ -531,20 +576,20 @@ namespace MetaTrans {
 
     void MetaInst::buildEquivClass(){
         auto vec = this->getOperandList();
-        auto bb  = this->getParent();
+        auto bb  = (MetaBB*)(this->getParentScope());
         this->EquivClassTag = 1;
-        for(auto i = vec.begin(); i!=vec.end();i++){
-               if((*i)->isMetaInst() && dynamic_cast<MetaInst*>(*i)->getParent() == bb)
+        for(auto i = vec.begin(); i!=vec.end();i++) {
+               if((*i)->isMetaInst() && (MetaBB*)(dynamic_cast<MetaInst*>(*i)->getParentScope()) == bb)
                     (dynamic_cast<MetaInst*>(*i))->buildEquivClass(); 
         }
     }
 
     void MetaInst::resetEquivClass(){
         auto vec = this->getOperandList();
-        auto bb  = this->getParent();
+        auto bb  = (MetaBB*)(this->getParentScope());
         this->EquivClassTag = 0;
         for(auto i = vec.begin(); i!=vec.end();i++){
-               if((*i)->isMetaInst() && dynamic_cast<MetaInst*>(*i)->getParent() == bb)
+               if((*i)->isMetaInst() && (MetaBB*)(dynamic_cast<MetaInst*>(*i)->getParentScope()) == bb)
                     (dynamic_cast<MetaInst*>(*i))->resetEquivClass();     
         }
     }
@@ -1192,21 +1237,30 @@ namespace MetaTrans {
         }
         phiMapStr[phiMapStr.length() - 1] = '}'; 
 
-        std::string str = "";
+        std::string str = "{";
         return str + 
-            "{" + "\"id\":" + std::to_string(id) + 
-            ",\"isMetaPhi\":true,\"type\":" + MetaUtil::toString(type) + 
+            "\"id\":" + std::to_string(id) + "," +
+            "\"address\":" + std::to_string(MetaInst::getAddress()) + "," + 
+            "\"isMetaPhi\":true,\"type\":" + MetaUtil::toString(type) + 
             ",\"operandList\":" + opList + 
             ",\"bbValueMap\":" + phiMapStr +
             "}";
     }
 
-    MetaInst& MetaPhi::buildFromJSON(llvm::json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+    MetaInst& MetaPhi::buildFromJSON(MetaUnitBuildContext& context) {
+        llvm::json::Object JSON = context.getHoldObject();
+        
+        int64_t id = JSON.getInteger("id").getValue();
+        int64_t address = JSON.getInteger("address").getValue();
+
+        setID(id);
+        setAddress(address);
+
         json::Object kv = *(JSON["bbValueMap"].getAsObject());
         for (auto iter = kv.begin(); iter != kv.end(); ++iter) {
             int key = std::stoi(iter->first.str());
             int val = iter->second.getAsInteger().getValue();
-            bbValueMap[tempBBMap[key]] = tempOperandMap[val];
+            bbValueMap[context.getMetaBB(key)] = context.getMetaOperand(val);
         }
         return *this;
     }
@@ -1220,22 +1274,21 @@ namespace MetaTrans {
 /// Meta Basic Block implementation.
 
     
-    MetaBB::MetaBB() : entry(nullptr), terminator(nullptr), parent(nullptr) { }
+    MetaBB::MetaBB() : entry(nullptr), terminator(nullptr) { }
 
-    MetaBB::MetaBB(MetaFunction* f) : entry(nullptr), terminator(nullptr), parent(f) { }
-
-    MetaBB::MetaBB(std::string JSON) {
-
-    }
-
-    MetaBB::MetaBB(MetaFunction* parent, std::string JSON) : parent(parent) {
-
+    MetaBB::MetaBB(MetaFunction* f) : entry(nullptr), terminator(nullptr) {
+        setParentScope(f);
     }
 
     MetaBB::~MetaBB() {
         for (auto inst : instList) {
             delete inst;
         }
+    }
+
+    MetaBB& MetaBB::setParentScope(MetaScope* scope) {
+        MetaScope::setParentScope(scope);
+        return *this;
     }
 
     MetaInst* MetaBB::buildInstruction(std::vector<InstType> ty) {
@@ -1295,53 +1348,65 @@ namespace MetaTrans {
         return *this;
     }
 
-    MetaBB& MetaBB::setParent(MetaFunction* mF) {
-        parent = mF;
+    MetaBB& MetaBB::setID(int64_t id) {
+        MetaScope::setID(id);
         return *this;
     }
 
-    MetaBB& MetaBB::setID(int id) { this->id = id; return* this; }
+    MetaBB& MetaBB::registerToMetaUnit() {
+        getMetaUnit().registerScope(this);
+        return *this;
+    }
 
-    MetaBB& MetaBB::buildInstGraphFromJSON(json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
-        json::Array& insts = *(JSON["instList"].getAsArray());
+    MetaBB& MetaBB::buildInstGraphFromJSON(MetaUnitBuildContext& context) {
+        json::Array insts = context.getJsonArray("instList");
 
         for (int i = 0; i < insts.size(); ++i) {
-            json::Object& inst = *(insts[i].getAsObject());
-            json::Array&  ops  = *(inst.getArray("operandList"));
+            json::Object inst = *(insts[i].getAsObject());
+            json::Array ops  = *(inst.getArray("operandList"));
             
             // 连上 Meta Instruction 之间的边
             for (int j = 0; j < ops.size(); ++j) {
                 int64_t op_id = ops[j].getAsInteger().getValue();
                 assert(instList[i]);
-                instList[i]->addOperand(tempOperandMap[op_id]);
+                assert(context.getMetaOperand(op_id));
+                MetaOperand* operand = context.getMetaOperand(op_id);
+                instList[i]->addOperand(operand);
             }
         }
 
     }
 
-    MetaBB& MetaBB::buildInstFromJSON(json::Object JSON, std::unordered_map<int64_t, MetaBB*>& tempBBMap, std::unordered_map<int64_t, MetaOperand*>& tempOperandMap) {
+    MetaBB& MetaBB::buildInstFromJSON(MetaUnitBuildContext& context) {
 
-        json::Array& insts = *(JSON["instList"].getAsArray());
-
+        json::Array insts = context.getJsonArray("instList");
+        
         for (auto iter = insts.begin(); iter != insts.end(); ++iter) {
             int64_t     inst_id     = (*iter).getAsObject()->getInteger("id").getValue();
             bool        isMetaPhi   = (*iter).getAsObject()->getBoolean("isMetaPhi").getValue();
             MetaInst*   newInst     = isMetaPhi ? buildPhi(true) : buildInstruction();
-            tempOperandMap[inst_id] = newInst;
+            context.addMetaOperand(inst_id, newInst);
+
+            context.saveContext().setHoldObject(iter->getAsObject());
             // 构建 Meta Instruction
             (*newInst)
-                .setParent     (this)
-                .buildFromJSON (*(iter->getAsObject()), tempBBMap, tempOperandMap)
+                .buildFromJSON      (context)
+                .setParentScope     (this)
+                .registerToMetaUnit ()
                 ;
+            context.restoreContext();
         }
-
+        
+        
+        llvm::json::Object object = context.getHoldObject();
         (*this)
-            .addFeature     (JSON["load"]   .getAsInteger().getValue())
-            .addFeature     (JSON["store"]  .getAsInteger().getValue())
-            .addFeature     (JSON["in"]     .getAsInteger().getValue())
-            .addFeature     (JSON["out"]    .getAsInteger().getValue())
-            .setEntry       ((MetaInst*)tempOperandMap[JSON["entry"]     .getAsInteger().getValue()])
-            .setTerminator  ((MetaInst*)tempOperandMap[JSON["terminator"].getAsInteger().getValue()])
+            .setID          (object["id"]     .getAsInteger().getValue())
+            .addFeature     (object["load"]   .getAsInteger().getValue())
+            .addFeature     (object["store"]  .getAsInteger().getValue())
+            .addFeature     (object["in"]     .getAsInteger().getValue())
+            .addFeature     (object["out"]    .getAsInteger().getValue())
+            .setEntry       (context.getMetaInst(object["entry"]     .getAsInteger().getValue()))
+            .setTerminator  (context.getMetaInst(object["terminator"].getAsInteger().getValue()))
             ;
     }
 
@@ -1359,10 +1424,6 @@ namespace MetaTrans {
 
     int MetaBB::getInstNum() { return instList.size(); }
 
-    MetaFunction* MetaBB::getParent() { return parent; }
-
-    int MetaBB::getID() { assert(id != -1); return id; }
-
     double MetaBB::getModular() { return modular; }
 
     double MetaBB::similarity(MetaBB& bb) {
@@ -1374,6 +1435,10 @@ namespace MetaTrans {
             dot += v[i] * features[i];
         }
         return dot / (bb.getModular() * bb.getModular());
+    }
+
+    MetaUnit& MetaBB::getMetaUnit() {
+        return *((MetaUnit*)getRootScope());
     }
 
     Stream<MetaInst*> MetaBB::stream() { Stream<MetaInst*> s(instList); return s; }
@@ -1405,7 +1470,7 @@ namespace MetaTrans {
         std::string bbStr = "";
 
         return bbStr + "{" +
-            "\"id\":" + std::to_string(id) + "," +
+            "\"id\":" + std::to_string(getID()) + "," +
             "\"entry\":" + (entry == nullptr ? "null" : std::to_string(entry->getID())) + "," +
             "\"terminator\":" + (terminator == nullptr ? "null" : std::to_string(terminator->getID())) + "," +
             "\"load\":" + std::to_string(features[0]) + "," +
@@ -1544,83 +1609,79 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.
 
-    void MetaFunction::init(llvm::json::Object& object) {
-        json::Array& blocks =  *(object["basicBlocks"].getAsArray());
-        json::Array& arguments = *(object["arguments"].getAsArray());
-        json::Array& constants = *(object["constants"].getAsArray());
+    MetaFunction::MetaFunction(MetaUnitBuildContext& context) {
+        json::Array blocks    = context.getJsonArray("basicBlocks");
+        json::Array arguments = context.getJsonArray("arguments");
+        json::Array constants = context.getJsonArray("constants");
 
-        std::unordered_map<int64_t, MetaOperand*> tempOperandMap;
-        std::unordered_map<int64_t, MetaBB*> tempBBMap;
+
+        json::Object object = context.getHoldObject();
+        (*this)
+            .setParentScope(context.getCurScope())
+            .registerToMetaUnit()
+            .setRoot(context.getMetaBB(object["rootBB"].getAsInteger().getValue()))
+            .setFunctionName(object["funcName"].getAsString().getValue().str())
+            .setStackSize(object.getInteger("stackSize").getValue())
+            .setReturnType(MetaUtil::stringToDataType(object["returnType"].getAsString().getValue().str()))
+            .setID(object.getInteger("id").getValue())
+            ;
+        
+        context.addMetaScope(getID(), this);
 
         // 构建 Meta Argument
         for (auto iter = arguments.begin(); iter != arguments.end(); ++iter) {
-            MetaArgument& newArg = *buildArgument();
+            MetaArgument* newArg = buildArgument();
             int64_t arg_id = (*iter).getAsObject()->getInteger("id").getValue();
-            tempOperandMap[arg_id] = &newArg;
-            newArg
-                .setParent(this)
-                .setID(arg_id)
+            context.addMetaOperand(arg_id, newArg);
+            (*newArg)
+                .setParentScope     (this)
+                .registerToMetaUnit ()
+                .setID              (arg_id)
                 ;
         }
 
         // 构建 Meta Constant
         for (auto iter = constants.begin(); iter != constants.end(); ++iter) {
-            MetaConstant& newConst = *buildConstant();
+            MetaConstant* newConst = buildConstant();
             int64_t constant_id = (*iter).getAsObject()->getInteger("id").getValue();
-            tempOperandMap[constant_id] = &newConst;
-            newConst
-                .setParent(this)
-                .setID(constant_id)
+            context.addMetaOperand(constant_id, newConst);
+            (*newConst)
+                .setParentScope     (this)
+                .registerToMetaUnit ()
+                .setID              (constant_id)
                 ;
         }
 
         // 构建 Meta BB
         for (auto iter = blocks.begin(); iter != blocks.end(); ++iter) {
-            MetaBB& newBB = *buildBB();
+            MetaBB* newBB = buildBB();
             int64_t bbID = (*iter).getAsObject()->getInteger("id").getValue();
-            tempBBMap[bbID] = &newBB;
-            newBB
-                .setParent(this)
-                .setID(bbID)
+            context.addMetaScope(bbID, newBB);
+            (*newBB)
+                .setParentScope     (this)
+                .registerToMetaUnit ()
+                .setID              (bbID)
                 ;
             // 递归构建 Meta BB
-            newBB.buildInstFromJSON(*((*iter).getAsObject()), tempBBMap, tempOperandMap);
+            context.saveContext().setCurScope(this).setHoldObject(iter->getAsObject());
+            newBB->buildInstFromJSON(context);
+            context.restoreContext();
         }
-
+        
+        printf("\n%d %d\n", bbs.size(), blocks.size());
         for (int i = 0; i < blocks.size(); ++i) {
-            json::Object& block = *(blocks[i].getAsObject());
-            json::Array& suc = *(block.getArray("successors"));
+            json::Object block = *(blocks[i].getAsObject());
+            json::Array suc = *(block.getArray("successors"));
             // 连上 Meta BB 之间的边
             for (int j = 0; j < suc.size(); ++j) {
                 int64_t suc_id = suc[j].getAsInteger().getValue();
-                assert(tempBBMap[suc_id]);
-                bbs[i]->addNextBB(tempBBMap[suc_id]);
+                assert(context.getMetaBB(suc_id));
+                bbs[i]->addNextBB(context.getMetaBB(suc_id));
             }
-            bbs[i]->buildInstGraphFromJSON(*(blocks[i].getAsObject()), tempBBMap, tempOperandMap);
+            context.saveContext().setCurScope(this).setHoldObject(block);
+            bbs[i]->buildInstGraphFromJSON(context);
+            context.restoreContext();
         }
-
-        (*this)
-            .setRoot(tempBBMap[object["rootBB"].getAsInteger().getValue()])
-            .setFunctionName(object["funcName"].getAsString().getValue().str())
-            .setStackSize(object["stackSize"].getAsInteger().getValue())
-            .setReturnType(MetaUtil::stringToDataType(object["returnType"].getAsString().getValue().str()))
-            ;
-
-    }
-
-    MetaFunction::MetaFunction(std::string JSON) {
-        std::cout << "MetaFunction::MetaFunction(std::string JSON)" << std::endl;
-        llvm::Expected<json::Value> expect = json::parse(JSON);
-        if (expect.takeError()) {
-            std::cout << "parse function json error!" << "\n";
-            return;
-        }
-        json::Object& object = *(expect.get().getAsObject());
-        init(object);
-    }
-
-    MetaFunction::MetaFunction(llvm::json::Object& object) {
-        init(object);
     }
 
     MetaFunction::MetaFunction() : stackSize(0), argNum(0) {
@@ -1660,6 +1721,20 @@ namespace MetaTrans {
     MetaFunction& MetaFunction::expandStackSize(int s) {
         stackSize += s;
         return *this;
+    }
+    
+    MetaFunction& MetaFunction::registerToMetaUnit() {
+        getMetaUnit().registerScope(this);
+        return *this;
+    }
+
+    MetaFunction& MetaFunction::setParentScope(MetaScope* scope) {
+        MetaScope::setParentScope(scope);
+        return *this;
+    }
+
+    MetaUnit& MetaFunction::getMetaUnit() {
+        return *((MetaUnit*)getRootScope());
     }
 
     int MetaFunction::getArgNum() { return args.size(); }
@@ -1717,6 +1792,7 @@ namespace MetaTrans {
         argStr[argStr.length() - 1] = ']';
         
         return funcStr +
+            "\"id\":" + std::to_string(getID()) + "," +
             "\"funcName\":" + "\"" + funcName + "\"" + "," +
             "\"stackSize\":" + std::to_string(stackSize) + "," +
             "\"rootBB\":" + std::to_string(root->getID()) + "," +
@@ -1887,11 +1963,66 @@ namespace MetaTrans {
 
     MetaUnit::MetaUnit() { }
 
+    MetaUnit::MetaUnit(std::string& JSON) {
+        MetaUnit(std::move(JSON));
+    }
+
+    MetaUnit::MetaUnit(std::string&& JSON) {
+        MetaUnitBuildContext context(JSON);
+
+        json::Array funcObj = context.getJsonArray("funcs");
+        json::Array globalVarObj = context.getJsonArray("globalVar");
+
+        for (auto iter = globalVarObj.begin(); iter != globalVarObj.end(); ++iter) {
+            context.saveContext().setCurScope(this).setHoldObject(iter->getAsObject());
+            MetaConstant* c = new MetaConstant(context);
+            addGlobalVar(c);
+            context.restoreContext();
+        }
+
+        for (auto iter = funcObj.begin(); iter != funcObj.end(); ++iter) {
+            context
+                .saveContext()
+                .setHoldObject(iter->getAsObject())
+                .setCurScope(this)
+                ;
+            MetaFunction* f = new MetaFunction(context);
+            addFunc(f);
+            context.restoreContext();
+        }
+
+    }
+
+    MetaUnit::~MetaUnit() { for (MetaFunction* mF : funcs) delete mF; }
+
     MetaUnit& MetaUnit::addFunc(MetaFunction* f) { funcs.push_back(f); return *this; }
 
     MetaUnit& MetaUnit::addGlobalVar(MetaConstant* c) { globalVar.push_back(c); return *this; }
 
-    Stream<MetaFunction*> MetaUnit::stream() { Stream<MetaFunction*> s(funcs); return s; } 
+    MetaUnit& MetaUnit::fillID() {
+        int op_id = 0, scope_id = 0, inst_address = 0;
+        for (auto operand : operands) {
+            operand->setID(op_id++);
+            if (operand->isMetaInst())
+                ((MetaInst*)operand)->setAddress(inst_address++);
+        }
+        for (auto scope : scopes) scope->setID(scope_id++);
+    }
+
+    MetaUnit& MetaUnit::registerOperand(MetaOperand* operand) {
+        operands.push_back(operand);
+        if (operand->isMetaInst()) insts.push_back((MetaInst*)operand);
+    }
+
+    MetaUnit& MetaUnit::registerScope(MetaScope* scope) {
+        scopes.push_back(scope);
+    }
+
+    Stream<MetaFunction*> MetaUnit::func_stream() { return std::move(Stream<MetaFunction*>(funcs)); } 
+
+    Stream<MetaConstant*> MetaUnit::global_stream() { return std::move(Stream<MetaConstant*>(globalVar)); } 
+
+    Stream<MetaInst*> MetaUnit::inst_stream() { return std::move(Stream<MetaInst*>(insts)); } 
 
     std::vector<MetaFunction*>& MetaUnit::getFuncList() { return funcs; }
 
@@ -1902,9 +2033,122 @@ namespace MetaTrans {
     std::vector<MetaFunction*>::iterator MetaUnit::end() { return funcs.end(); }
 
     std::string MetaUnit::toString() {
-        return "";
+        std::string&& str           = "{";
+        std::string&& funcStr       = MetaUtil::vectorToJsonString(funcs);
+        std::string&& globalVarStr  = MetaUtil::vectorToJsonString(globalVar);
+        printf("size of global var: %d", globalVar.size());
+        return str
+            + "\"funcs\":" + funcStr + ","
+            + "\"globalVar\":" + globalVarStr
+            + "}"
+            ;
     }
 
+
+//===-------------------------------------------------------------------------------===//
+/// MetaScope implementation.
+    
+    MetaScope::MetaScope() : parent(nullptr), id(-1) { }
+
+    int MetaScope::getID() { return id; }
+
+    MetaScope& MetaScope::setParentScope(MetaScope* scope) { parent = scope; return *this; }
+
+    MetaScope& MetaScope::setID(int id) { this->id = id; return *this; }
+
+    MetaScope* MetaScope::getParentScope() { return parent; }
+
+    MetaScope* MetaScope::getRootScope() {
+        if (parent == nullptr) return this;
+        return parent->getRootScope();
+    }
+
+//===-------------------------------------------------------------------------------===//
+/// MetaUnitBuildContext implementation.
+
+    MetaUnitBuildContext::MetaUnitBuildContext(std::string str) : JSON(str), scope(nullptr) {
+        llvm::Expected<json::Value> expect = json::parse(str);
+        if (expect.takeError()) {
+            std::cout << "parse function json error!" << "\n";
+            return;
+        }
+        object = *(expect.get().getAsObject());
+    }
+
+    llvm::json::Object MetaUnitBuildContext::getHoldObject() {
+        return object;
+    }
+
+    llvm::json::Array MetaUnitBuildContext::getJsonArray(std::string key) {
+        return *(object[key].getAsArray());
+    }
+
+    llvm::json::Object MetaUnitBuildContext::getJsonObject(std::string key) {
+        return *(object[key].getAsObject());
+    }
+
+    MetaScope* MetaUnitBuildContext::getScope(int64_t id) { return scopeMap[id]; }
+    
+    MetaScope* MetaUnitBuildContext::getCurScope() { return scope; }
+    
+    MetaUnitBuildContext& MetaUnitBuildContext::setCurScope(MetaScope* scope) {
+        this->scope = scope;
+        return *this;
+    }
+
+    MetaUnitBuildContext& MetaUnitBuildContext::setHoldObject(llvm::json::Object& o) {
+        object = o;
+        return *this;
+    }
+
+    MetaUnitBuildContext& MetaUnitBuildContext::setHoldObject(llvm::json::Object* o) {
+        object = *o;
+        return *this;
+    }
+
+    MetaUnitBuildContext& MetaUnitBuildContext::addMetaOperand(int64_t id, MetaOperand* operand) {
+        operandMap[id] = operand;
+        return *this;
+    }
+
+    MetaUnitBuildContext& MetaUnitBuildContext::addMetaScope(int64_t id, MetaScope* scope) {
+        scopeMap[id] = scope; 
+        return *this;
+    }
+
+    MetaUnitBuildContext& MetaUnitBuildContext::saveContext() {
+        objectStack.push_back(object);
+        scopeStack.push_back(scope);
+        return *this;
+    }
+
+    MetaUnitBuildContext& MetaUnitBuildContext::restoreContext() {
+        object = objectStack.back();
+        scope = scopeStack.back();
+        objectStack.pop_back();
+        scopeStack.pop_back();
+        return *this;
+    }
+
+    MetaOperand* MetaUnitBuildContext::getMetaOperand(int64_t id) {
+        return operandMap[id];
+    }
+
+    MetaConstant* MetaUnitBuildContext::getMetaConstant(int64_t id) {
+        return (MetaConstant*) operandMap[id];
+    }
+
+    MetaInst* MetaUnitBuildContext::getMetaInst(int64_t id) {
+        return (MetaInst*) operandMap[id];
+    }
+
+    MetaBB* MetaUnitBuildContext::getMetaBB(int64_t id) {
+        return (MetaBB*) scopeMap[id];
+    }
+
+    MetaFunction* MetaUnitBuildContext::getMetaFunction(int64_t id) {
+        return (MetaFunction*) scopeMap[id];
+    }
 
 
 } // end namespace MetaTrans

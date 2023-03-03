@@ -14,7 +14,7 @@ namespace MetaTrans {
             arg
                 .setArgIndex(index++)
                 .setOffset(offset)
-                .setParent(builder.mF)
+                .setParentScope(builder.mF)
                 .setArgType(MetaUtil::extractDataType(*(it->getType())))
                 .setWidth(MetaUtil::extractDataWidth(*(it->getType())))
                 ;
@@ -61,9 +61,9 @@ namespace MetaTrans {
             std::vector<MetaInst*>& instList = mB.getInstList();
             assert(b.getFirstNonPHI());
             mB
-                .setEntry(builder.instMap[b.getFirstNonPHI()])
-                .setParent(builder.mF)
-                .setTerminator(instList[instList.size() - 1])
+                .setEntry       (builder.instMap[b.getFirstNonPHI()])
+                .setParentScope (builder.mF)
+                .setTerminator  (instList[instList.size() - 1])
                 ;
         }
         chain.doFilter(target);

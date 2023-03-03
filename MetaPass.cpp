@@ -3,6 +3,7 @@
 #include "llvm/Support/JSON.h"
 #include "meta/MetaMatcher.h"
 #include "meta/MetaTrans.h"
+#include <typeinfo>
 
 using namespace llvm;
 int globalColor = 0;
@@ -18,27 +19,26 @@ namespace MetaTrans {
     }
 
     MetaFunctionPass::~MetaFunctionPass() {
-        std::string funcs = MetaUtil::vectorToJsonString(metaFuncs);
-        std::string name = getenv("HOME");
+        builder.getMetaUnit()->fillID();
+        std::string funcs  = builder.getMetaUnit()->toString();
+        std::string name   = getenv("HOME");
         std::string IRJSON = name + "/ir.json";
         MetaUtil::writeToFile(funcs, IRJSON);
         std::cout << "MetaFunctionPass::~MetaFunctionPass ir.json IRJSON :: " << std::endl << funcs << std::endl;
  
+        MetaUnit u(funcs);
         
         // check out functions
         printf("PRINTING FUNC NAME ... \n");
 
-        
         processMatch();
 
-        for (MetaFunction* mF : metaFuncs) delete mF;
-        delete unit;
     }
 
     void MetaFunctionPass::processMatch() {
-        std::string name = getenv("HOME");
+        std::string name    = getenv("HOME");
         std::string ASMJSON = name + "/asm.json";
-        std::string asmStr = MetaUtil::readFromFile(ASMJSON);
+        std::string asmStr  = MetaUtil::readFromFile(ASMJSON);
 
         MapTable = new MappingTable();
 
@@ -46,23 +46,15 @@ namespace MetaTrans {
                 ->initTableMeta()
                 ->loadMappingTable();
 
-
+        MetaUnit asmUnit(asmStr);
         
-        llvm::Expected<json::Value> expect = json::parse(asmStr);
-        if (Error e = expect.takeError()) {
-            // std::cout << "parse function json error!" << "\n";
-            logAllUnhandledErrors(std::move(e), outs(), "[JSON Error] ");
-            return;
-        }
-        json::Array& funcArr = *(expect.get().getAsArray());
-        for (int i = 0; i < funcArr.size(); i++) {
-            MetaFunction f(*(funcArr[i].getAsObject()));
+        auto match_outer = [&] (MetaFunction* f) {
             MetaMatcher matcher;
 
-            auto predicate = [&] (MetaFunction* mF) { return mF->getFunctionName() == f.getFunctionName(); };
-            auto match = [&] (MetaFunction* mF) {
+            auto predicate = [&] (MetaFunction* mF) { return mF->getFunctionName() == f->getFunctionName(); };
+            auto match_inner = [&] (MetaFunction* mF) {
                 std::unordered_map<MetaBB*, MetaBB*>& result = matcher
-                                                                .setX(&f)
+                                                                .setX(f)
                                                                 .setY(mF)
                                                                 .matchBB()
                                                                 .matchInst()
@@ -92,18 +84,20 @@ namespace MetaTrans {
             };
 
             
-            (*unit)
-                .stream()
+            builder
+                .getMetaUnitRef()
+                .func_stream()
                 .filter(predicate)
-                .forEach(match)
+                .forEach(match_inner)
                 ;
 
-        }
+        };
+
+        asmUnit.func_stream().forEach(match_outer);
 
     }
 
     MetaFunctionPass::MetaFunctionPass() : FunctionPass(MetaFunctionPass::ID) {
-        unit = new MetaUnit();
         typeMap = YamlUtil::parseMapConfig("ir.yml", MetaFunctionPass::str_inst_map);
     }
 
@@ -113,9 +107,6 @@ namespace MetaTrans {
                                     .setFunction(&F)
                                     .setTypeMap(typeMap)
                                     .build();
-        unit->addFunc(metaFunc);
-        metaFuncs.push_back(metaFunc);
-        MetaFunction f(metaFunc->toString());
         return true;
     }
 
@@ -195,15 +186,21 @@ namespace MetaTrans {
 /// Meta Function Builder implementation.
 
     MetaFunctionBuilder::MetaFunctionBuilder() : F(nullptr), mF(nullptr), typeMap(nullptr), buildCount(0) {
+        unit = new MetaUnit();
         filterManager
             .addFilter(new MetaArgFilter())
             .addFilter(new MetaConstantFilter())
             .addFilter(new MetaInstFilter())
             .addFilter(new MetaBBFilter())
             .addFilter(new MetaFuncFilter())
-            .addFilter(new MetaIDFilter())
+            // .addFilter(new MetaIDFilter())
             .addFilter(new MetaFeatureFilter())
             ;
+    }
+
+    MetaFunctionBuilder::~MetaFunctionBuilder() {
+        filterManager.clear();
+        delete unit;
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::clearAuxMaps() {
@@ -227,33 +224,25 @@ namespace MetaTrans {
 
     MetaFunction* MetaFunctionBuilder::build() {
         (*this)
-            .buildMetaFunction()
             .buildMetaElements()
             .buildGraph()
             .buildMetaData();
 
         MetaUtil::paintColor(mF, globalColor++);
         MetaUtil::setDataRoot(mF);
+
         buildCount++;
 
         return mF;
     }
 
-    MetaFunctionBuilder& MetaFunctionBuilder::buildMetaFunction() {
-        mF = new MetaFunction();
-        return *this;
-    }
-
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaElements() {
-        // create all meta basic block and instructions recursively.
         (*this)
             .createGlobalVar()
+            .createMetaFunction()
             .createMetaArgs()
+            .createMetaBB()
             ;
-                
-        for (auto bb = F->begin(); bb != F->end(); ++bb) {
-            createMetaBB(*bb);
-        }
         return *this;
     }
 
@@ -289,39 +278,72 @@ namespace MetaTrans {
             (*mc)
                 .setGlobal(true)
                 .setName(global.getName().str())
+                .setParentScope(unit)
+                .registerToMetaUnit()
                 ;
-
-            mF->addConstant(constantMap[&global] = mc);
+    
+            unit->addGlobalVar(constantMap[&global] = mc);
             // printf("meta address for global var %s is: %d\n", global.getName().str().c_str(), map[&global]);
         }
 
         return *this;
     }
 
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaFunction() {
+        mF = new MetaFunction();
+        (*mF)
+            .setParentScope(unit)
+            .registerToMetaUnit()
+            ;
+        (*unit)
+            .addFunc(mF)
+            ;
+        return *this;
+    }
+
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaArgs() {
         // create all arguments;
         for (auto arg_iter = F->arg_begin(); arg_iter != F->arg_end(); ++arg_iter) {
-            mF->addArgument(argMap[&*arg_iter] = new MetaArgument());
+            MetaArgument* arg = mF->buildArgument();
+            argMap[&*arg_iter] = arg;
+            (*arg)
+                .setParentScope(mF)
+                .registerToMetaUnit()
+                ;
         }
         return *this;
 
     }
 
-    MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB(BasicBlock& b) {
-        MetaBB& newBB = *(mF->buildBB());
-        assert(bbMap.insert({&b, &newBB}).second);
-        for (auto i = b.begin(); i != b.end(); ++i) {
-            (*this)
-                .createMetaInst(*i, newBB)
-                .createMetaOperand(*i);
+    MetaFunctionBuilder& MetaFunctionBuilder::createMetaBB() {
+        // create all meta basic block and instructions recursively.
+        for (auto bb = F->begin(); bb != F->end(); ++bb) {
+            BasicBlock& bbRef   = *bb;
+            MetaBB*     newBB   = mF->buildBB();
+            bbMap[&bbRef]       = newBB;
+            (*newBB)
+                .setParentScope(mF)
+                .registerToMetaUnit()
+                ;
+
+            for (auto i = bbRef.begin(); i != bbRef.end(); ++i) {
+                Instruction& inst  = *i;
+                (*this)
+                    .createMetaInst(inst, *newBB)
+                    .createMetaOperand(inst)
+                    ;
+            }
         }
         return *this;
     }
     
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaInst(Instruction& i, MetaBB& b) {
         MetaInst* newInst = b.buildInstruction((*typeMap)[i.getOpcode()]);
-        newInst->setParent(&b);
-        assert(instMap.insert({&i, newInst}).second);
+        (*newInst)
+            .setParentScope(&b)
+            .registerToMetaUnit()
+            ;
+        instMap[&i] = newInst;
         return *this;
     }
 
@@ -333,7 +355,14 @@ namespace MetaTrans {
             if (Constant* c = dyn_cast<Constant>(value)) {
                 if (constantMap.find(c) != constantMap.end()) continue;
                 printf("WARN: creating constant when process operand.\n");
-                mF->addConstant(constantMap[c] = new MetaConstant());
+                MetaConstant* newConst = constantMap[c] = mF->buildConstant();
+                (*newConst)
+                    .setParentScope(mF)
+                    .registerToMetaUnit()
+                    ;
+            }
+            else {
+                printf("find operand type: %d\n", value->getType()->getTypeID());
             }
         }
         return *this;
@@ -371,7 +400,7 @@ namespace MetaTrans {
         // deal with phi node particularly.
         if (auto phi = dyn_cast<PHINode>(curInst)) { copyDependencies(phi); }
 
-        MetaBB* curBB = inst->getParent();
+        MetaBB* curBB = (MetaBB*)(inst->getParentScope());
         outs() << "inst " << inst << ",  type: " << curInst->getOpcodeName() << "\n";
         for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
             Value* value = op->get();
@@ -391,6 +420,14 @@ namespace MetaTrans {
         }
 
     }
+
+    std::string MetaFunctionBuilder::getMetaUnitStr() {
+        return std::move(unit->toString());
+    }
+        
+    MetaUnit* MetaFunctionBuilder::getMetaUnit() { return unit; }
+
+    MetaUnit& MetaFunctionBuilder::getMetaUnitRef() { return *unit; }
 
 } // namespace MetaTrans
 
