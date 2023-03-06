@@ -347,8 +347,11 @@ public:
     
     std::vector<MetaOperand*>::iterator op_end();
         
-    // return true if has same type with i.
-    bool hasSameType(MetaInst* i);
+    // return true if has absolute same type (same number of types and same type) with i.
+    bool hasStrictSameType(MetaInst* i);
+
+    // return true if has one same type with i.
+    bool hasRelaxedSameType(MetaInst* i);
     
     // return true if ty is in type vector.
     bool isType(InstType ty);
@@ -423,6 +426,8 @@ public:
     MetaInst* trainEquivClass(MetaInst* inst);
 
     std::vector<MetaInst*> getMatchedInst();
+
+    MetaInst* updateMappingTable(std::string mapstr, std::string asmInst, std::string ir, int index);
 
 
 };
