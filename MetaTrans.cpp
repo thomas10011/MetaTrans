@@ -120,12 +120,16 @@ namespace MetaTrans {
     MetaConstant::MetaConstant() : global(false), imm(false) { }
 
     MetaConstant::MetaConstant(MetaUnitBuildContext& context) {
-        auto    object = context.getHoldObject();
-        int64_t id     = object.getInteger("id")      .getValue();
-        bool    global = object.getBoolean("isGloabl").getValue();
-        bool    imm    = object.getBoolean("isImm")   .getValue();
+        auto        object = context.getHoldObject();
+        std::string name   = object.getString ("name")    .getValue().str();
+        std::string value  = object.getString ("value")   .getValue().str();
+        int64_t     id     = object.getInteger("id")      .getValue();
+        bool        global = object.getBoolean("isGloabl").getValue();
+        bool        imm    = object.getBoolean("isImm")   .getValue();
 
         (*this)
+            .setName(name)
+            .setValueStr(value)
             .setGlobal(global)
             .setImm(imm)
             .setParentScope(context.getCurScope())
@@ -196,6 +200,15 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaConstant& MetaConstant::setValueStr(std::string str) {
+        valueStr = str;
+        return *this;
+    }
+
+    std::string MetaConstant::getValueStr() {
+        return valueStr;
+    }
+
     bool MetaConstant::isMetaConstant() { return true; }
 
     bool MetaConstant::isGlobal() { return global; }
@@ -207,6 +220,8 @@ namespace MetaTrans {
     std::string MetaConstant::toString() {
         std::string str = "";
         return str + "{" 
+            + "\"name\":" + "\"" + getName() + "\"" + ","
+            + "\"value\":" + (valueStr.length() ? valueStr : "\"\"") + "," 
             + "\"id\":" + std::to_string(id) + ","
             + "\"isGloabl\":" + (global ? "true" : "false") + ","
             + "\"isImm\":" + (imm ? "true" : "false")
@@ -1451,7 +1466,6 @@ namespace MetaTrans {
                 for (auto iter = kv.begin(); iter != kv.end(); ++iter) {
                     int key = std::stoi(iter->first.str());
                     int val = iter->second.getAsInteger().getValue();
-                    printf("%d %d\n", key, val);
                     assert(context.getMetaOperand(val));
                     assert(context.getMetaBB(key));
                     ((MetaPhi*)(instList[i]))->addValue(context.getMetaBB(key), context.getMetaOperand(val));
@@ -2073,8 +2087,6 @@ namespace MetaTrans {
             addFunc(f);
             context.restoreContext();
         }
-
-        printf("size of func: %d size of global: %d\n", funcs.size(), globalVar.size());
             
     }
 
@@ -2121,7 +2133,6 @@ namespace MetaTrans {
         std::string&& str           = "{";
         std::string&& funcStr       = MetaUtil::vectorToJsonString(funcs);
         std::string&& globalVarStr  = MetaUtil::vectorToJsonString(globalVar);
-        printf("size of func: %d size of global: %d\n", funcs.size(), globalVar.size());
 
         return str
             + "\"funcs\":" + funcStr + ","

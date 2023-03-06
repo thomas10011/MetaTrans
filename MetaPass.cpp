@@ -285,7 +285,7 @@ namespace MetaTrans {
                 .setParentScope(unit)
                 .registerToMetaUnit()
                 ;
-    
+            printf("INFO: Creating Global Var named %s\n", mc->getName().c_str());
             unit->addGlobalVar(constantMap[&global] = mc);
             // printf("meta address for global var %s is: %d\n", global.getName().str().c_str(), map[&global]);
         }
@@ -358,12 +358,19 @@ namespace MetaTrans {
             // Ugly, but works.
             if (Constant* c = dyn_cast<Constant>(value)) {
                 if (constantMap.find(c) != constantMap.end()) continue;
-                printf("WARN: creating constant when process operand.\n");
                 MetaConstant* newConst = constantMap[c] = mF->buildConstant();
                 (*newConst)
                     .setParentScope(mF)
                     .registerToMetaUnit()
                     ;
+                if (ConstantData* cd = dyn_cast<ConstantData>(c)) {
+                    (*newConst)
+                        .setImm(true)
+                        .setName("")
+                        .setValueStr(cd->getNameOrAsOperand())
+                        ;
+                    printf("INFO: Creating Immm Constant with value %s.\n", newConst->getValueStr().c_str());
+                }
             }
             else {
                 printf("find operand type: %d\n", value->getType()->getTypeID());

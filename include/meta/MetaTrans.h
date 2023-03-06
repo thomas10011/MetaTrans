@@ -178,6 +178,8 @@ protected:
 
     DataUnion value;
 
+    std::string valueStr;
+
 public:
     
     MetaConstant();
@@ -216,6 +218,8 @@ public:
 
     MetaConstant& setParentScope(MetaScope* scope);
 
+    MetaConstant& setValueStr(std::string str);
+
     bool isGlobal();
 
     bool isImm();
@@ -223,6 +227,8 @@ public:
     virtual bool isMetaConstant() override;
 
     std::string getName();
+
+    std::string getValueStr();
 
     std::string virtual toString() override;
 
