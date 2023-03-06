@@ -1256,12 +1256,7 @@ namespace MetaTrans {
         setID(id);
         setAddress(address);
 
-        json::Object kv = *(JSON["bbValueMap"].getAsObject());
-        for (auto iter = kv.begin(); iter != kv.end(); ++iter) {
-            int key = std::stoi(iter->first.str());
-            int val = iter->second.getAsInteger().getValue();
-            bbValueMap[context.getMetaBB(key)] = context.getMetaOperand(val);
-        }
+
         return *this;
     }
 
@@ -1372,6 +1367,19 @@ namespace MetaTrans {
                 assert(context.getMetaOperand(op_id));
                 MetaOperand* operand = context.getMetaOperand(op_id);
                 instList[i]->addOperand(operand);
+            }
+                
+            // 如果是phi节点 则添加bb和value的映射
+            if (instList[i]->isMetaPhi()) {
+                json::Object kv = *(inst["bbValueMap"].getAsObject());
+                for (auto iter = kv.begin(); iter != kv.end(); ++iter) {
+                    int key = std::stoi(iter->first.str());
+                    int val = iter->second.getAsInteger().getValue();
+                    printf("%d %d\n", key, val);
+                    assert(context.getMetaOperand(val));
+                    assert(context.getMetaBB(key));
+                    ((MetaPhi*)(instList[i]))->addValue(context.getMetaBB(key), context.getMetaOperand(val));
+                }
             }
         }
 
@@ -1619,7 +1627,6 @@ namespace MetaTrans {
         (*this)
             .setParentScope(context.getCurScope())
             .registerToMetaUnit()
-            .setRoot(context.getMetaBB(object["rootBB"].getAsInteger().getValue()))
             .setFunctionName(object["funcName"].getAsString().getValue().str())
             .setStackSize(object.getInteger("stackSize").getValue())
             .setReturnType(MetaUtil::stringToDataType(object["returnType"].getAsString().getValue().str()))
@@ -1668,7 +1675,10 @@ namespace MetaTrans {
             context.restoreContext();
         }
         
-        printf("\n%d %d\n", bbs.size(), blocks.size());
+        (*this)
+            .setRoot(context.getMetaBB(object["rootBB"].getAsInteger().getValue()))
+            ;
+
         for (int i = 0; i < blocks.size(); ++i) {
             json::Object block = *(blocks[i].getAsObject());
             json::Array suc = *(block.getArray("successors"));
@@ -1682,6 +1692,7 @@ namespace MetaTrans {
             bbs[i]->buildInstGraphFromJSON(context);
             context.restoreContext();
         }
+
     }
 
     MetaFunction::MetaFunction() : stackSize(0), argNum(0) {
@@ -1964,10 +1975,6 @@ namespace MetaTrans {
     MetaUnit::MetaUnit() { }
 
     MetaUnit::MetaUnit(std::string& JSON) {
-        MetaUnit(std::move(JSON));
-    }
-
-    MetaUnit::MetaUnit(std::string&& JSON) {
         MetaUnitBuildContext context(JSON);
 
         json::Array funcObj = context.getJsonArray("funcs");
@@ -1991,9 +1998,11 @@ namespace MetaTrans {
             context.restoreContext();
         }
 
+        printf("size of func: %d size of global: %d\n", funcs.size(), globalVar.size());
+            
     }
 
-    MetaUnit::~MetaUnit() { for (MetaFunction* mF : funcs) delete mF; }
+    MetaUnit::~MetaUnit() { }
 
     MetaUnit& MetaUnit::addFunc(MetaFunction* f) { funcs.push_back(f); return *this; }
 
@@ -2036,7 +2045,8 @@ namespace MetaTrans {
         std::string&& str           = "{";
         std::string&& funcStr       = MetaUtil::vectorToJsonString(funcs);
         std::string&& globalVarStr  = MetaUtil::vectorToJsonString(globalVar);
-        printf("size of global var: %d", globalVar.size());
+        printf("size of func: %d size of global: %d\n", funcs.size(), globalVar.size());
+
         return str
             + "\"funcs\":" + funcStr + ","
             + "\"globalVar\":" + globalVarStr

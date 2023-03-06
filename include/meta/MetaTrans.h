@@ -719,8 +719,6 @@ public:
 
     MetaUnit(std::string& JSON);
 
-    MetaUnit(std::string&& JSON);
-
     ~MetaUnit();
 
     MetaUnit& addFunc(MetaFunction* f);

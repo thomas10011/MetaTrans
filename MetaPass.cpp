@@ -26,6 +26,7 @@ namespace MetaTrans {
         MetaUtil::writeToFile(funcs, IRJSON);
         std::cout << "MetaFunctionPass::~MetaFunctionPass ir.json IRJSON :: " << std::endl << funcs << std::endl;
  
+        // just test for constructor.
         MetaUnit u(funcs);
         
         // check out functions
@@ -46,9 +47,14 @@ namespace MetaTrans {
                 ->initTableMeta()
                 ->loadMappingTable();
 
-        MetaUnit asmUnit(asmStr);
+
+        MetaUnit* asmUnit = new MetaUnit(asmStr);
+
+        std::cout << asmUnit->toString() << std::endl;
         
-        auto match_outer = [&] (MetaFunction* f) {
+
+        for (auto iter = asmUnit->begin(); iter != asmUnit->end(); ++iter) {
+            MetaFunction* f = *iter;
             MetaMatcher matcher;
 
             auto predicate = [&] (MetaFunction* mF) { return mF->getFunctionName() == f->getFunctionName(); };
@@ -92,8 +98,6 @@ namespace MetaTrans {
                 ;
 
         };
-
-        asmUnit.func_stream().forEach(match_outer);
 
     }
 

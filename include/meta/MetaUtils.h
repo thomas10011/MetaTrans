@@ -178,7 +178,7 @@ public:
         std::string res = "[";
         for (T* e : vec) res += e->toString() + ",";
         res[res.length() - 1] = ']';
-        return std::move(res);
+        return res;
     }
 
     template<typename T>
