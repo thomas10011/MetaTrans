@@ -979,6 +979,7 @@ namespace MetaTrans {
             return "";
         }
            
+        
 
         if(this->getInstType().size() == 1 && inst->getInstType().size() == 1)
             // Unordered Operations can directly dump sequence
@@ -989,7 +990,6 @@ namespace MetaTrans {
                 dumpMapping(str);
                 return str;
             }  
-
 
 
         // 1-1 Mapping
