@@ -185,6 +185,8 @@ namespace MetaTrans {
             case InstType::CONVERT:    return "convert"   ;
             case InstType::HINT:       return "hint"      ;
             case InstType::MOV:        return "mov"      ;
+            case InstType::CSR:        return "csr"       ;
+            case InstType::SIGN:       return "sign"      ;
         }
     }
 
