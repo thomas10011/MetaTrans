@@ -979,6 +979,7 @@ namespace MetaTrans {
             return "";
         }
            
+        
 
         if(this->getInstType().size() == 1 && inst->getInstType().size() == 1)
             // Unordered Operations can directly dump sequence
@@ -994,8 +995,15 @@ namespace MetaTrans {
 
         // 1-1 Mapping
         if(asmVec.size() == 1 && irVec.size() == 1){
+            std::cout << "DEBUG::buildOperandMapping() ASM & IR instructions only has one instruction matched respectively\n";
             for(int id = 0; id < asmOpVec.size(); id++){
+
+                std::cout << "DEBUG::buildOperandMapping is calling getMatchedInst()......\n";
+
                 auto vec = dynamic_cast<MetaInst*>(asmOpVec[id])->getMatchedInst();
+                
+                std::cout << "DEBUG:: getMatchedInst() returns the vector of size" << vec.size() << "\n";
+
                 for(int ir = 0; ir < irOpVec.size(); ir++){
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
                         mapping.insert(std::make_pair(id, ir));
