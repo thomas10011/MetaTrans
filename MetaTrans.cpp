@@ -801,6 +801,12 @@ namespace MetaTrans {
 
         std::cout <<"DEBUG:: Enterng function buildMapping(inst)....." << std::endl;;
         std::string str = "";
+
+        // Skip the matched nodes
+        // if(this->MatchedInst.size() || inst->MatchedInst.size())
+        //     return *this;
+
+
         this->Matched   = true;
         inst->Matched   = true;
 
@@ -971,8 +977,22 @@ namespace MetaTrans {
 
         // <ASM OP ID, IR OP ID>
         std::map<int, int> mapping;
-        std::cout << "DEBUG:: buildOperandMapping() This->getOperandNum = " << opNum << std::endl;
-        std::cout << "DEBUG:: buildOperandMapping() inst->getOperandNum = " << inst->getOperandNum() << std::endl;
+        std::cout << "DEBUG:: buildOperandMapping() ASM->getOperandNum = " << opNum << std::endl;
+        std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << inst->getOperandNum() << std::endl;
+        std::cout << "DEBUG:: buildOperandMapping() ASM->MatchedInst Size = " << asmVec.size() << std::endl;
+
+        for(auto it = asmVec.begin(); it != asmVec.end();it++){
+            std::cout << (*it)->getOriginInst() << " ";
+        }
+
+        std::cout << "\nDEBUG:: buildOperandMapping() IR->MatchedInst Size = " << irVec.size() << std::endl;
+
+        for(auto it = irVec.begin(); it != irVec.end();it++){
+            std::cout << (*it)->getOriginInst() << " ";
+        }
+
+        std::cout << std::endl;
+
 
         if(opNum != inst->getOperandNum()){
             std::cout << BOLD << RED << "ERROR:: Operand Number mismatched between IR & ASM! STOP buildOperandMapping()!\n" << RST;
@@ -994,12 +1014,19 @@ namespace MetaTrans {
 
         // 1-1 Mapping
         if(asmVec.size() == 1 && irVec.size() == 1){
+            std::cout << "DEBUG::buildOperandMapping() encounters 1-1 Mapping\n"; 
             for(int id = 0; id < asmOpVec.size(); id++){
-                if(asmOpVec[id]->isMetaConstant())
+                if(asmOpVec[id]->isMetaConstant()){
+                    std::cout << "DEBUG::buildOperandMapping() ASM Operand "<< id+1 << "is MetaConstant\n"; 
                     continue;
+                }
                 auto vec = dynamic_cast<MetaInst*>(asmOpVec[id])->getMatchedInst();
                 std::cout << "DEBUG:: getMatchedInst() returns the vector of size" << vec.size() << "\n";
                 for(int ir = 0; ir < irOpVec.size(); ir++){
+                    if(irOpVec[ir]->isMetaConstant()){
+                        std::cout << "DEBUG::buildOperandMapping() IR Operand "<< ir+1 << "is MetaConstant\n"; 
+                        continue;
+                    }
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
                         mapping.insert(std::make_pair(id, ir));
                         std::cout << "DEBUG:: buildOperandMapping() builds operand pair < "
@@ -1051,6 +1078,8 @@ namespace MetaTrans {
         // std::vector<MetaInst*> tmp;
         std::vector<MetaInst*> fused;
 
+        this->Trained = true;
+        irinst->Trained = true;
 
 
         //Perfect Match Case: 1-1 or N-N operation mapping
@@ -1194,8 +1223,13 @@ namespace MetaTrans {
 
         for(auto it = asmvec.begin(); it != asmvec.end(); it++){
              std::cout << "DEBUG:: trainEquivClass:: enter loops \n";
-            
+
+
             if(!(*it)->getInstType().size())
+                continue;
+            
+            //Skipping trained inst
+            if((*it)->Trained)
                 continue;
 
             // Skip Load Store & Branch instruction in EquivClass training
@@ -1214,8 +1248,15 @@ namespace MetaTrans {
 
             // TODO: Ambiguous cases can be addressed if adding further hash check
                 if(retvec.size() == 1)
-                    for(auto itt = retvec.begin();itt!=retvec.end();itt++)
+                    for(auto itt = retvec.begin();itt!=retvec.end();itt++){
+                        if(!(*it)->Trained && !(*itt)->Trained)
                             (*it)->trainInst(*itt);
+                        else
+                            std::cout << "DEBUG::trainEquivClass() found ASM inst "<<  (*it)->getOriginInst()
+                                      << " trained status = " << (*it)->Trained << ",  IR inst "
+                                      << (*itt)->getOriginInst() << " trained status = " << (*itt)->Trained 
+                                      << std::endl;
+                    }
             }
 
         return this;

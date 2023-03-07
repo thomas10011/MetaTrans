@@ -315,6 +315,8 @@ protected:
 
     int address;
 
+    bool Trained = false;
+
 public:
 
     MetaInst();
