@@ -995,7 +995,10 @@ namespace MetaTrans {
         // 1-1 Mapping
         if(asmVec.size() == 1 && irVec.size() == 1){
             for(int id = 0; id < asmOpVec.size(); id++){
+                if(asmOpVec[id]->isMetaConstant())
+                    continue;
                 auto vec = dynamic_cast<MetaInst*>(asmOpVec[id])->getMatchedInst();
+                std::cout << "DEBUG:: getMatchedInst() returns the vector of size" << vec.size() << "\n";
                 for(int ir = 0; ir < irOpVec.size(); ir++){
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
                         mapping.insert(std::make_pair(id, ir));
