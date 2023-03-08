@@ -221,7 +221,7 @@ namespace MetaTrans {
         std::string str = "";
         return str + "{" 
             + "\"name\":" + "\"" + getName() + "\"" + ","
-            + "\"value\":" + (valueStr.length() ? valueStr : "\"\"") + "," 
+            + "\"value\":" + (valueStr.length() ? "\"" + valueStr + "\"" : "\"\"") + "," 
             + "\"id\":" + std::to_string(id) + ","
             + "\"isGloabl\":" + (global ? "true" : "false") + ","
             + "\"isImm\":" + (imm ? "true" : "false")
@@ -1788,14 +1788,10 @@ namespace MetaTrans {
 
         // 构建 Meta Constant
         for (auto iter = constants.begin(); iter != constants.end(); ++iter) {
-            MetaConstant* newConst = buildConstant();
-            int64_t constant_id = (*iter).getAsObject()->getInteger("id").getValue();
-            context.addMetaOperand(constant_id, newConst);
-            (*newConst)
-                .setParentScope     (this)
-                .registerToMetaUnit ()
-                .setID              (constant_id)
-                ;
+            context.saveContext().setCurScope(this).setHoldObject(iter->getAsObject());
+            MetaConstant* c = new MetaConstant(context);
+            addConstant(c);
+            context.restoreContext();
         }
 
         // 构建 Meta BB
