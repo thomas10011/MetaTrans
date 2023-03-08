@@ -3,60 +3,60 @@
 
 namespace MetaTrans {
 
-    class MetaArgFilter : public Filter {
+class MetaArgFilter : public Filter {
 
-        public:
+public:
 
-            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+    virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
-    };
+};
 
-    class MetaConstantFilter : public Filter {
+class MetaConstantFilter : public Filter {
 
-        public:
+public:
 
-            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+    virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
-    };
+};
 
-    class MetaInstFilter : public Filter {
+class MetaInstFilter : public Filter {
 
-        public:
+    public:
 
-            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+        virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
-    };
+};
 
-    class MetaBBFilter : public Filter {
+class MetaBBFilter : public Filter {
 
-        public:
+public:
 
-            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+    virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
-    };
+};
 
-    class MetaFuncFilter : public Filter {
+class MetaFuncFilter : public Filter {
 
-        public:
+public:
 
-            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+    virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
-    };
+};
 
-    class MetaIDFilter : public Filter {
+class MetaIDFilter : public Filter {
 
-        public:
+public:
 
-            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+    virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
 
-    };
-    
-    class MetaFeatureFilter : public Filter {
+};
 
-        public:
+class MetaFeatureFilter : public Filter {
 
-            virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+public:
 
-    };
+    virtual void doFilter(FilterTarget& target, FilterChain& chain) override;
+
+};
 
 }
