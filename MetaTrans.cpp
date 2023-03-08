@@ -1021,7 +1021,7 @@ namespace MetaTrans {
                     continue;
                 }
                 auto vec = dynamic_cast<MetaInst*>(asmOpVec[id])->getMatchedInst();
-                std::cout << "DEBUG:: getMatchedInst() returns the vector of size" << vec.size() << "\n";
+                std::cout << "DEBUG:: getMatchedInst() " << dynamic_cast<MetaInst*>(asmOpVec[id])->getOriginInst()<<" returns the vector of size " << vec.size() << "\n";
                 for(int ir = 0; ir < irOpVec.size(); ir++){
                     if(irOpVec[ir]->isMetaConstant()){
                         std::cout << "DEBUG::buildOperandMapping() IR Operand "<< ir+1 << "is MetaConstant\n"; 
@@ -1249,13 +1249,13 @@ namespace MetaTrans {
             // TODO: Ambiguous cases can be addressed if adding further hash check
                 if(retvec.size() == 1)
                     for(auto itt = retvec.begin();itt!=retvec.end();itt++){
-                        if(!(*it)->Trained && !(*itt)->Trained)
+                        //if(!(*it)->Trained && !(*itt)->Trained)
                             (*it)->trainInst(*itt);
-                        else
-                            std::cout << "DEBUG::trainEquivClass() found ASM inst "<<  (*it)->getOriginInst()
-                                      << " trained status = " << (*it)->Trained << ",  IR inst "
-                                      << (*itt)->getOriginInst() << " trained status = " << (*itt)->Trained 
-                                      << std::endl;
+                        // else
+                        //     std::cout << "DEBUG::trainEquivClass() found ASM inst "<<  (*it)->getOriginInst()
+                        //               << " trained status = " << (*it)->Trained << ",  IR inst "
+                        //               << (*itt)->getOriginInst() << " trained status = " << (*itt)->Trained 
+                        //               << std::endl;
                     }
             }
 
@@ -1302,11 +1302,12 @@ namespace MetaTrans {
         if(asmvec.size() == 1 && (asmvec[0])->isType(InstType::COMPARE)) {
             // Either asmvec is 'icmp' instruction
             retvec = (asmvec[0])->findMatchedInst(irvec);
-        }else {
-            // asmvec is arithmetic calculate for branch
-            // Train the current 'branch' instruction with irvec
-            retvec = this->findMatchedInst(irvec);
         }
+        // else {
+        //     // asmvec is arithmetic calculate for branch
+        //     // Train the current 'branch' instruction with irvec
+        //     retvec = this->findMatchedInst(irvec);
+        // }
         std::cout << "DEBUG:: retvec.size() = "<< retvec.size() <<std::endl;
 
         // if(retvec.size() == 1)
@@ -1688,10 +1689,14 @@ namespace MetaTrans {
                 }                 
                 else{
                     matchvec = (*inst)->findTheSameInst(irbb);
-                    if(matchvec.size() != 0 )
+                    if(matchvec.size() != 0 ){
                         std::cout   << "DEBUG:: In trainBB():: ASM LOAD: " << (*inst)->getOriginInst()
                                     << " Find a new match in IR: " <<  matchvec[0]->getOriginInst()
                                     << std::endl;
+                        // Build Mapping for new matched load instructions
+                        if(matchvec.size()==1)
+                            (*inst)->buildMapping(matchvec[0]);
+                    }
                 }
                 // Skip unmatched or ambiguous instructions 
                 // Can be optimized to address ambiguity if needed
