@@ -46,11 +46,7 @@ std::unordered_map<MetaBB*, MetaBB*>::iterator end();
 };
 
 
-class MetaMatcher {
-
-private:
-
-MetaMatcher& matchNextBB(int& i, int& j, std::vector<MetaBB*>& bbs_x, std::vector<MetaBB*>& bbs_y, std::unordered_set<MetaBB*>& visited_x, std::unordered_set<MetaBB*>& visited_y);
+class MetaBBMatcher {
 
 protected:
 
@@ -58,21 +54,37 @@ MetaFunction *x, *y;
 
 std::unordered_map<MetaBB*, MetaBB*> bbMap;
 
-std::pair<MetaInst*, MetaInst*> matchInstGraph(MetaBB& u, MetaBB& v);
-
 public:
 
-MetaMatcher();
+MetaBBMatcher();
 
-MetaMatcher& setX(MetaFunction* x);
+MetaBBMatcher& setAsmMetaFunc(MetaFunction* f);
 
-MetaMatcher& setY(MetaFunction* y);
+MetaBBMatcher& setIrMetaFunc(MetaFunction* f);
 
-MetaMatcher& matchBB();
+virtual MetaBBMatcher& match() = 0;
 
-MetaMatcher& matchInst();
+std::unordered_map<MetaBB*, MetaBB*>& getResult();
 
-std::unordered_map<MetaBB*, MetaBB*>& getBBMatchResult();
+};
+
+
+class LinearMetaBBMatcher : public MetaBBMatcher {
+
+private:
+
+LinearMetaBBMatcher& matchNextBB(int& i, int& j, std::vector<MetaBB*>& bbs_x, std::vector<MetaBB*>& bbs_y, std::unordered_set<MetaBB*>& visited_x, std::unordered_set<MetaBB*>& visited_y);
+
+std::pair<MetaInst*, MetaInst*> matchInstGraph(MetaBB& u, MetaBB& v);
+
+protected:
+public:
+
+LinearMetaBBMatcher();
+
+MetaBBMatcher& match() override;
+
+LinearMetaBBMatcher& matchInst();
 
 };
 

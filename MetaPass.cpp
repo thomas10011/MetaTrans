@@ -55,16 +55,15 @@ namespace MetaTrans {
 
         for (auto iter = asmUnit->begin(); iter != asmUnit->end(); ++iter) {
             MetaFunction* f = *iter;
-            MetaMatcher matcher;
+            MetaBBMatcher* matcher = new LinearMetaBBMatcher();
 
             auto predicate = [&] (MetaFunction* mF) { return mF->getFunctionName() == f->getFunctionName(); };
             auto match_inner = [&] (MetaFunction* mF) {
-                std::unordered_map<MetaBB*, MetaBB*>& result = matcher
-                                                                .setX(f)
-                                                                .setY(mF)
-                                                                .matchBB()
-                                                                .matchInst()
-                                                                .getBBMatchResult()
+                std::unordered_map<MetaBB*, MetaBB*>& result = (*matcher)
+                                                                .setAsmMetaFunc(f)
+                                                                .setIrMetaFunc(mF)
+                                                                .match()
+                                                                .getResult()
                                                                 ;
                 // print match result.
                 printf("<<<<<<<<<<<<<<<<<<<< BB Match Result >>>>>>>>>>>>>>>>>>>>\n");

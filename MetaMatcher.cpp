@@ -4,19 +4,30 @@
 
 namespace MetaTrans {
 
-MetaMatcher::MetaMatcher() : x(nullptr), y(nullptr) { }
+MetaBBMatcher::MetaBBMatcher() : x(nullptr), y(nullptr) {
+    
+}
 
-MetaMatcher& MetaMatcher::setX(MetaFunction* x) {
+
+LinearMetaBBMatcher::LinearMetaBBMatcher() {
+
+}
+
+MetaBBMatcher& MetaBBMatcher::setAsmMetaFunc(MetaFunction* x) {
     this->x = x;
     return *this;
 }
 
-MetaMatcher& MetaMatcher::setY(MetaFunction* y) {
+MetaBBMatcher& MetaBBMatcher::setIrMetaFunc(MetaFunction* y) {
     this->y = y;
     return *this;
 }
 
-MetaMatcher& MetaMatcher::matchBB() {
+std::unordered_map<MetaBB*, MetaBB*>& MetaBBMatcher::getResult() {
+    return bbMap;
+}
+
+MetaBBMatcher& LinearMetaBBMatcher::match() {
     MetaBB* root_x = x->getRoot();
     MetaBB* root_y = y->getRoot();
     std::vector<MetaBB*>& bbs_x = x->getBB();
@@ -44,7 +55,7 @@ MetaMatcher& MetaMatcher::matchBB() {
     return *this;
 }
 
-MetaMatcher& MetaMatcher::matchNextBB(int& i, int& j, std::vector<MetaBB*>& bbs_x, std::vector<MetaBB*>& bbs_y, std::unordered_set<MetaBB*>& visited_x, std::unordered_set<MetaBB*>& visited_y) {
+LinearMetaBBMatcher& LinearMetaBBMatcher::matchNextBB(int& i, int& j, std::vector<MetaBB*>& bbs_x, std::vector<MetaBB*>& bbs_y, std::unordered_set<MetaBB*>& visited_x, std::unordered_set<MetaBB*>& visited_y) {
     MetaBB* bb_x = bbs_x[i]; int k = j;
     for (; k < bbs_y.size(); k++) {
         MetaBB* bb_z = bbs_y[k];
@@ -66,7 +77,7 @@ MetaMatcher& MetaMatcher::matchNextBB(int& i, int& j, std::vector<MetaBB*>& bbs_
     return *this;
 }
 
-MetaMatcher& MetaMatcher::matchInst() {
+LinearMetaBBMatcher& LinearMetaBBMatcher::matchInst() {
     for (auto pair = bbMap.begin(); pair != bbMap.end(); ++pair) {
         MetaBB& u = *(pair->first);
         MetaBB& v = *(pair->second);
@@ -76,7 +87,7 @@ MetaMatcher& MetaMatcher::matchInst() {
     return *this;
 }
 
-std::pair<MetaInst*, MetaInst*> MetaMatcher::matchInstGraph(MetaBB& u, MetaBB& v) {
+std::pair<MetaInst*, MetaInst*> LinearMetaBBMatcher::matchInstGraph(MetaBB& u, MetaBB& v) {
     for (auto inst = u.inst_begin(); inst != u.inst_end(); inst++) {
         MetaInst& instRef = **inst;
         if (instRef.isLoad() || instRef.isStore()) {
@@ -90,8 +101,5 @@ std::pair<MetaInst*, MetaInst*> MetaMatcher::matchInstGraph(MetaBB& u, MetaBB& v
 
 }
 
-std::unordered_map<MetaBB*, MetaBB*>& MetaMatcher::getBBMatchResult() {
-    return bbMap;
-}
 
 } // namespace MetaTrans
