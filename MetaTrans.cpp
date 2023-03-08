@@ -531,7 +531,7 @@ namespace MetaTrans {
                 MetaInst *IRinst = *it;
                 // std::string rootAns = MetaUtil::findDataRoot(IRinst);
                 if(this->hasRelaxedSameType(IRinst) && IRinst->getDataRoot() == "TIR_GLOBAL") {
-                    std::string rootAns = this->getGlobalSymbolName();
+                    std::string rootAns = IRinst->getGlobalSymbolName();
                     if(rootAns == asmGlobalName) {
                         std::cout << "findTheSameGlobalVariable " << rootAns << ": " << std::hex << IRinst << std::oct << std::endl;
                         ans.push_back(IRinst);
@@ -765,8 +765,11 @@ namespace MetaTrans {
         this->Matched   = true;
         std::string str;
         std::string ret;
-
+    
+        std::cout << "DEBUG:: MatchedInst Connecting... this and fused::" << std::endl;
+        std::cout << this->toString() << std::endl;
         for(auto it = fused.begin(); it!= fused.end(); it++){
+            std::cout << (*it)->toString() << std::endl;
             (*it)->Matched = true;
             (*it)->FuseID  = fuseID;
             this->MatchedInst.push_back((*it));
@@ -810,6 +813,10 @@ namespace MetaTrans {
         this->Matched   = true;
         inst->Matched   = true;
 
+
+        std::cout << "DEBUG:: MatchedInst Connecting... this and inst::" << std::endl;
+        std::cout << this->toString() << std::endl;
+        std::cout << inst->toString() << std::endl;
 
         this->MatchedInst.push_back(inst);
         inst->MatchedInst.push_back(this);
@@ -903,6 +910,7 @@ namespace MetaTrans {
 
                     // Find matched ASM instsaruction of such "operand" 
                     auto AsmMatch  = dynamic_cast<MetaInst*>(vec[id])->getMatchedInst();
+                    std::cout << "DEBUG:: fused[i] " << fused[i]->getOriginInst() <<" .operands[id] " << dynamic_cast<MetaInst*>(vec[id])->getOriginInst() << " ->getMatchedInst().size() = " << AsmMatch.size() << std::endl;
 
                     // ASM 1-N Mapping
                     if(ASMorIR == "IR"){
@@ -960,7 +968,9 @@ namespace MetaTrans {
     //std::pair<std::string, std::string> 
     std::string MetaInst::buildOperandMapping(MetaInst* inst){
         
-        std::cout <<"DEBUG:: Entering function buildOperandMapping().....\n";
+        std::cout <<"DEBUG:: Entering function buildOperandMapping()..this and inst is...\n";
+        std::cout << (this)->toString() << std::endl;
+        std::cout << (inst)->toString() << std::endl;
 
         int         opNum      = this->getOperandNum();
         auto        asmOpVec   = this->getOperandList();
@@ -981,6 +991,18 @@ namespace MetaTrans {
         std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << inst->getOperandNum() << std::endl;
         std::cout << "DEBUG:: buildOperandMapping() ASM->MatchedInst Size = " << asmVec.size() << std::endl;
 
+        std::cout << "\nDEBUG:: buildOperandMapping() IR->MatchedInst Size = " << irVec.size() << std::endl;
+
+        for(auto it = irVec.begin(); it != irVec.end();it++){
+            std::cout << (*it)->toString() << std::endl;
+        }
+
+        std::cout << std::endl;
+
+        std::cout << "DEBUG:: buildOperandMapping() ASM->getOperandNum = " << opNum << std::endl;
+        std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << inst->getOperandNum() << std::endl;
+        std::cout << "DEBUG:: buildOperandMapping() ASM->MatchedInst Size = " << asmVec.size() << std::endl;
+
         for(auto it = asmVec.begin(); it != asmVec.end();it++){
             std::cout << (*it)->getOriginInst() << " ";
         }
@@ -988,7 +1010,7 @@ namespace MetaTrans {
         std::cout << "\nDEBUG:: buildOperandMapping() IR->MatchedInst Size = " << irVec.size() << std::endl;
 
         for(auto it = irVec.begin(); it != irVec.end();it++){
-            std::cout << (*it)->getOriginInst() << " ";
+            std::cout << (*it)->toString() << std::endl;
         }
 
         std::cout << std::endl;
@@ -1017,14 +1039,14 @@ namespace MetaTrans {
             std::cout << "DEBUG::buildOperandMapping() encounters 1-1 Mapping\n"; 
             for(int id = 0; id < asmOpVec.size(); id++){
                 if(asmOpVec[id]->isMetaConstant()){
-                    std::cout << "DEBUG::buildOperandMapping() ASM Operand "<< id+1 << "is MetaConstant\n"; 
+                    std::cout << "DEBUG::buildOperandMapping() ASM Operand "<< id+1 << " is MetaConstant\n"; 
                     continue;
                 }
                 auto vec = dynamic_cast<MetaInst*>(asmOpVec[id])->getMatchedInst();
                 std::cout << "DEBUG:: getMatchedInst() " << dynamic_cast<MetaInst*>(asmOpVec[id])->getOriginInst()<<" returns the vector of size " << vec.size() << "\n";
                 for(int ir = 0; ir < irOpVec.size(); ir++){
                     if(irOpVec[ir]->isMetaConstant()){
-                        std::cout << "DEBUG::buildOperandMapping() IR Operand "<< ir+1 << "is MetaConstant\n"; 
+                        std::cout << "DEBUG::buildOperandMapping() IR Operand "<< ir+1 << " is MetaConstant\n"; 
                         continue;
                     }
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
