@@ -1020,20 +1020,26 @@ namespace MetaTrans {
 
         std::cout << std::endl;
 
-        if(opNum != opNumIr){
-            // Clean up MetaConstant if exists
-            for(auto it = asmOpVec.begin(); it < asmOpVec.end(); it++)
+        // Clean up ASM MetaConstant if exists
+        for(auto it = asmOpVec.begin(); it < asmOpVec.end(); it++)
                 if((*it)->isMetaConstant())
                     asmOpVec.erase(it);
+        opNum = asmOpVec.size();
 
-            // In case the Operand number still doesn't match
-            if(asmOpVec.size()!= opNumIr){
-                std::cout << BOLD << RED << "ERROR:: Operand Number mismatched between IR & ASM! STOP buildOperandMapping()!\n" << RST;
-                return "";
-            }
-            else   // Update ASM Operand Count
-                opNum = asmOpVec.size();
-        }
+        // Currently, we don't evict IR constant operands,
+        // since IR inst operand can be either reg or imm without limitation.
+        // We thus focus more on the ASM side, in which some large imm have to
+        // be buffered in reg instead of a 12-bit imm field in ASM
+
+        // for(auto it = irOpVec.begin(); it < irOpVec.end(); it++)
+        //         if((*it)->isMetaConstant())
+        //             irOpVec.erase(it);            
+        // opNumIr = irOpVec.size();
+
+        // if(opNum != opNumIr){
+        //     std::cout << BOLD << RED << "ERROR:: Operand Number mismatched between IR & ASM! STOP buildOperandMapping()!\n" << RST;
+        //     return "";
+        // }
            
         
 
