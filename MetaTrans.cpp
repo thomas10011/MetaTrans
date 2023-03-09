@@ -1345,16 +1345,56 @@ namespace MetaTrans {
             // Either asmvec is 'icmp' instruction
             retvec = (asmvec[0])->findMatchedInst(irvec);
         }
-        // else {
-        //     // asmvec is arithmetic calculate for branch
-        //     // Train the current 'branch' instruction with irvec
-        //     retvec = this->findMatchedInst(irvec);
-        // }
+        else {
+            // asmvec is arithmetic calculate for branch
+            // Train the current 'branch' instruction with irvec
+
+            // Firstly, -- train `asmvec` and `irvec` BEGIN --
+            for(auto it = asmvec.begin(); it != asmvec.end(); it++){
+                std::cout << "DEBUG:: trainControlFlow:: enter loops \n";
+                if(!(*it)->getInstType().size())
+                    continue;
+                //Skipping trained inst
+                if((*it)->Trained)
+                    continue;
+                if( (*it)->getInstType()[0] == InstType::PHI) // FIXME: whether it need ??
+                    (*it)->setOriginInst("PHI");
+                std::vector<MetaInst*> operandsOfIcmp;
+                // now irvec = ['icmp'], make operands of icmp to match with operands of branch
+                for(auto it2 = irvec[0]->getOperandList().begin(); it2 != irvec[0]->getOperandList().end(); it2++) {
+                    if((*it2)->isMetaInst()) {
+                        operandsOfIcmp.push_back((MetaInst*)(*it2));
+                    }
+                }
+                retvec.clear();
+                retvec = (*it)->findMatchedInst(operandsOfIcmp);
+                std::cout << "findMatchedInst(operandsOfIcmp) returns the vector size = " << retvec.size() << std::endl;
+                if(retvec.size() == 1) {
+                    for(int i = 0; i < retvec.size(); i++) {
+                        MetaInst* cur = retvec[i];
+                        std::cout << "auto itt = retvec.begin(); itt != retvec.end(); itt++" << std::endl;
+                        std::cout << cur->toString() << std::endl;
+                        if(!(*it)->Trained && !cur->Trained) {
+                            (*it)->trainInst(cur);
+                            // second: build branch mapping rule
+                            retvec = this->findMatchedInst(irvec);
+                            for(auto itt = retvec.begin();itt!=retvec.end();itt++)
+                                this->trainInst(cur);
+                        } else {
+                            std::cout << "DEBUG::trainControlFlow() found ASM inst "<<  (*it)->getOriginInst()
+                                    << " trained status = " << (*it)->Trained << ",  IR inst "
+                                    << cur->getOriginInst() << " trained status = " << cur->Trained 
+                                    << std::endl;
+                        }
+                    }
+                }
+            }
+
+        }
         std::cout << "DEBUG:: retvec.size() = "<< retvec.size() <<std::endl;
 
         // if(retvec.size() == 1)
-            for(auto itt = retvec.begin();itt!=retvec.end();itt++)
-                this->trainInst(*itt);
+            
 
         return this;
     }
