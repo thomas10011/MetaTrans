@@ -916,6 +916,8 @@ namespace MetaTrans {
                     if(ASMorIR == "IR"){
                         // Check RS matching between ASM and LLVM IR
                         for(int idd = 0; idd < tmpvec.size(); idd++){
+                            if(tmpvec[idd]->isMetaConstant())
+                                continue;
                             find = ifFind (dynamic_cast<MetaInst*>(tmpvec[idd]), AsmMatch);
                             if (find != -1){
                                 str += std::to_string(idd+1) + " ";
@@ -932,6 +934,9 @@ namespace MetaTrans {
                             asmOpVec =  Fuse[i]->getOperandList();
                             
                             for( int opid = 0; opid < asmOpVec.size(); opid++ ){
+                                
+                                if(asmOpVec[opid]->isMetaConstant())
+                                    continue;
 
                                 find  = ifFind(dynamic_cast<MetaInst*>(asmOpVec[opid]), AsmMatch);
 
@@ -973,6 +978,7 @@ namespace MetaTrans {
         std::cout << (inst)->toString() << std::endl;
 
         int         opNum      = this->getOperandNum();
+        int         opNumIr    = inst->getOperandNum();
         auto        asmOpVec   = this->getOperandList();
         auto        irOpVec    = inst->getOperandList();
         auto        asmVec     = this->getMatchedInst();
@@ -988,9 +994,8 @@ namespace MetaTrans {
         // <ASM OP ID, IR OP ID>
         std::map<int, int> mapping;
         std::cout << "DEBUG:: buildOperandMapping() ASM->getOperandNum = " << opNum << std::endl;
-        std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << inst->getOperandNum() << std::endl;
+        std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << opNumIr << std::endl;
         std::cout << "DEBUG:: buildOperandMapping() ASM->MatchedInst Size = " << asmVec.size() << std::endl;
-
         std::cout << "\nDEBUG:: buildOperandMapping() IR->MatchedInst Size = " << irVec.size() << std::endl;
 
         for(auto it = irVec.begin(); it != irVec.end();it++){
@@ -999,9 +1004,9 @@ namespace MetaTrans {
 
         std::cout << std::endl;
 
-        std::cout << "DEBUG:: buildOperandMapping() ASM->getOperandNum = " << opNum << std::endl;
-        std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << inst->getOperandNum() << std::endl;
-        std::cout << "DEBUG:: buildOperandMapping() ASM->MatchedInst Size = " << asmVec.size() << std::endl;
+        // std::cout << "DEBUG:: buildOperandMapping() ASM->getOperandNum = " << opNum << std::endl;
+        // std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << opNumIr << std::endl;
+        // std::cout << "DEBUG:: buildOperandMapping() ASM->MatchedInst Size = " << asmVec.size() << std::endl;
 
         for(auto it = asmVec.begin(); it != asmVec.end();it++){
             std::cout << (*it)->getOriginInst() << " ";
@@ -1015,17 +1020,26 @@ namespace MetaTrans {
 
         std::cout << std::endl;
 
+        if(opNum != opNumIr){
+            // Clean up MetaConstant if exists
+            for(auto it = asmOpVec.begin(); it < asmOpVec.end(); it++)
+                if((*it)->isMetaConstant())
+                    asmOpVec.erase(it);
 
-        if(opNum != inst->getOperandNum()){
-            std::cout << BOLD << RED << "ERROR:: Operand Number mismatched between IR & ASM! STOP buildOperandMapping()!\n" << RST;
-            return "";
+            // In case the Operand number still doesn't match
+            if(asmOpVec.size()!= opNumIr){
+                std::cout << BOLD << RED << "ERROR:: Operand Number mismatched between IR & ASM! STOP buildOperandMapping()!\n" << RST;
+                return "";
+            }
+            else   // Update ASM Operand Count
+                opNum = asmOpVec.size();
         }
            
         
 
         if(this->getInstType().size() == 1 && inst->getInstType().size() == 1)
             // Unordered Operations can directly dump sequence
-            if(!ifOrderMatters(this->getInstType()[0])){
+            if(!ifOrderMatters(this->getInstType()[0])){    
                 std::cout << "DEBUG:: Operand Ordering Unnecessary according to InstType check\n";
                 for(int i = 0; i < opNum; i++)
                     str +=  std::to_string(i+1) + " ";
