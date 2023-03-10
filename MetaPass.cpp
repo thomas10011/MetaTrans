@@ -356,6 +356,8 @@ namespace MetaTrans {
             Value* value = op->get();
             // Ugly, but works.
             if (Constant* c = dyn_cast<Constant>(value)) {
+                // function 也是 constant的子类 跳过不添加
+                if (Function* func = dyn_cast<Function>(value)) continue;
                 if (constantMap.find(c) != constantMap.end()) continue;
                 MetaConstant* newConst = constantMap[c] = mF->buildConstant();
                 (*newConst)
@@ -423,7 +425,12 @@ namespace MetaTrans {
                     ;
             }
 
-            if (MetaOperand* metaOp = findMetaOperand(value))
+            // only call instruction has function as operand
+            else if (Function* func = dyn_cast<Function>(value)) {
+                ((MetaCall*)inst)->setFuncName(func->getName().str());
+            }
+
+            else if (MetaOperand* metaOp = findMetaOperand(value))
                 inst->addOperand(metaOp);
 
             outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";

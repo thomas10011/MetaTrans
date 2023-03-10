@@ -414,6 +414,8 @@ namespace MetaTrans {
 
     bool MetaInst::isMetaPhi() { return false; }
 
+    bool MetaInst::isMetaCall() { return false; }
+
     std::string MetaInst::toString() {
         std::string opList = operandList.size() == 0 ? "[]" : "[";
         for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
@@ -449,6 +451,7 @@ namespace MetaTrans {
             "\"id\":" + std::to_string(id) + "," +
             "\"address\":" + std::to_string(address) + "," +
             "\"originInst\":" + "\"" +originInst + "\"" + "," +
+            "\"isMetaCall\":" + "false" + "," +
             "\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
             "\"operandList\":" + opList + "," + 
             "\"userList\":" + userList + "," + 
@@ -916,7 +919,7 @@ namespace MetaTrans {
                     if(ASMorIR == "IR"){
                         // Check RS matching between ASM and LLVM IR
                         for(int idd = 0; idd < tmpvec.size(); idd++){
-                            if(tmpvec[idd]->isMetaConstant())
+                            if(tmpvec[idd] == NULL || tmpvec[idd]->isMetaConstant())
                                 continue;
                             find = ifFind (dynamic_cast<MetaInst*>(tmpvec[idd]), AsmMatch);
                             if (find != -1){
@@ -935,7 +938,7 @@ namespace MetaTrans {
                             
                             for( int opid = 0; opid < asmOpVec.size(); opid++ ){
                                 
-                                if(asmOpVec[opid]->isMetaConstant())
+                                if(asmOpVec[opid] == NULL || asmOpVec[opid]->isMetaConstant())
                                     continue;
 
                                 find  = ifFind(dynamic_cast<MetaInst*>(asmOpVec[opid]), AsmMatch);
@@ -1358,16 +1361,56 @@ namespace MetaTrans {
             // Either asmvec is 'icmp' instruction
             retvec = (asmvec[0])->findMatchedInst(irvec);
         }
-        // else {
-        //     // asmvec is arithmetic calculate for branch
-        //     // Train the current 'branch' instruction with irvec
-        //     retvec = this->findMatchedInst(irvec);
-        // }
+        else {
+            // asmvec is arithmetic calculate for branch
+            // Train the current 'branch' instruction with irvec
+
+            // Firstly, -- train `asmvec` and `irvec` BEGIN --
+            for(auto it = asmvec.begin(); it != asmvec.end(); it++){
+                std::cout << "DEBUG:: trainControlFlow:: enter loops \n";
+                if(!(*it)->getInstType().size())
+                    continue;
+                //Skipping trained inst
+                if((*it)->Trained)
+                    continue;
+                if( (*it)->getInstType()[0] == InstType::PHI) // FIXME: whether it need ??
+                    (*it)->setOriginInst("PHI");
+                std::vector<MetaInst*> operandsOfIcmp;
+                // now irvec = ['icmp'], make operands of icmp to match with operands of branch
+                for(auto it2 = irvec[0]->getOperandList().begin(); it2 != irvec[0]->getOperandList().end(); it2++) {
+                    if((*it2)->isMetaInst()) {
+                        operandsOfIcmp.push_back((MetaInst*)(*it2));
+                    }
+                }
+                retvec.clear();
+                retvec = (*it)->findMatchedInst(operandsOfIcmp);
+                std::cout << "findMatchedInst(operandsOfIcmp) returns the vector size = " << retvec.size() << std::endl;
+                if(retvec.size() == 1) {
+                    for(int i = 0; i < retvec.size(); i++) {
+                        MetaInst* cur = retvec[i];
+                        std::cout << "auto itt = retvec.begin(); itt != retvec.end(); itt++" << std::endl;
+                        std::cout << cur->toString() << std::endl;
+                        if(!(*it)->Trained && !cur->Trained) {
+                            (*it)->trainInst(cur);
+                            // second: build branch mapping rule
+                            retvec = this->findMatchedInst(irvec);
+                            for(auto itt = retvec.begin(); itt != retvec.end(); itt++)
+                                this->trainInst(*itt);
+                        } else {
+                            std::cout << "DEBUG::trainControlFlow() found ASM inst "<<  (*it)->getOriginInst()
+                                    << " trained status = " << (*it)->Trained << ",  IR inst "
+                                    << cur->getOriginInst() << " trained status = " << cur->Trained 
+                                    << std::endl;
+                        }
+                    }
+                }
+            }
+
+        }
         std::cout << "DEBUG:: retvec.size() = "<< retvec.size() <<std::endl;
 
         // if(retvec.size() == 1)
-            for(auto itt = retvec.begin();itt!=retvec.end();itt++)
-                this->trainInst(*itt);
+            
 
         return this;
     }
@@ -1380,6 +1423,7 @@ namespace MetaTrans {
         type.push_back(InstType::PHI);
         MetaInst(type);
     }
+
     MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
 
     MetaPhi& MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
@@ -1432,6 +1476,7 @@ namespace MetaTrans {
         return str + 
             "\"id\":" + std::to_string(id) + "," +
             "\"address\":" + std::to_string(MetaInst::getAddress()) + "," + 
+            "\"isMetaCall\":false," + 
             "\"isMetaPhi\":true,\"type\":" + MetaUtil::toString(type) + 
             ",\"operandList\":" + opList + 
             ",\"bbValueMap\":" + phiMapStr +
@@ -1446,8 +1491,6 @@ namespace MetaTrans {
 
         setID(id);
         setAddress(address);
-
-
         return *this;
     }
 
@@ -1455,6 +1498,51 @@ namespace MetaTrans {
 
     bool MetaPhi::isStore() { return false; }
 
+//===-------------------------------------------------------------------------------===//
+/// Meta Basic Block implementation.
+
+    MetaCall::MetaCall() {
+        type.push_back(InstType::CALL);
+    }
+
+    MetaCall& MetaCall::setFuncName(std::string name) {
+        funcName = name;
+    }
+
+    std::string MetaCall::getFuncName() {
+        return funcName;
+    }
+
+    MetaInst& MetaCall::buildFromJSON(MetaUnitBuildContext& context) {
+        llvm::json::Object JSON = context.getHoldObject();
+        
+        int64_t id = JSON.getInteger("id").getValue();
+        int64_t address = JSON.getInteger("address").getValue();
+
+        std::string func = JSON.getString("funcName").getValue().str();
+
+        setID(id);
+        setAddress(address);
+        setFuncName(func);
+        return *this; 
+    }
+
+    std::string MetaCall::toString() {
+        std::string opList = operandList.size() == 0 ? "[]" : "[";
+        for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        opList[opList.length() - 1] = ']'; 
+        
+        std::string str = "{";
+        return str + 
+            "\"id\":" + std::to_string(id) + "," +
+            "\"address\":" + std::to_string(MetaInst::getAddress()) + "," + 
+            "\"type\":" + MetaUtil::toString(type) + "," +
+            "\"isMetaPhi\":false," + 
+            "\"isMetaCall\":true," + 
+            "\"operandList\":" + opList + "," +
+            "\"funcName\":" + "\"" + funcName + "\"" + 
+            "}";
+    }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Basic Block implementation.
@@ -1481,6 +1569,8 @@ namespace MetaTrans {
         MetaInst* newInst = nullptr;
         if (ty[0] == InstType::PHI)
             newInst = new MetaPhi(ty);
+        else if (ty[0] == InstType::CALL)
+            newInst = new MetaCall();
         else 
             newInst =  new MetaInst(ty);
         instList.push_back(newInst);
@@ -1489,6 +1579,12 @@ namespace MetaTrans {
 
     MetaInst* MetaBB::buildInstruction() {
         MetaInst* newInst = new MetaInst();
+        instList.push_back(newInst);
+        return newInst;
+    }
+
+    MetaInst* MetaBB::buildCall() {
+        MetaInst* newInst = new MetaCall();
         instList.push_back(newInst);
         return newInst;
     }
@@ -1582,7 +1678,8 @@ namespace MetaTrans {
         for (auto iter = insts.begin(); iter != insts.end(); ++iter) {
             int64_t     inst_id     = (*iter).getAsObject()->getInteger("id").getValue();
             bool        isMetaPhi   = (*iter).getAsObject()->getBoolean("isMetaPhi").getValue();
-            MetaInst*   newInst     = isMetaPhi ? buildPhi(true) : buildInstruction();
+            bool        isMetaCall  = (*iter).getAsObject()->getBoolean("isMetaCall").getValue();
+            MetaInst*   newInst     = isMetaPhi ? buildPhi(true) : isMetaCall ? buildCall() : buildInstruction();
             context.addMetaOperand(inst_id, newInst);
 
             context.saveContext().setHoldObject(iter->getAsObject());
