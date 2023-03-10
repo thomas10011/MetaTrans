@@ -373,6 +373,8 @@ public:
 
     bool virtual isMetaPhi();
 
+    bool virtual isMetaCall();
+
     bool virtual isLoad();
 
     bool virtual isStore();
@@ -476,6 +478,26 @@ public:
     bool virtual isStore() override;
 };
 
+class MetaCall : public MetaInst {
+private:
+protected:
+
+    std::string funcName;
+
+public:
+
+    MetaCall();
+
+    MetaCall& setFuncName(std::string name);
+
+    std::string getFuncName();
+
+    virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context) override;
+
+    std::string virtual toString() override;
+
+};
+
 class MetaBB : public MetaScope {
 private:
 protected:
@@ -507,6 +529,8 @@ public:
     MetaInst* buildInstruction(std::vector<InstType> ty);
 
     MetaInst* buildInstruction();
+
+    MetaInst* buildCall();
 
     MetaPhi* buildPhi(bool insertAtHead = false);
 

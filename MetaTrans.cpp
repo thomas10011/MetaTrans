@@ -414,6 +414,8 @@ namespace MetaTrans {
 
     bool MetaInst::isMetaPhi() { return false; }
 
+    bool MetaInst::isMetaCall() { return false; }
+
     std::string MetaInst::toString() {
         std::string opList = operandList.size() == 0 ? "[]" : "[";
         for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
@@ -449,6 +451,7 @@ namespace MetaTrans {
             "\"id\":" + std::to_string(id) + "," +
             "\"address\":" + std::to_string(address) + "," +
             "\"originInst\":" + "\"" +originInst + "\"" + "," +
+            "\"isMetaCall\":" + "false" + "," +
             "\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
             "\"operandList\":" + opList + "," + 
             "\"userList\":" + userList + "," + 
@@ -1407,6 +1410,7 @@ namespace MetaTrans {
         type.push_back(InstType::PHI);
         MetaInst(type);
     }
+
     MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
 
     MetaPhi& MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
@@ -1459,6 +1463,7 @@ namespace MetaTrans {
         return str + 
             "\"id\":" + std::to_string(id) + "," +
             "\"address\":" + std::to_string(MetaInst::getAddress()) + "," + 
+            "\"isMetaCall\":false," + 
             "\"isMetaPhi\":true,\"type\":" + MetaUtil::toString(type) + 
             ",\"operandList\":" + opList + 
             ",\"bbValueMap\":" + phiMapStr +
@@ -1473,8 +1478,6 @@ namespace MetaTrans {
 
         setID(id);
         setAddress(address);
-
-
         return *this;
     }
 
@@ -1482,6 +1485,51 @@ namespace MetaTrans {
 
     bool MetaPhi::isStore() { return false; }
 
+//===-------------------------------------------------------------------------------===//
+/// Meta Basic Block implementation.
+
+    MetaCall::MetaCall() {
+        type.push_back(InstType::CALL);
+    }
+
+    MetaCall& MetaCall::setFuncName(std::string name) {
+        funcName = name;
+    }
+
+    std::string MetaCall::getFuncName() {
+        return funcName;
+    }
+
+    MetaInst& MetaCall::buildFromJSON(MetaUnitBuildContext& context) {
+        llvm::json::Object JSON = context.getHoldObject();
+        
+        int64_t id = JSON.getInteger("id").getValue();
+        int64_t address = JSON.getInteger("address").getValue();
+
+        std::string func = JSON.getString("funcName").getValue().str();
+
+        setID(id);
+        setAddress(address);
+        setFuncName(func);
+        return *this; 
+    }
+
+    std::string MetaCall::toString() {
+        std::string opList = operandList.size() == 0 ? "[]" : "[";
+        for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        opList[opList.length() - 1] = ']'; 
+        
+        std::string str = "{";
+        return str + 
+            "\"id\":" + std::to_string(id) + "," +
+            "\"address\":" + std::to_string(MetaInst::getAddress()) + "," + 
+            "\"type\":" + MetaUtil::toString(type) + "," +
+            "\"isMetaPhi\":false," + 
+            "\"isMetaCall\":true," + 
+            "\"operandList\":" + opList + "," +
+            "\"funcName\":" + "\"" + funcName + "\"" + 
+            "}";
+    }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Basic Block implementation.
@@ -1508,6 +1556,8 @@ namespace MetaTrans {
         MetaInst* newInst = nullptr;
         if (ty[0] == InstType::PHI)
             newInst = new MetaPhi(ty);
+        else if (ty[0] == InstType::CALL)
+            newInst = new MetaCall();
         else 
             newInst =  new MetaInst(ty);
         instList.push_back(newInst);
@@ -1516,6 +1566,12 @@ namespace MetaTrans {
 
     MetaInst* MetaBB::buildInstruction() {
         MetaInst* newInst = new MetaInst();
+        instList.push_back(newInst);
+        return newInst;
+    }
+
+    MetaInst* MetaBB::buildCall() {
+        MetaInst* newInst = new MetaCall();
         instList.push_back(newInst);
         return newInst;
     }
@@ -1609,7 +1665,8 @@ namespace MetaTrans {
         for (auto iter = insts.begin(); iter != insts.end(); ++iter) {
             int64_t     inst_id     = (*iter).getAsObject()->getInteger("id").getValue();
             bool        isMetaPhi   = (*iter).getAsObject()->getBoolean("isMetaPhi").getValue();
-            MetaInst*   newInst     = isMetaPhi ? buildPhi(true) : buildInstruction();
+            bool        isMetaCall  = (*iter).getAsObject()->getBoolean("isMetaCall").getValue();
+            MetaInst*   newInst     = isMetaPhi ? buildPhi(true) : isMetaCall ? buildCall() : buildInstruction();
             context.addMetaOperand(inst_id, newInst);
 
             context.saveContext().setHoldObject(iter->getAsObject());
