@@ -1207,6 +1207,19 @@ namespace MetaTrans {
             }
         }
 
+        // check if compiler instrinsics are involved
+        // Can only be detected in the case that IR call
+        // is the only operand
+        if(irvec.size() == 1 && irvec[0]->getInstType()[0] == InstType::CALL){
+            std::cout << "irinst = " << MetaUtil::toString(irvec[0]->type) << std::endl;
+            auto vec = irvec[0]->getOperandList();
+            std::cout << "DEBUG:: CALL Inst has "<<  irvec[0]->getOperandNum()<< " Operands:\n";
+            // for(auto it = vec.begin(); it!= vec.end(); it++){
+            //      std::cout << MetaUtil::toString(*it) <<std::endl;
+            // }
+        }
+
+
         // check if fusion is needed
         if( this->MatchedInst.size() == 0 ){        
             for(auto it = irvec.begin(); it != irvec.end(); it++ ){
