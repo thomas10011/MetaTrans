@@ -1488,7 +1488,7 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Basic Block implementation.
 
-    MetaCall::MetaCall() {
+    MetaCall::MetaCall() : func(nullptr) {
         type.push_back(InstType::CALL);
     }
 
@@ -1498,6 +1498,15 @@ namespace MetaTrans {
 
     std::string MetaCall::getFuncName() {
         return funcName;
+    }
+
+    MetaCall& MetaCall::setMetaFunction(MetaFunction* mF) {
+        func = mF;
+        return *this;
+    }
+
+    MetaFunction* MetaCall::getMetaFunction() {
+        return func;
     }
 
     MetaInst& MetaCall::buildFromJSON(MetaUnitBuildContext& context) {
@@ -2270,6 +2279,17 @@ namespace MetaTrans {
             MetaFunction* f = new MetaFunction(context);
             addFunc(f);
             context.restoreContext();
+        }
+
+        for (MetaOperand* operand : operands) {
+            if (MetaCall* call = dynamic_cast<MetaCall*>(operand)) {
+                for (auto func : funcs) {
+                    if (func->getFunctionName() == call->getFuncName()) {
+                        call->setMetaFunction(func);
+                        break;
+                    }
+                }
+            }
         }
             
     }

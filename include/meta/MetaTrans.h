@@ -484,13 +484,19 @@ protected:
 
     std::string funcName;
 
+    MetaFunction* func;
+
 public:
 
     MetaCall();
 
     MetaCall& setFuncName(std::string name);
 
+    MetaCall& setMetaFunction(MetaFunction* mF);
+
     std::string getFuncName();
+
+    MetaFunction* getMetaFunction();
 
     virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context) override;
 
