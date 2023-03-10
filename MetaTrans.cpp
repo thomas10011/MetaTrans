@@ -919,7 +919,7 @@ namespace MetaTrans {
                     if(ASMorIR == "IR"){
                         // Check RS matching between ASM and LLVM IR
                         for(int idd = 0; idd < tmpvec.size(); idd++){
-                            if(tmpvec[idd]->isMetaConstant())
+                            if(tmpvec[idd] == NULL || tmpvec[idd]->isMetaConstant())
                                 continue;
                             find = ifFind (dynamic_cast<MetaInst*>(tmpvec[idd]), AsmMatch);
                             if (find != -1){
@@ -938,7 +938,7 @@ namespace MetaTrans {
                             
                             for( int opid = 0; opid < asmOpVec.size(); opid++ ){
                                 
-                                if(asmOpVec[opid]->isMetaConstant())
+                                if(asmOpVec[opid] == NULL || asmOpVec[opid]->isMetaConstant())
                                     continue;
 
                                 find  = ifFind(dynamic_cast<MetaInst*>(asmOpVec[opid]), AsmMatch);
@@ -1381,8 +1381,8 @@ namespace MetaTrans {
                             (*it)->trainInst(cur);
                             // second: build branch mapping rule
                             retvec = this->findMatchedInst(irvec);
-                            for(auto itt = retvec.begin();itt!=retvec.end();itt++)
-                                this->trainInst(cur);
+                            for(auto itt = retvec.begin(); itt != retvec.end(); itt++)
+                                this->trainInst(*itt);
                         } else {
                             std::cout << "DEBUG::trainControlFlow() found ASM inst "<<  (*it)->getOriginInst()
                                     << " trained status = " << (*it)->Trained << ",  IR inst "
