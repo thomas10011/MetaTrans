@@ -993,6 +993,11 @@ namespace MetaTrans {
         // Mapping dump instruction information
         str += " : ";
         str += inst->getOriginInst() + "  ";
+        if(inst->getInstType()[0] == InstType::CALL){
+            //std::cout << "DEBUG:: build operand mapping for function " << dynamic_cast<MetaCall*>(inst)->getFuncName() << std::endl;
+            str +=  dynamic_cast<MetaCall*>(inst)->getFuncName()  + "  ";
+        }
+
 
         // <ASM OP ID, IR OP ID>
         std::map<int, int> mapping;
@@ -1133,6 +1138,10 @@ namespace MetaTrans {
             std::cout << "DEBUG:: trainInst() found the Same Type between IR and ASM \n";
             this->buildMapping(irinst);
         }
+        else if (asmOpCnt == irOpCnt){
+            std::cout << "DEBUG:: trainInst() Unmatched instructions and skip training \n";
+            return *this;
+        }
 
         // Fuse IR TIR instructions
         else if(asmOpCnt > irOpCnt){
@@ -1213,7 +1222,14 @@ namespace MetaTrans {
         if(irvec.size() == 1 && irvec[0]->getInstType()[0] == InstType::CALL){
             std::cout << "irinst = " << MetaUtil::toString(irvec[0]->type) << std::endl;
             auto vec = irvec[0]->getOperandList();
-            std::cout << "DEBUG:: CALL Inst has "<<  irvec[0]->getOperandNum()<< " Operands:\n";
+            std::string funcName = dynamic_cast<MetaCall*>(irvec[0])->getFuncName();
+            std::cout << "DEBUG:: CALL Inst " << funcName << " has "<<  irvec[0]->getOperandNum()<< " Operands:\n";
+
+            this->buildMapping(irvec[0]);
+
+
+            //std::cout << "DEBUG:: CALL Inst has "<<  irvec[0]->getOperandNum()<< " Operands:\n";
+
             // for(auto it = vec.begin(); it!= vec.end(); it++){
             //      std::cout << MetaUtil::toString(*it) <<std::endl;
             // }
