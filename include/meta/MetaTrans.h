@@ -351,6 +351,8 @@ public:
 
     std::vector<MetaOperand*>& getOperandList();
 
+    std::vector<MetaInst*> getOperandOnlyInstList();
+
     std::vector<MetaOperand*>::iterator op_begin();
     
     std::vector<MetaOperand*>::iterator op_end();

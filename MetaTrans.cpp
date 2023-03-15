@@ -381,6 +381,12 @@ namespace MetaTrans {
 
     std::vector<MetaOperand*>& MetaInst::getOperandList() { return operandList; }
 
+    std::vector<MetaInst*> MetaInst::getOperandOnlyInstList() {
+        std::vector<MetaInst*> ans;
+        for(int i = 0; i < operandList.size(); i++) if(operandList[i]->isMetaInst()) ans.push_back(dynamic_cast<MetaInst*>(operandList[i]));
+        return ans;
+    }
+
     std::vector<MetaOperand*>::iterator MetaInst::op_begin() { return operandList.begin(); }
 
     std::vector<MetaOperand*>::iterator MetaInst::op_end() { return operandList.end(); }
@@ -738,7 +744,7 @@ namespace MetaTrans {
         // std:: cout << "DEBUG::buildOperandMapping returns string = " << str << std::endl;
         if(it != MapTable->MTable[index].end())
             std:: cout << "DEBUG::MTable contains the mapping for " << this->getOriginInst() 
-                       << " : "<<it->second << std::endl;
+                       << " : "<<it->second << "; current mapstr: " << mapstr << std::endl;
 
         if(mapstr != "" && it == MapTable->MTable[index].end()){
             std:: cout << "DEBUG::buildMapping() Writing to MTable " << MapTable->getTableName(index) << std::endl;
@@ -900,6 +906,51 @@ namespace MetaTrans {
                 auto vec    =  dynamic_cast<MetaInst*>(fused[i])->getOperandList();
                 auto tmpvec =  asmOpVec;
 
+
+                // judge if contains auto match case
+                int numOfOp = 0, numOfMatchedOp = 0, emptyElementIndex = -1;
+                std::vector<std::vector<MetaInst*>> AsmMatchVec(vec.size());
+                for( int id = 0; id < vec.size(); id++ ){
+                    if(!vec[id]->isMetaInst()) {
+                        continue;
+                    }
+                    numOfOp++;
+                    std::vector<MetaInst*> AsmMatch  = dynamic_cast<MetaInst*>(vec[id])->getMatchedInst();
+                    if(AsmMatch.size() != 0) numOfMatchedOp++; else emptyElementIndex = id;
+                    AsmMatchVec[id] = AsmMatch;
+                }
+                if(numOfOp == numOfMatchedOp + 1) { // auto match at `emptyElementIndex`
+                    // find unmatched inst in `tmpvec` and `vec`, auto match them
+                    // only there is only 1 unmatched both in `tempvec` and `vec` then we auto match them
+                    int mark = -1;
+                    for(int idd = 0; idd < tmpvec.size(); idd++){
+                        if(tmpvec[idd]->isMetaConstant()) continue;
+                        if(dynamic_cast<MetaInst*>(tmpvec[idd])->getMatchedInst().size() == 0) {
+                            if(mark != -1) { // the second time found asmOpVec has unmatched inst
+                                mark = -1;
+                            }else {
+                                mark = idd;
+                            }
+                        }
+                    }
+                    if(mark != -1) {
+                        std::cout << "DEBUG:: Auto match between " << fused[i]->getOriginInst() << " and " << dynamic_cast<MetaInst*>(tmpvec[mark])->getOriginInst() << std::endl;
+                        AsmMatchVec[emptyElementIndex].push_back(dynamic_cast<MetaInst*>(tmpvec[mark]));
+                        numOfMatchedOp++;
+                    }
+                }
+                std::cout << "DEBUG:: Matched op Analysis for " << fused[i]->getOriginInst() << ": numOfOp: " << numOfOp << ", numOfMatchedOp: " << numOfMatchedOp << std::endl;
+                // if icmp fcmp: must have 2 operands
+                if(fused[i]->getOriginInst() == "icmp" && numOfOp < 2) {
+                    std::cout << BOLD << RED << "ERROR:: # of operands of `compare` != 2, cannot build mapping!\n";
+                    return "";
+                }
+                if(numOfOp != numOfMatchedOp) {
+                    std::cout << BOLD << RED << "ERROR:: numOfOp != numOfMatchedOp (after auto match), cannot build mapping!\n";
+                    return "";
+                }
+
+
                 for( int id = 0; id < vec.size(); id++ ){
                     if(!vec[id]->isMetaInst()) {
                         continue;
@@ -912,18 +963,24 @@ namespace MetaTrans {
                         std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
 
                     // Find matched ASM instsaruction of such "operand" 
-                    auto AsmMatch  = dynamic_cast<MetaInst*>(vec[id])->getMatchedInst();
-                    std::cout << "DEBUG:: fused[i] " << fused[i]->getOriginInst() <<" .operands[id] " << dynamic_cast<MetaInst*>(vec[id])->getOriginInst() << " ->getMatchedInst().size() = " << AsmMatch.size() << std::endl;
+                    auto AsmMatch  = AsmMatchVec.at(id);
+                    std::cout << "DEBUG:: fused["<<i<<"] " << fused[i]->getOriginInst() <<" .operands["<<id<<"] " << dynamic_cast<MetaInst*>(vec[id])->getOriginInst() << " ->getMatchedInst().size() = " << AsmMatch.size() << std::endl;
 
                     // ASM 1-N Mapping
                     if(ASMorIR == "IR"){
+                        int skip = 0;
                         // Check RS matching between ASM and LLVM IR
                         for(int idd = 0; idd < tmpvec.size(); idd++){
-                            if(tmpvec[idd] == NULL || tmpvec[idd]->isMetaConstant())
+                            if(tmpvec[idd] == NULL) {
                                 continue;
+                            }else if(tmpvec[idd]->isMetaConstant()) {
+                                skip++;
+                                continue;
+                            }
+                            std::cout << "DEBUG:: tmpvec[idd] (["<<idd<<"]) is " << dynamic_cast<MetaInst*>(tmpvec[idd])->getOriginInst() << std::endl;
                             find = ifFind (dynamic_cast<MetaInst*>(tmpvec[idd]), AsmMatch);
                             if (find != -1){
-                                str += std::to_string(idd+1) + " ";
+                                str += std::to_string(idd+1-skip) + " ";
                                 // Handle the Case like add a1, a0, a0, wherein a0 has been used twice
                                 // We assume the reg mapping of the same inst will only hit once
                                 tmpvec[idd] = NULL;
@@ -1308,8 +1365,9 @@ namespace MetaTrans {
 
             // Skip Load Store & Branch instruction in EquivClass training
             // TODO:: BE CAUTIOUS OF AMO INSTRUCTIONS that have implicit load, store operations!!!
-            if( (*it)->getInstType()[0] == InstType::LOAD || (*it)->getInstType()[0] == InstType::STORE || 
-                (*it)->getInstType()[0] == InstType::BRANCH )
+            if( (*it)->getInstType()[0] == InstType::LOAD || (*it)->getInstType()[0] == InstType::STORE )
+                continue;
+            if((*it)->getInstType().size() == 2 && ((*it)->getInstType()[0] == InstType::COMPARE && (*it)->getInstType()[1] == InstType::BRANCH))
                 continue;
 
             if( (*it)->getInstType()[0] == InstType::PHI)
@@ -1373,6 +1431,15 @@ namespace MetaTrans {
         if(asmvec.size() == 0 || irvec.size()== 0)
             return NULL;   
         
+        std::vector<MetaInst*> operandsOfIcmp;
+        // now irvec = ['icmp'], make operands of icmp to match with operands of branch
+        for(auto it2 = irvec[0]->getOperandList().begin(); it2 != irvec[0]->getOperandList().end(); it2++) {
+            if((*it2)->isMetaInst()) {
+                operandsOfIcmp.push_back((MetaInst*)(*it2));
+            }
+        }
+        std::cout << "DEBUG:: operandsOfIcmp.size() = "<< operandsOfIcmp.size() <<std::endl;
+
         if(asmvec.size() == 1 && (asmvec[0])->isType(InstType::COMPARE)) {
             // Either asmvec is 'icmp' instruction
             retvec = (asmvec[0])->findMatchedInst(irvec);
@@ -1383,21 +1450,17 @@ namespace MetaTrans {
 
             // Firstly, -- train `asmvec` and `irvec` BEGIN --
             for(auto it = asmvec.begin(); it != asmvec.end(); it++){
-                std::cout << "DEBUG:: trainControlFlow:: enter loops \n";
+                std::cout << "DEBUG:: trainControlFlow:: enter loops, find matchedInst for " << (*it)->getOriginInst() << " \n";
                 if(!(*it)->getInstType().size())
                     continue;
                 //Skipping trained inst
-                if((*it)->Trained)
+                if((*it)->Trained) {
+                    std::cout << "DEBUG:: This asmvec[i] has been already trained" << std::endl;
                     continue;
+                }
                 if( (*it)->getInstType()[0] == InstType::PHI) // FIXME: whether it need ??
                     (*it)->setOriginInst("PHI");
-                std::vector<MetaInst*> operandsOfIcmp;
-                // now irvec = ['icmp'], make operands of icmp to match with operands of branch
-                for(auto it2 = irvec[0]->getOperandList().begin(); it2 != irvec[0]->getOperandList().end(); it2++) {
-                    if((*it2)->isMetaInst()) {
-                        operandsOfIcmp.push_back((MetaInst*)(*it2));
-                    }
-                }
+
                 retvec.clear();
                 retvec = (*it)->findMatchedInst(operandsOfIcmp);
                 std::cout << "findMatchedInst(operandsOfIcmp) returns the vector size = " << retvec.size() << std::endl;
@@ -1407,11 +1470,7 @@ namespace MetaTrans {
                         std::cout << "auto itt = retvec.begin(); itt != retvec.end(); itt++" << std::endl;
                         std::cout << cur->toString() << std::endl;
                         if(!(*it)->Trained && !cur->Trained) {
-                            (*it)->trainInst(cur);
-                            // second: build branch mapping rule
-                            retvec = this->findMatchedInst(irvec);
-                            for(auto itt = retvec.begin(); itt != retvec.end(); itt++)
-                                this->trainInst(*itt);
+                            (*it)->trainInst(cur); // Train `asmInst->op[i]` and its matched inst in `operandsOfIcmp`
                         } else {
                             std::cout << "DEBUG::trainControlFlow() found ASM inst "<<  (*it)->getOriginInst()
                                     << " trained status = " << (*it)->Trained << ",  IR inst "
@@ -1421,7 +1480,10 @@ namespace MetaTrans {
                     }
                 }
             }
-
+            // second: build `branch` mapping rule
+            retvec = this->findMatchedInst(irvec);
+            for(auto itt = retvec.begin(); itt != retvec.end(); itt++)
+                this->trainInst(*itt);
         }
         std::cout << "DEBUG:: retvec.size() = "<< retvec.size() <<std::endl;
 
