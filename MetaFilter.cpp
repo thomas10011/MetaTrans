@@ -47,7 +47,16 @@ namespace MetaTrans {
         std::unordered_map<Instruction*, MetaInst*>& instMap = builder.instMap;
 
         for (auto iter = instMap.begin(); iter != instMap.end(); ++iter) {
-            iter->second->setOriginInst(iter->first->getOpcodeName());
+            Instruction* irInst = iter->first;
+            MetaInst* metaInst = iter->second;
+
+            std::string type = irInst->getOpcodeName();
+            if (CmpInst* cmp = dyn_cast<CmpInst>(irInst)) {
+                std::string pred = cmp->getPredicateName(cmp->getPredicate()).str();
+                printf("type of cmp: %s\n", pred.c_str());
+                type = type + " " + pred;
+            }
+            metaInst->setOriginInst(type);
         }
 
         chain.doFilter(target);
