@@ -140,6 +140,8 @@ public:
 
     MetaOperand& registerToMetaUnit();
 
+    MetaOperand& unregisterFromMetaUnit();
+
     MetaScope* getParentScope();
 
     MetaUnit& getMetaUnit();
@@ -772,7 +774,11 @@ public:
     
     MetaUnit& registerOperand(MetaOperand* operand);
 
+    MetaUnit& unregisterOperand(MetaOperand* operand);
+
     MetaUnit& registerScope(MetaScope* scope);
+
+    MetaUnit& unregisterScope(MetaScope* scope);
 
     MetaUnit& fillID();
 
