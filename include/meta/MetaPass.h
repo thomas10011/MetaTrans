@@ -47,6 +47,9 @@ protected:
 
     MetaFunctionBuilder&    clearAuxMaps                    ();
     
+    // 将GEP转换成inttoptr和ptrtoint
+    MetaFunctionBuilder&    translateGEP                    ();
+
     MetaFunctionBuilder&    buildMetaElements               ();
                                                             
     // build denpendency graph between instructions.

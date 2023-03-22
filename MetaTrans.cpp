@@ -2431,15 +2431,48 @@ namespace MetaTrans {
                 ((MetaInst*)operand)->setAddress(inst_address++);
         }
         for (auto scope : scopes) scope->setID(scope_id++);
+        return *this;
     }
 
     MetaUnit& MetaUnit::registerOperand(MetaOperand* operand) {
         operands.push_back(operand);
         if (operand->isMetaInst()) insts.push_back((MetaInst*)operand);
+        return *this;
     }
 
     MetaUnit& MetaUnit::registerScope(MetaScope* scope) {
         scopes.push_back(scope);
+        return *this;
+    }
+
+    MetaUnit& MetaUnit::unregisterOperand(MetaOperand* operand) {
+        for (auto it = operands.begin(); it != operands.end(); ++it) {
+            if (*it == operand) {
+                operands.erase(it);
+                break;
+            }
+        }
+
+        if (!operand->isMetaInst()) return *this;
+
+        for (auto it = insts.begin(); it != insts.end(); ++it) {
+            if (*it == operand) {
+                insts.erase(it);
+                break;
+            }
+        }
+
+        return *this;
+    }
+
+    MetaUnit& MetaUnit::unregisterScope(MetaScope* scope) {
+        for (auto it = scopes.begin(); it != scopes.end(); ++it) {
+            if (*it == scope) {
+                scopes.erase(it);
+                break;
+            }
+        }
+        return *this;
     }
 
     Stream<MetaFunction*> MetaUnit::func_stream() { return std::move(Stream<MetaFunction*>(funcs)); } 

@@ -1,9 +1,12 @@
 #include "meta/MetaPass.h"
 #include "meta/MetaFilter.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/IR/IRBuilder.h"
 #include "meta/MetaMatcher.h"
 #include "meta/MetaTrans.h"
 #include <typeinfo>
+
+#define ULL unsigned long long
 
 using namespace llvm;
 int globalColor = 0;
@@ -227,6 +230,7 @@ namespace MetaTrans {
 
     MetaFunction* MetaFunctionBuilder::build() {
         (*this)
+            .translateGEP()
             .buildMetaElements()
             .buildGraph()
             .buildMetaData();
@@ -237,6 +241,107 @@ namespace MetaTrans {
         buildCount++;
 
         return mF;
+    }
+
+    void unrollingGEP(GetElementPtrInst* gep) {
+        IRBuilder<> builder(gep->getContext());
+
+        builder.SetInsertPoint(gep);
+        BasicBlock& bb = *(gep->getParent());
+
+        Value* base = gep->getPointerOperand();
+        
+        // Get the base pointer type
+        Type* ptrType = gep->getPointerOperandType();
+        Type* type = gep->getType();
+        Type* resType = gep->getResultElementType();
+        Type* srcType = gep->getSourceElementType();
+
+        // print GEP type information
+        std::string tyStr;
+        raw_string_ostream ros(tyStr);
+        ros << "ptr type: " << *ptrType << "\t, && id: " << ptrType->getTypeID() << "\n";
+        ros << "gep type: " << *type    << "\t, && id: " << type->getTypeID()    << "\n";
+        ros << "src type: " << *srcType << "\t, && id: " << srcType->getTypeID() << "\n";
+        ros << "res type: " << *resType << "\t, && id: " << resType->getTypeID() << "\n";
+
+        printf(tyStr.c_str());
+
+        // 目前仅支持固定大小数组的gep翻译 如a[1024][1024]
+        // 获取元素个数，最后一位存储位宽
+        std::vector<ULL> arrayLength;
+        Type* iter = srcType;
+        while (iter != resType) {
+            printf("%d ", iter->getArrayNumElements());
+            arrayLength.push_back((ULL)iter->getArrayNumElements());
+            iter = iter->getArrayElementType();
+        }
+        // 根据不同类型存储位宽
+        if (iter->isIntegerTy()) {
+            printf("%d\n", iter->getIntegerBitWidth());
+            arrayLength.push_back((ULL)iter->getIntegerBitWidth());
+        }
+        else if (iter->isFloatingPointTy()) {
+            printf("%d\n", iter->getFPMantissaWidth());
+            arrayLength.push_back((ULL)iter->getFPMantissaWidth());
+        }
+        
+        // offsets存储偏移量
+        int n = arrayLength.size();
+        ULL offsets[n];
+        offsets[n - 1] = arrayLength[n - 1];
+        for (int i = n - 2; i >= 0; --i) {
+            offsets[i] = offsets[i + 1] * arrayLength[i];
+        }
+        for (int i = 0; i < n; ++i) {
+            printf("%lld ", offsets[i]);
+        }
+        printf("\n");
+
+        // 从此处开始翻译
+        Value* pti = builder.CreatePtrToInt(base, builder.getInt64Ty());
+
+        // Iterate through the indices to compute the final type
+        Value* address = pti;
+        for (int i = 1; i <= gep->getNumIndices(); ++i) {
+            printf("operand no of idx: %d / %d\n", i, gep->getNumIndices());
+            Value* idx = gep->getOperand(i);
+            Constant* size = builder.getInt64(offsets[i - 1]);
+            Value* offset = builder.CreateMul(idx, size);
+            Value* add = builder.CreateAdd(address, offset);
+            address = add;
+        }
+
+        Value* itp = builder.CreateIntToPtr(address, type);
+
+        for (auto iter = gep->user_begin(); iter != gep->user_end(); ++iter) {
+            User* memOp = *iter;
+            if (LoadInst* load = dyn_cast<LoadInst>(memOp)) { printf("Find laod operation after GEP.\n"); }
+            else if (StoreInst* store = dyn_cast<StoreInst>(memOp)) { printf("Find laod operation after GEP.\n"); }
+            else { printf("WARN: no load or store after GEP.\n"); outs() << *memOp << "\n"; } 
+        }
+        gep->replaceAllUsesWith(itp);
+        gep->eraseFromParent();
+    }
+
+    MetaFunctionBuilder& MetaFunctionBuilder::translateGEP() {
+        
+        printf("Finding gep\n");
+        for(BasicBlock& bb : F->getBasicBlockList()) {
+            // 必须把gep单独摘出来处理 否则段错误
+            std::vector<GetElementPtrInst*> geps;
+            for (Instruction& inst : bb.getInstList()) {
+                if (GetElementPtrInst* gep = dyn_cast<GetElementPtrInst>(&inst)) {
+                    geps.push_back(gep);
+                }
+            }
+            for (auto gep : geps) {
+                printf("Unrolling gep\n");
+                unrollingGEP(gep);
+            }
+        }
+
+        return *this;
     }
 
     MetaFunctionBuilder& MetaFunctionBuilder::buildMetaElements() {
@@ -399,12 +504,12 @@ namespace MetaTrans {
         }
         outs() << "\n";
         
-        for (auto op = phi->op_begin(); op != phi->op_end(); ++op) {
-            Value* value = op->get();
-            MetaUtil::printValueType(value); 
-            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
-        }
-        outs() << "\n";
+        // for (auto op = phi->op_begin(); op != phi->op_end(); ++op) {
+        //     Value* value = op->get();
+        //     MetaUtil::printValueType(value); 
+        //     outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
+        // }
+        // outs() << "\n";
     }
 
     void MetaFunctionBuilder::copyDependencies(Instruction* curInst) {
@@ -416,7 +521,7 @@ namespace MetaTrans {
         outs() << "inst " << inst << ",  type: " << curInst->getOpcodeName() << "\n";
         for (auto op = curInst->op_begin(); op != curInst->op_end(); ++op) {
             Value* value = op->get();
-            MetaUtil::printValueType(value);
+            // MetaUtil::printValueType(value);
             // create CFG here.
             if (BasicBlock* bb = dyn_cast<BasicBlock>(value)) {
                 (*curBB)
@@ -433,7 +538,7 @@ namespace MetaTrans {
             else if (MetaOperand* metaOp = findMetaOperand(value))
                 inst->addOperand(metaOp);
 
-            outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
+            // outs() << "; operand number: " << op->getOperandNo() << "#" << "\n";
         }
 
     }
