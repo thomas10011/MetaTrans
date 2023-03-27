@@ -1932,6 +1932,8 @@ namespace MetaTrans {
                         std::cout   << "DEBUG:: In trainBB():: ASM LOAD: " << (*inst)->getOriginInst()
                                     << " Find a new match in IR: " <<  matchvec[0]->getOriginInst()
                                     << std::endl;
+                        for(auto i = matchvec.begin();i!=matchvec.end();i++)
+                            (*i)->toString();
                         // Build Mapping for new matched load instructions
                         if(matchvec.size()==1)
                             (*inst)->buildMapping(matchvec[0]);
@@ -1940,8 +1942,11 @@ namespace MetaTrans {
                 // Skip unmatched or ambiguous instructions 
                 // Can be optimized to address ambiguity if needed
                 if(matchvec.size() != 1 ){
-                    if(matchvec.size() > 1)
+                    if(matchvec.size() > 1){
                         std::cout << "DEBUG:: Matched more than one load instruction!\n";
+                        for(auto i = matchvec.begin();i!=matchvec.end();i++)
+                            std::cout << (*i)->toString() << std::endl;
+                    }
                     else
                         std::cout << "DEBUG:: No load instruction is matched!\n";
                     continue;
