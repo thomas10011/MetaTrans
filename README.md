@@ -1,7 +1,7 @@
 
 # MetaTrans
 
-## How to build && run
+## How to BUILD && RUN
 1. Clone llvm project.
 2. Clone code into `llvm-project/llvm/lib/Transforms/`, so the full relative path should be `llvm-project/llvm/lib/Transforms/MetaTrans`.
 3. (Not Necessary)Set your compiler path in `llvm-project/llvm/lib/Transforms/MetaTrans/CMakeLists.txt`
@@ -55,7 +55,7 @@ lldb's execution flow should stop at the breakpoint.
 
 ## Notice
 
-We used yaml-cpp, so you need to kick off `-fno-exceptions` and `-fno-rtti` from your compilation options, add add `LLVM_REQUIRES_EH`.
+We used yaml-cpp, so you need to kick off `-fno-exceptions` and `-fno-rtti` from your compilation options, and for the polymorphic feature required by yaml-cpp, you need to add `LLVM_REQUIRES_EH` option.
 
 
 All tests is under LLVM 13.0.1.
