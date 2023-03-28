@@ -45,6 +45,35 @@ std::unordered_map<MetaBB*, MetaBB*>::iterator end();
     
 };
 
+// Matching addressing code for two load instruction.
+class MetaAddressMatcher {
+protected: 
+
+    MetaInst *asb, *ir;
+
+    MetaBB* irbb;
+
+    std::unordered_map<MetaInst*, MetaInst*> instMap;
+
+    std::unordered_set<MetaInst*> matchedSet;
+
+public:
+    
+    MetaAddressMatcher();
+
+    MetaAddressMatcher& setAsmInst(MetaInst* i);
+
+    MetaAddressMatcher& setIrInst(MetaInst* i);
+
+    MetaAddressMatcher& setIrBB(MetaBB* bb);
+
+    virtual MetaAddressMatcher& match();
+
+    std::unordered_map<MetaInst*, MetaInst*>& getResult();
+    
+    bool matched(MetaInst* inst);
+    
+};
 
 class MetaBBMatcher {
 

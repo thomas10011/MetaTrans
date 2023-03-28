@@ -59,6 +59,7 @@ namespace MetaTrans {
         for (auto iter = asmUnit->begin(); iter != asmUnit->end(); ++iter) {
             MetaFunction* f = *iter;
             MetaBBMatcher* matcher = new LinearMetaBBMatcher();
+            MetaAddressMatcher* addrMatcher = new MetaAddressMatcher();
 
             auto predicate = [&] (MetaFunction* mF) { return mF->getFunctionName() == f->getFunctionName(); };
             auto match_inner = [&] (MetaFunction* mF) {
@@ -87,6 +88,10 @@ namespace MetaTrans {
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
                     printf("MetaBB: %d <-> %d, Training Strats\n",pair->first->getID(), pair->second->getID() );
                     pair->first->trainBB(pair->second);
+                    for (auto it = pair->first->begin(); it != pair->first->end(); ++it) {
+                        if ((*it)->isLoad() || (*it)->isStore())
+                            (*addrMatcher).setAsmInst(*it).setIrBB(&*(pair->second)).match();
+                    }
                 }
                 printf("-----------------------------------\n");
             };
@@ -335,12 +340,22 @@ namespace MetaTrans {
                     geps.push_back(gep);
                 }
             }
+            // 为GEP的User（Load / Store）设置GlobalVar 然后将GEP展开。
             for (auto gep : geps) {
+                Value* var = gep->getOperand(0);
+                outs() << "Type of GEP[0]: " << *(var->getType()) << " " << "\n";
+                for (auto it = gep->user_begin(); it != gep->user_end(); ++it) {
+                    Instruction* inst = (Instruction*)*it;
+                    if (isa<LoadInst>(inst) || isa<StoreInst>(inst)) {
+                        printf("LOAD / STORE: %d,  Type of GEP[0]: %s, %d\n", inst->getName().str().c_str(), var->getName().str().c_str(), var->getType()->getTypeID());
+                        LoadStoreVarMap[inst] = var;
+                    }
+                }
                 printf("Unrolling gep\n");
                 unrollingGEP(gep);
             }
         }
-
+        
         return *this;
     }
 
@@ -451,6 +466,13 @@ namespace MetaTrans {
             .setParentScope(&b)
             .registerToMetaUnit()
             ;
+        // set global var name for Load / Store.
+        if (isa<LoadInst>(i) || isa<StoreInst>(i)) {
+            outs() << i << "\n";
+            Value* var = LoadStoreVarMap[&i];
+            if (var)
+                newInst->setGlobalSymbolName(var->getName().str());
+        }
         instMap[&i] = newInst;
         return *this;
     }

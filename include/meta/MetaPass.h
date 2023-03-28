@@ -39,6 +39,8 @@ protected:
 
     std::unordered_map<Instruction*, MetaInst*>             instMap;
 
+    std::unordered_map<Instruction*, Value*>                LoadStoreVarMap;
+
     std::unordered_map<Constant*, MetaConstant*>            constantMap;
 
     std::unordered_map<Argument*, MetaArgument*>            argMap;

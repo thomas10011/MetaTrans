@@ -102,4 +102,52 @@ std::pair<MetaInst*, MetaInst*> LinearMetaBBMatcher::matchInstGraph(MetaBB& u, M
 }
 
 
+MetaAddressMatcher::MetaAddressMatcher() {
+
+}
+
+MetaAddressMatcher& MetaAddressMatcher::setAsmInst(MetaInst* i) {
+    this->asb = i;
+    return *this;
+}
+
+MetaAddressMatcher& MetaAddressMatcher::setIrInst(MetaInst* i) {
+    this->ir = i;
+    return *this;
+}
+
+MetaAddressMatcher& MetaAddressMatcher::setIrBB(MetaBB* bb) {
+    this->irbb = bb;
+    return *this;
+}
+
+
+std::vector<MetaInst*> findUntilLui(MetaInst* inst) {
+    MetaInst* cur = inst;
+
+}
+
+std::vector<MetaInst*> findUntilPti(MetaInst* inst) {
+    MetaInst* cur = inst;
+
+}
+
+MetaAddressMatcher& MetaAddressMatcher::match() {
+    MetaInst* cur = asb;
+    std::vector<MetaInst*> matchedLoad = asb->findTheSameInst(irbb);
+    for (int i = 0; i < matchedLoad.size(); ++i) {
+        std::string type = asb->isLoad() ? "load" : "store";
+        printf("matched %s: %s\n", type.c_str(), matchedLoad[i]->getOriginInst().c_str());
+    }
+    return *this;
+}
+
+std::unordered_map<MetaInst*, MetaInst*>& MetaAddressMatcher::getResult() {
+    return instMap;
+}
+
+bool MetaAddressMatcher::matched(MetaInst* inst) {
+    return matchedSet.find(inst) != matchedSet.end();
+}
+
 } // namespace MetaTrans
