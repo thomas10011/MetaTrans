@@ -32,7 +32,7 @@ And then run the pass.
 If you are using lldb, you can follow this (substitute the binary path to yours):
 
 ```
-lldb -- ~/projects/llvm-project-dev/build/bin/opt -debug -enable-new-pm=0 -load ~/projects/  llvm-project-dev/build/lib/LLVMMetaTrans.so --meta-trans example.ll 
+lldb -- ~/projects/llvm-project-dev/build/bin/opt -debug -enable-new-pm=0 -load ~/projects/llvm-project-dev/build/lib/LLVMMetaTrans.so --meta-trans example.ll 
 ```
 
 this should run lldb with opt, and load the pass as a shared object. The output will be like:

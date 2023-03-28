@@ -336,6 +336,7 @@ namespace MetaTrans {
             // 必须把gep单独摘出来处理 否则段错误
             std::vector<GetElementPtrInst*> geps;
             for (Instruction& inst : bb.getInstList()) {
+                // TODO: 使用GEPOperator，因为GetElementPtrInst和ConstantExpr都可以表示GEP操作
                 if (GetElementPtrInst* gep = dyn_cast<GetElementPtrInst>(&inst)) {
                     geps.push_back(gep);
                 }
@@ -462,17 +463,38 @@ namespace MetaTrans {
     
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaInst(Instruction& i, MetaBB& b) {
         MetaInst* newInst = b.buildInstruction((*typeMap)[i.getOpcode()]);
+
+        std::string globalVarNmae = "";
+        // set global var name for Load / Store.
+        if (isa<LoadInst>(i) || isa<StoreInst>(i)) {
+            std::string tyStr;
+            raw_string_ostream ros(tyStr);
+            i.getOperand(0)->getType()->print(ros);
+            Value* first = i.getOperand(0);
+            printf("Type of OP[0]: %s\n", tyStr.c_str());
+
+            for (auto it = i.op_begin(); it != i.op_end(); ++it) {
+                Value* op = *it;
+                // 如果是gep
+                if (GEPOperator* gep = dyn_cast<GEPOperator>(op)) {
+                    outs() << "Find nested GEP\n";
+                    globalVarNmae = gep->getPointerOperand()->getName().str();
+                }
+                else if (Value* var = LoadStoreVarMap[&i]) {
+                    globalVarNmae = var->getName().str();
+                }
+                printf("Set gloabl var %s for : ", globalVarNmae.c_str());
+                outs() << i << "\n";
+            }
+
+        }
+
         (*newInst)
+            .setGlobalSymbolName(globalVarNmae)
             .setParentScope(&b)
             .registerToMetaUnit()
             ;
-        // set global var name for Load / Store.
-        if (isa<LoadInst>(i) || isa<StoreInst>(i)) {
-            outs() << i << "\n";
-            Value* var = LoadStoreVarMap[&i];
-            if (var)
-                newInst->setGlobalSymbolName(var->getName().str());
-        }
+
         instMap[&i] = newInst;
         return *this;
     }
