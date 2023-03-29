@@ -535,6 +535,10 @@ namespace MetaTrans {
 
         // 2. TODO: Compare with dataRoot: if global->match name;
         if(dataRoot == "RISCV_GLOBAL") {
+        //if(dataRoot != "") {
+
+            std::cout << "DEBUG:: globalSymbolName =  " << globalSymbolName << std::endl;
+
             std::string asmGlobalName = globalSymbolName;
             for (auto it = bb->inst_begin(); it != bb->inst_end(); it++) {
                 MetaInst *IRinst = *it;

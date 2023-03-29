@@ -491,6 +491,7 @@ namespace MetaTrans {
 
         (*newInst)
             .setGlobalSymbolName(globalVarNmae)
+            .setDataRoot("TIR_GLOBAL")
             .setParentScope(&b)
             .registerToMetaUnit()
             ;
