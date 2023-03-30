@@ -1004,7 +1004,7 @@ namespace MetaTrans {
                 // Now: icmp->operand[0] = icmp.rs2, icmp->operand[1] = icmp.rs1; bge/lt/...->operand[0] = target_imm, [1] = rs1, [2] = rs2; need to reverse icmp->operand
                     std::reverse(std::begin(tmpvec), std::end(tmpvec));
                     if(numOfOp < 2) {
-                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " != 2, cannot build mapping!\n";
+                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " != 2, cannot build mapping!\n"<< RST;
                         return "";
                     }
                 }
