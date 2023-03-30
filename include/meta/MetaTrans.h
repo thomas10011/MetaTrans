@@ -441,7 +441,7 @@ public:
 
     std::vector<MetaInst*> getMatchedInst();
 
-    MetaInst* updateMappingTable(std::string mapstr, std::string asmInst, std::string ir, int index);
+    MetaInst* updateMappingTable(std::string mapstr, std::string asmInst, std::string ir, int index, std::string firstASM);
 
 
 };
@@ -704,7 +704,7 @@ class MappingTable {
 
 public:
 
-    // MappingName[0]: TableMata.mapping
+    // MappingName[0]: TableMeta.mapping
     // MappingName[1]: 1-N.mapping
     // MappingName[2]: 2-N.mapping
     // MappingName[3]: 3-N.mapping
@@ -718,7 +718,7 @@ public:
     // 0100 -> 3-N
     // O110 -> 2-N & 3-N
     // 0011 -> 1-N & 2-N
-    std::map<std::string, int> TableMata;
+    std::map<std::string, int> TableMeta;
 
     // Max ASM Inst count in a mapping entry
     int max = 5;
@@ -739,6 +739,8 @@ public:
     MappingTable* loadMappingTable();
 
     std::string getTableName(int id);
+
+    MappingTable* updateTableMeta();
 
 
 };

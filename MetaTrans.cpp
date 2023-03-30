@@ -753,7 +753,12 @@ namespace MetaTrans {
         std::cout << std::endl;
     }
 
-    MetaInst* MetaInst::updateMappingTable(std::string mapstr, std::string asmInst, std::string irInst,  int index){
+    MetaInst* MetaInst::updateMappingTable( std::string mapstr, 
+                                            std::string asmInst, 
+                                            std::string irInst,  
+                                            int index, 
+                                            std::string firstASM // used to traverse MT Meta
+                                            ){
 
         std::cout <<  "\nDEBUG:: Entering updateMappingTable()....\n" <<std::endl;
 
@@ -761,15 +766,36 @@ namespace MetaTrans {
         auto it = MapTable->MTable[index].find(asmInst);
         // std:: cout << "DEBUG::buildMapping() checked the MTable\n";
         // std:: cout << "DEBUG::buildOperandMapping returns string = " << str << std::endl;
-        if(it != MapTable->MTable[index].end())
+        if(it != MapTable->MTable[index].end()){
             std:: cout << "DEBUG::MTable contains the mapping for " << this->getOriginInst() 
                        << " : "<<it->second << "; current mapstr: " << mapstr << std::endl;
+            return this;
+        }
 
         if(mapstr != "" && it == MapTable->MTable[index].end()){
             std:: cout << "DEBUG::buildMapping() Writing to MTable " << MapTable->getTableName(index) << std::endl;
             MapTable->MTable[index][asmInst] = irInst;
             MetaUtil::writeMapping(mapstr, MapTable->getTableName(index));
         }
+        
+
+        std::cout <<  "\nDEBUG:: Updating TableMeta....\n" <<std::endl;
+
+        int bitmap = (1<<(index-1));
+        if(MapTable->TableMeta.find(firstASM) != MapTable->TableMeta.end()){
+            // The bitmap records which mapping table contains such instruction
+            // 0001 -> 1-N
+            // 0010 -> 2-N
+            // 0100 -> 3-N
+            // O110 -> 2-N & 3-N
+            // 0011 -> 1-N & 2-N
+            if (MapTable->TableMeta[firstASM] & bitmap == 0x0)
+                MapTable->TableMeta[firstASM] |= (1<<(index-1));
+            
+        }
+        else  // Add a new mapping entry to the TableMeta
+            MapTable->TableMeta.insert(std::make_pair(firstASM, bitmap));
+        
 
         std::cout <<  "\nDEBUG:: Leaving updateMappingTable()....\n" <<std::endl;
 
@@ -808,7 +834,7 @@ namespace MetaTrans {
         ret = this->buildOperandMapping(fused, ASMorIR);
         // 1-N Mapping
         if(ASMorIR == "IR"){
-            this->updateMappingTable(ret, this->getOriginInst(), str, 1);
+            this->updateMappingTable(ret, this->getOriginInst(), str, 1, this->getOriginInst());
         }
         else{
             int id = fused.size();
@@ -818,7 +844,7 @@ namespace MetaTrans {
                 return *this;
             }
             // When ASMorIR = ASM, then this points to an IR TIR inst
-            this->updateMappingTable(ret, str, this->getOriginInst(), id);
+            this->updateMappingTable(ret, str, this->getOriginInst(), id, fused[0]->getOriginInst());
         }
 
 
@@ -860,7 +886,7 @@ namespace MetaTrans {
         
 
         // //Update MTable of 1-N mapping
-        this->updateMappingTable(str, this->getOriginInst(), inst->getOriginInst(), 1);
+        this->updateMappingTable(str, this->getOriginInst(), inst->getOriginInst(), 1, this->getOriginInst());
 
         // auto it = MapTable->MTable[1].find(this->getOriginInst());
         // // std:: cout << "DEBUG::buildMapping() checked the MTable\n";
@@ -2255,45 +2281,71 @@ namespace MetaTrans {
 
     MappingTable* MappingTable::initTableMeta(){
 
-        std::ifstream file(this->MappingName[0]);
-        if(!file){
-            std::ofstream new_file(this->MappingName[0]);
-            new_file.close();
-            std::cout << "Mapping Table " << this->MappingName[0] << "does not exist! Creating a new one! \n";
-            return this;
-        }
-        // Check if the file was opened successfully
-        if (!file.is_open()) {
-            std::cout << "Error: Could not open file " << this->MappingName[0] << std::endl;
-            return NULL;
+        // std::ifstream file(this->MappingName[0]);
+        // if(!file){
+        //     std::ofstream new_file(this->MappingName[0]);
+        //     new_file.close();
+        //     std::cout << "Mapping Table " << this->MappingName[0] << "does not exist! Creating a new one! \n";
+        //     return this;
+        // }
+        // // Check if the file was opened successfully
+        // if (!file.is_open()) {
+        //     std::cout << "Error: Could not open file " << this->MappingName[0] << std::endl;
+        //     return NULL;
+        // }
+
+        // std::string line;
+        // while (std::getline(file, line)) {
+        // // Split the line into two parts - the string and the integer
+        //     std::string::size_type pos = line.find(' ');
+        //     if (pos == std::string::npos) {
+        //         std::cerr << "Error: Invalid line format." << std::endl;
+        //         continue;
+        //     }
+        //     std::string str = line.substr(0, pos);
+        //     std::string int_str = line.substr(pos+1);
+
+        //     // Convert the string to a std::string and the integer to an int
+        //     int value;
+        //     try {
+        //         value = std::stoi(int_str);
+        //     } catch (std::invalid_argument& e) {
+        //         std::cerr << "Error: Invalid integer value." << std::endl;
+        //         continue;
+        //     } catch (std::out_of_range& e) {
+        //         std::cerr << "Error: Integer value out of range." << std::endl;
+        //         continue;
+        //     }
+
+        //     // Store the mapping in the map
+        //     this->TableMeta[str] = value;
+        // }
+
+        int bitmap = 1;
+        std::string  firstInst;
+        for(int i = 1; i < this->max; i++){
+            bitmap <<= i - 1;
+            for(auto it = this->MTable[i].begin(); it!= this->MTable[i].end(); it++){
+                if(i == 1){
+                    firstInst = it->first;
+                }
+                else{
+                     std::string::size_type pos =  it->first.find(' ');
+                    if (pos == std::string::npos) {
+                        std::cout << "DEBUG:: Incorrect formatting in MTable[" << i << "], Key ="
+                                  << it->first << std::endl;
+                        continue;
+                    }
+                    firstInst = it->first.substr(0, pos);
+                }
+
+                if(this->TableMeta.find(firstInst) != this->TableMeta.end())
+                    TableMeta[firstInst] |= bitmap;
+                else
+                    TableMeta.insert (std::make_pair(firstInst, bitmap));
+            }            
         }
 
-        std::string line;
-        while (std::getline(file, line)) {
-        // Split the line into two parts - the string and the integer
-            std::string::size_type pos = line.find(' ');
-            if (pos == std::string::npos) {
-                std::cerr << "Error: Invalid line format." << std::endl;
-                continue;
-            }
-            std::string str = line.substr(0, pos);
-            std::string int_str = line.substr(pos+1);
-
-            // Convert the string to a std::string and the integer to an int
-            int value;
-            try {
-                value = std::stoi(int_str);
-            } catch (std::invalid_argument& e) {
-                std::cerr << "Error: Invalid integer value." << std::endl;
-                continue;
-            } catch (std::out_of_range& e) {
-                std::cerr << "Error: Integer value out of range." << std::endl;
-                continue;
-            }
-
-            // Store the mapping in the map
-            this->TableMata[str] = value;
-        }
         return this;
     }
 
@@ -2358,9 +2410,9 @@ namespace MetaTrans {
 
     int MappingTable::locateMappingTable(std::string InstName){
 
-        auto ptr = this->TableMata.find(InstName);
+        auto ptr = this->TableMeta.find(InstName);
 
-        if(ptr != TableMata.end())
+        if(ptr != TableMeta.end())
             return ptr->second;
         else
             return 0;
@@ -2369,7 +2421,7 @@ namespace MetaTrans {
 
     MappingTable* MappingTable::setName(std::string path){
 
-        this->MappingName.push_back(path + "TableMata.mapping");
+        this->MappingName.push_back(path + "TableMeta.mapping");
         for(int i = 1; i <= this->max; i++)
             this->MappingName.push_back(path + std::to_string(i) + "-N.mapping");
         return this;
@@ -2383,6 +2435,18 @@ namespace MetaTrans {
         }
         return MappingName[id];
     }
+
+
+    MappingTable* MappingTable::updateTableMeta(){
+
+        std::ofstream file(this->MappingName[0]);
+       
+        for(auto pair: TableMeta){
+            file << pair.first << " " << pair.second << std::endl;
+        }
+        return this;
+    }
+
 
 //===-------------------------------------------------------------------------------===//
 /// MetaUnit implementation.

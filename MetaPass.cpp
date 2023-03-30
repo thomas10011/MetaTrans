@@ -47,8 +47,8 @@ namespace MetaTrans {
         MapTable = new MappingTable();
 
         MapTable->setName(name+"/")
-                ->initTableMeta()
-                ->loadMappingTable();
+                ->loadMappingTable()
+                ->initTableMeta();
 
 
         MetaUnit* asmUnit = new MetaUnit(asmStr);
@@ -105,6 +105,7 @@ namespace MetaTrans {
                 ;
 
         };
+        MapTable->updateTableMeta();
 
     }
 
