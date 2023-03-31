@@ -319,6 +319,8 @@ protected:
 
     bool Trained = false;
 
+    llvm::Instruction* TransInst = NULL;
+
 public:
 
     MetaInst();
@@ -443,6 +445,10 @@ public:
 
     MetaInst* updateMappingTable(std::string mapstr, std::string asmInst, std::string ir, int index, std::string firstASM);
 
+    llvm::Instruction* getTransInst();
+
+    void setTransInst(llvm::Instruction* inst);
+
 
 };
 
@@ -480,6 +486,8 @@ public:
     bool virtual isLoad() override;
 
     bool virtual isStore() override;
+
+    std::unordered_map<MetaBB*, MetaOperand*> getMapping();
 };
 
 class MetaCall : public MetaInst {

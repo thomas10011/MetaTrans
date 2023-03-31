@@ -1555,6 +1555,15 @@ namespace MetaTrans {
         return this;
     }
 
+    llvm::Instruction* MetaInst::getTransInst(){
+        return this->TransInst;
+    }
+
+    void MetaInst::setTransInst(llvm::Instruction* inst){
+        this->TransInst = inst;
+    }
+
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Phi Instruction implementation.
@@ -1637,6 +1646,9 @@ namespace MetaTrans {
     bool MetaPhi::isLoad() { return false; }
 
     bool MetaPhi::isStore() { return false; }
+
+    std::unordered_map<MetaBB*, MetaOperand*> MetaPhi::getMapping(){return this->bbValueMap;}
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Basic Block implementation.
