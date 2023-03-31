@@ -332,7 +332,7 @@ namespace MetaTrans {
 
     void MetaUtil::paintColor(MetaFunction* mF, int startColor) {
         std::tuple<int, int, int> counts(0,0,0); // Store, Load, Branch
-        std::vector<std::string> name = {"Data Compute", "Addressing",
+        std::vector<std::string> name = {"Addressing", "Data Compute",
                                          "Control Flow"};
         std::cout << "\n\n<<== Coloring TIR for CFG: " << mF->getFunctionName() << " ==>>" << "\n";
         for (auto func_iter = mF->bb_begin(); func_iter != mF->bb_end(); ++func_iter) {
@@ -343,10 +343,9 @@ namespace MetaTrans {
                 if (!inst->isMetaPhi())
                     if(inst->isType(InstType::STORE)){
                         std::get<0>(counts) = std::get<0>(counts) + 1;
-                        std::vector<MetaOperand*> ops = inst->getOperandList();
+                        std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
                         std::cout << "IsStore " << ops.size() <<  std::endl;
                         for(int i = 0; i < ops.size(); i++) {
-                            if(ops[i]->isMetaInst()) {
                                 inst->addColor(startColor, i);
                                 Path* p = new Path{(MetaInst*)(ops[i]), i, 0, 0, 0, 0};
                                 inst->addToPath(p);
@@ -360,7 +359,6 @@ namespace MetaTrans {
                                        p->firstNode, p->type, p->numLoad,
                                        p->numStore, p->numPHI, p->numGEP);
                                 startColor++;
-                            }
                         }
                         std::vector<MetaInst*> vecForHash;
                         vecForHash.push_back(inst);
@@ -370,12 +368,11 @@ namespace MetaTrans {
                         inst->setHashcode(hashCode);
                     }else if(inst->isType(InstType::LOAD)){
                         std::get<1>(counts) = std::get<1>(counts) + 1;
-                        std::vector<MetaOperand*> ops = inst->getOperandList();
+                        std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
                         std::cout << "IsLoad " << ops.size() <<  std::endl;
                         for(int i = 0; i < ops.size(); i++) {
-                            if(ops[i]->isMetaInst()) {
                                 Path* p = new Path{(MetaInst*)(ops[i]), 1, 0, 0, 0, 0};
-                                inst->addColor(startColor, 1);
+                                inst->addColor(startColor, 0);
                                 printf("Color: %d, Type: Addressing\n", startColor);
                                 printf("%x(%d) LOAD,  -> \n", inst, startColor);
                                 std::unordered_set<MetaInst*> set;
@@ -385,7 +382,6 @@ namespace MetaTrans {
                                        p->firstNode, p->type, p->numLoad,
                                        p->numStore, p->numPHI, p->numGEP);
                                 startColor++;
-                            }
                         }
                         std::vector<MetaInst*> vecForHash;
                         vecForHash.push_back(inst);
@@ -399,9 +395,8 @@ namespace MetaTrans {
                     }else if(inst->isType(InstType::BRANCH)){
                         std::get<2>(counts) = std::get<2>(counts) + 1;
                         std::cout << "IsBranch" << std::endl;
-                        std::vector<MetaOperand*> ops = inst->getOperandList();
+                        std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
                         for(int i = 0; i < ops.size(); i++) {
-                            if(ops[i]->isMetaInst()) {
                                 Path* p = new Path{(MetaInst*)(ops[i]), 2, 0, 0, 0, 0};
                                 inst->addToPath(p);
                                 inst->addColor(startColor, 2);
@@ -414,7 +409,6 @@ namespace MetaTrans {
                                        p->firstNode, p->type, p->numLoad,
                                        p->numStore, p->numPHI, p->numGEP);
                                 startColor++;
-                            }
                         }
                     }
                 else {
