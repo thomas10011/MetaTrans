@@ -1866,7 +1866,22 @@ namespace MetaTrans {
 
     std::vector<MetaInst*>& MetaBB::getInstList() { return instList; }
 
-    int MetaBB::getInstNum() { return instList.size(); }
+    int MetaBB::getNumInst() { return instList.size(); }
+
+    int MetaBB::getNumLoad() { return features[0]; }
+
+    int MetaBB::getNumStore() { return features[1]; }
+
+    int MetaBB::getNumMemOp() { return features[0] + features[1]; }
+
+    int MetaBB::isLinearInCFG() {
+        return features[2] == 1 && features[3] == 1;
+    }
+
+    int MetaBB::isSelfLoop() {
+        for (MetaBB* suc : successors) if (suc == this) return 1;
+        return 0;
+    }
 
     double MetaBB::getModular() { return modular; }
 
@@ -1879,6 +1894,22 @@ namespace MetaTrans {
             dot += v[i] * features[i];
         }
         return dot / (bb.getModular() * bb.getModular());
+    }
+    
+    double MetaBB::memOpSimilarity(MetaBB* bb) {
+        std::vector<int> v = bb->getFeature();
+
+        double mod_a = sqrt(features[0] * features[0] + features[1] * features[1]);
+        double mod_b = sqrt(v[0] * v[0] + v[1] * v[1]);
+        if (!mod_a && !mod_b) return 1.0;
+        if (!mod_a || !mod_b) return 0.0;
+        
+        int dot = 0;
+        for (int i = 0; i < 2; ++i) {
+            dot += v[i] * features[i];
+        }
+
+        return dot / (mod_a * mod_b);
     }
 
     MetaUnit& MetaBB::getMetaUnit() {
@@ -2058,6 +2089,11 @@ namespace MetaTrans {
         return this;
     }
 
+    MetaBB& MetaBB::swapSuccessors() {
+        if (successors.size() < 2) return *this;
+        std::swap(successors[0], successors[1]);
+        return *this;
+    }
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Function implementation.
@@ -2118,6 +2154,7 @@ namespace MetaTrans {
         
         (*this)
             .setRoot(context.getMetaBB(object["rootBB"].getAsInteger().getValue()))
+            .setExit(context.getMetaBB(object["exitBB"].getAsInteger().getValue()))
             ;
 
         for (int i = 0; i < blocks.size(); ++i) {
@@ -2160,6 +2197,11 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaFunction& MetaFunction::setExit(MetaBB* exitBB) {
+        exit = exitBB;
+        return *this;
+    }
+
     MetaFunction& MetaFunction::setStackSize(int s) {
         stackSize = s;
         return *this;
@@ -2194,6 +2236,8 @@ namespace MetaTrans {
     int MetaFunction::getConstNum() { return constants.size(); }
 
     MetaBB* MetaFunction::getRoot() { return root; }
+
+    MetaBB* MetaFunction::getExit() { return exit; }
 
     std::vector<MetaBB*>& MetaFunction::getBB() { return bbs; }
 
@@ -2248,6 +2292,7 @@ namespace MetaTrans {
             "\"funcName\":" + "\"" + funcName + "\"" + "," +
             "\"stackSize\":" + std::to_string(stackSize) + "," +
             "\"rootBB\":" + std::to_string(root->getID()) + "," +
+            "\"exitBB\":" + std::to_string(exit->getID()) + "," +
             "\"returnType\":" + "\"" + MetaUtil::toString(returnType) + "\"" + "," +
             "\"arguments\":" + argStr + "," +
             "\"constants\":" + constStr + "," +

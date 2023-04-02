@@ -5,6 +5,25 @@
 namespace MetaTrans {
 
 
+class CodePiece {
+private:
+
+std::vector<std::string> instList;
+
+public:
+
+CodePiece();
+
+CodePiece(std::vector<std::string> init);
+
+CodePiece& addInst(std::string inst);
+
+uint64_t hashCode();
+
+};
+
+typedef std::pair<CodePiece, CodePiece> CodePiecePair;
+
 class InstMatchResult {
 private:
 protected:
@@ -56,6 +75,8 @@ protected:
     std::unordered_map<MetaInst*, MetaInst*> instMap;
 
     std::unordered_set<MetaInst*> matchedSet;
+    
+    std::unordered_map<uint64_t, CodePiecePair> codeMap;
 
 public:
     
@@ -69,7 +90,7 @@ public:
 
     virtual MetaAddressMatcher& match();
 
-    std::unordered_map<MetaInst*, MetaInst*>& getResult();
+    std::vector<CodePiecePair> getResult();
     
     bool matched(MetaInst* inst);
     
@@ -114,6 +135,22 @@ LinearMetaBBMatcher();
 MetaBBMatcher& match() override;
 
 LinearMetaBBMatcher& matchInst();
+
+};
+
+
+class CraphBasedBBMatcher : public MetaBBMatcher {
+
+private:
+
+void match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y);
+
+
+public:
+
+CraphBasedBBMatcher();
+
+MetaBBMatcher& match() override;
 
 };
 

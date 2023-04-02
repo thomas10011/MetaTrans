@@ -153,9 +153,15 @@ namespace MetaTrans {
         }
 
         for (auto bb_iter = metaFunc.begin(); bb_iter != metaFunc.end(); ++bb_iter) {
+            int in  = degreeMap[*bb_iter][0];
+            int out = degreeMap[*bb_iter][1];
+
+            // CFG应当只有一个出口，出度为0。
+            if (out == 0) metaFunc.setExit(*bb_iter);
+
             (**bb_iter)
-                .addFeature(degreeMap[*bb_iter][0])
-                .addFeature(degreeMap[*bb_iter][1])
+                .addFeature(in)
+                .addFeature(out)
                 ;
         }
 

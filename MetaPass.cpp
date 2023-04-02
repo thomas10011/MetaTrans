@@ -59,6 +59,7 @@ namespace MetaTrans {
         for (auto iter = asmUnit->begin(); iter != asmUnit->end(); ++iter) {
             MetaFunction* f = *iter;
             MetaBBMatcher* matcher = new LinearMetaBBMatcher();
+            // MetaBBMatcher* matcher = new CraphBasedBBMatcher();
             MetaAddressMatcher* addrMatcher = new MetaAddressMatcher();
 
             auto predicate = [&] (MetaFunction* mF) { return mF->getFunctionName() == f->getFunctionName(); };
@@ -78,7 +79,7 @@ namespace MetaTrans {
                     std::vector<int> x_f = x.getFeature();
                     std::vector<int> y_f = y.getFeature();
                     printf(
-                        "ASM BB num: %d --->>> IR BB num: %d  ||  features: [%d, %d, %d, %d], features: [%d, %d, %d, %d]\n",
+                        "ASM BB ID: %d --->>> IR BB ID: %d  ||  features: [%d, %d, %d, %d], features: [%d, %d, %d, %d]\n",
                         x.getID(), y.getID(),
                         x_f[0], x_f[1], x_f[2], x_f[3],
                         y_f[0], y_f[1], y_f[2], y_f[3]
@@ -236,7 +237,7 @@ namespace MetaTrans {
 
     MetaFunction* MetaFunctionBuilder::build() {
         (*this)
-            .translateGEP()
+            // .translateGEP()
             .buildMetaElements()
             .buildGraph()
             .buildMetaData();

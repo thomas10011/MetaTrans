@@ -568,6 +568,17 @@ public:
 
     std::vector<int> getFeature();
 
+    int getNumLoad();
+
+    int getNumStore();
+
+    // 获取 load / store 的总数
+    int getNumMemOp();
+
+    int isLinearInCFG();
+
+    int isSelfLoop();
+
     std::vector<MetaBB*> getNextBB();
 
     MetaBB* getNextBB(int index);
@@ -578,13 +589,15 @@ public:
 
     std::vector<MetaInst*>& getInstList();
 
-    int getInstNum();
+    int getNumInst();
 
     std::string toString();
 
     double getModular();
 
     double similarity(MetaBB& bb);
+
+    double memOpSimilarity(MetaBB* bb);
 
     Stream<MetaInst*> stream();
 
@@ -606,6 +619,8 @@ public:
 
     MetaUnit& getMetaUnit();
 
+    MetaBB& swapSuccessors();
+
 };
 
 class MetaFunction : public MetaScope {
@@ -619,8 +634,9 @@ protected:
     // basic blocks.
     std::vector<MetaBB*> bbs;
 
-    // CFG root
+    // CFG root and exit point.
     MetaBB* root;
+    MetaBB* exit;
 
     std::string funcName;
 
@@ -641,6 +657,8 @@ public:
     MetaFunction& addArgument(MetaArgument* a);
 
     MetaFunction& setRoot(MetaBB* rootBB);
+
+    MetaFunction& setExit(MetaBB* rootBB);
 
     MetaFunction& setFunctionName(std::string name);
 
@@ -670,6 +688,8 @@ public:
     MetaBB* buildBB();
 
     MetaBB* getRoot();
+
+    MetaBB* getExit();
 
     MetaArgument* buildArgument();
 
