@@ -219,6 +219,8 @@ public:
 
     static std::string upper(std::string s);
 
+    static std::string lower(std::string& str); 
+    
     static InstType stringToInstType(std::string str);
 
     static std::string toString(std::vector<InstType> type);

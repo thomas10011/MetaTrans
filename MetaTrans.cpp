@@ -1004,7 +1004,7 @@ namespace MetaTrans {
                 // Now: icmp->operand[0] = icmp.rs2, icmp->operand[1] = icmp.rs1; bge/lt/...->operand[0] = target_imm, [1] = rs1, [2] = rs2; need to reverse icmp->operand
                     std::reverse(std::begin(tmpvec), std::end(tmpvec));
                     if(numOfOp < 2) {
-                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " != 2, cannot build mapping!\n";
+                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " != 2, cannot build mapping!\n" << RST;
                         return "";
                     }
                 }
@@ -1020,7 +1020,7 @@ namespace MetaTrans {
                     // Check if RS points to any RD in the fused instructions
                     int ret = ifFind((vec[id]),fused);
                     if( ret != -1 )
-                        str += std::to_string(ret+1)+ "." + "rd  ";
+                        str += std::to_string(ret+1)+ "." + "rd ";
                     else if (ret > i)
                         std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
 
@@ -1083,6 +1083,7 @@ namespace MetaTrans {
                         asmOpVec.clear();
                     }       
                 }
+                str += ";";
             }
 
         dumpMapping(str);
@@ -2444,7 +2445,9 @@ namespace MetaTrans {
                     continue;
                 }
                 std::string str = line.substr(0, pos);
+                str = MetaUtil::lower(str);
                 std::string ir =  line.substr(pos+3);
+                ir = MetaUtil::lower(ir);
                 std::cout << "DEBUG:: loadMappingTable() is Parsing string " << str
                           << " and " << ir << std::endl;  
 
