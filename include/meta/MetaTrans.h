@@ -315,7 +315,7 @@ protected:
 
     int FuseID;
 
-    int address;
+    uint64_t address;
 
     bool Trained = false;
 
@@ -395,9 +395,9 @@ public:
 
     MetaInst& setHashcode(unsigned long hashCode);
 
-    int getAddress();
+    uint64_t getAddress();
 
-    MetaInst& setAddress(int address);
+    MetaInst& setAddress(uint64_t address);
 
     std::string getDataRoot();
 
@@ -810,7 +810,7 @@ public:
 
     MetaUnit& unregisterScope(MetaScope* scope);
 
-    MetaUnit& fillID();
+    MetaUnit& fillID(bool fillAddress = true);
 
     Stream<MetaFunction*> func_stream(); 
 

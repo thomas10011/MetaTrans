@@ -483,11 +483,11 @@ namespace MetaTrans {
 
     unsigned long MetaInst::getHashcode() {return hashCode;}
 
-    int MetaInst::getAddress() {
+    uint64_t MetaInst::getAddress() {
         return address;
     }
 
-    MetaInst& MetaInst::setAddress(int address) {
+    MetaInst& MetaInst::setAddress(uint64_t address) {
         this->address = address;
     }
 
@@ -1004,7 +1004,7 @@ namespace MetaTrans {
                 // Now: icmp->operand[0] = icmp.rs2, icmp->operand[1] = icmp.rs1; bge/lt/...->operand[0] = target_imm, [1] = rs1, [2] = rs2; need to reverse icmp->operand
                     std::reverse(std::begin(tmpvec), std::end(tmpvec));
                     if(numOfOp < 2) {
-                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " != 2, cannot build mapping!\n"<< RST;
+                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " != 2, cannot build mapping!\n";
                         return "";
                     }
                 }
@@ -2553,11 +2553,11 @@ namespace MetaTrans {
 
     MetaUnit& MetaUnit::addGlobalVar(MetaConstant* c) { globalVar.push_back(c); return *this; }
 
-    MetaUnit& MetaUnit::fillID() {
+    MetaUnit& MetaUnit::fillID(bool fillAddress) {
         int op_id = 0, scope_id = 0, inst_address = 0;
         for (auto operand : operands) {
             operand->setID(op_id++);
-            if (operand->isMetaInst())
+            if (fillAddress && operand->isMetaInst())
                 ((MetaInst*)operand)->setAddress(inst_address++);
         }
         for (auto scope : scopes) scope->setID(scope_id++);
