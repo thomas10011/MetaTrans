@@ -149,6 +149,13 @@ namespace MetaTrans {
         return s;
     }
 
+    std::string MetaUtil::lower( std::string& str) {
+        std::string result(str.size(), ' ');
+        std::transform(str.begin(), str.end(), result.begin(),
+                 [](unsigned char c) { return std::tolower(c); });
+        return result;
+    }
+
     InstType MetaUtil::stringToInstType(std::string str) {
         str = upper(str);
         return YamlUtil::str_inst_type_map[str];
