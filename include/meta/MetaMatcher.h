@@ -104,6 +104,13 @@ MetaFunction *x, *y;
 
 std::unordered_map<MetaBB*, MetaBB*> bbMap;
 
+std::unordered_map<MetaBB*, MetaBB*> visitedMap;
+
+std::unordered_set<MetaBB*> matchedSet;
+
+std::unordered_set<MetaBB*> visitedSet;
+
+
 public:
 
 MetaBBMatcher();
@@ -145,6 +152,15 @@ private:
 
 void match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y);
 
+MetaBB* findJoint(MetaBB* split, MetaBB* merge);
+
+bool isPartOfLoop(MetaBB* bb);
+
+bool isStartOfLoop(MetaBB* bb);
+
+bool isEndOfLoop(MetaBB* bb);
+
+MetaBB* next(MetaBB* bb);
 
 public:
 

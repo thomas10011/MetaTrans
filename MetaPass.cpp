@@ -58,8 +58,8 @@ namespace MetaTrans {
 
         for (auto iter = asmUnit->begin(); iter != asmUnit->end(); ++iter) {
             MetaFunction* f = *iter;
-            MetaBBMatcher* matcher = new LinearMetaBBMatcher();
-            // MetaBBMatcher* matcher = new CraphBasedBBMatcher();
+            // MetaBBMatcher* matcher = new LinearMetaBBMatcher();
+            MetaBBMatcher* matcher = new CraphBasedBBMatcher();
             MetaAddressMatcher* addrMatcher = new MetaAddressMatcher();
 
             auto predicate = [&] (MetaFunction* mF) { return mF->getFunctionName() == f->getFunctionName(); };

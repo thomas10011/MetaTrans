@@ -147,13 +147,30 @@ MetaBBMatcher& CraphBasedBBMatcher::match() {
     match(asmRoot, irRoot, asmExit, irExit);
 
     return *this;
+
 }
 
-MetaBB* next(MetaBB* bb) {
+MetaBB* CraphBasedBBMatcher::next(MetaBB* bb) {
     if (bb->getNextBB().size() == 0) return nullptr;
-    if (bb->isSelfLoop()) 
-        for (MetaBB* next : bb->getNextBB()) 
-            if (next != bb) return next;
+    if (isPartOfLoop(bb)) {
+        auto sucs = bb->getNextBB();
+        for (MetaBB* next : bb->getNextBB()) {
+            if (next == bb) continue;
+            if (visitedSet.find(next) == visitedSet.end()) return next;
+        }
+
+        
+        if (sucs.size() > 1)
+            printf("self: %d, suc0: %d, suc1: %d\n", bb->getID(), sucs[0]->getID(), sucs[1]->getID());
+        printf("content of visitedSet (size %d): ", visitedSet.size());
+        for (auto iter = visitedSet.begin(); iter != visitedSet.end(); ++iter) {
+            printf("%d ", (*iter)->getID());
+        }
+        printf("\n");
+        printf("Error! Not found the backward edge\n");
+
+        return nullptr;
+    }
     return bb->getNextBB()[0];
 }
 
@@ -175,37 +192,43 @@ struct weight {
 
 // 比较权重大小
 int compare(weight x, weight y) {
-    int ret;
+    int ret = 0;
     ret = x.num_bb - y.num_bb;
     if (ret) return ret;
     ret = x.num_inst - y.num_inst;
     if (ret) return ret;
     ret = x.num_memop - y.num_memop;
     if (ret) return ret;
-
     return y.order - x.order;
 }
 
 
 // 寻找Joint节点
-// 如有必要会交换 n 和 m 以保持左倾性
-MetaBB* bfs(MetaBB* n, MetaBB* m, MetaBB* end, int& needSwap) {
+// 如有必要会交换 l 和 r 以保持左倾性
+MetaBB* bfs(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* end, std::unordered_map<MetaBB*, weight>& weights) {
 
     std::list<MetaBB*> que;
     std::unordered_set<MetaBB*> visited;
     std::unordered_map<MetaBB*, MetaBB*> occupied;
-    std::unordered_map<MetaBB*, weight> weights;
     
+    // 以防有指向父亲的边
+    visited.insert(p);
 
-    que.push_back(n); occupied[n] = n;
-    que.push_back(m); occupied[m] = m;
-    weights[n] = { 0, 0, 0, n->getID() };
-    weights[m] = { 0, 0, 0, m->getID() };
+    que.push_back(l); occupied[l] = l;
+    que.push_back(r); occupied[r] = r;
+    weights[l] = { 0, 0, 0, l->getID() };
+    weights[r] = { 0, 0, 0, r->getID() };
 
-    MetaBB* ret;
+    MetaBB* ret = nullptr;
     
     while (!que.empty()) {
         MetaBB* cur = que.front(); que.pop_front();
+
+        if (cur == ret) {
+
+            return cur;
+        }
+
         visited.insert(cur);
 
         // 更新这一控制流的权重
@@ -218,16 +241,17 @@ MetaBB* bfs(MetaBB* n, MetaBB* m, MetaBB* end, int& needSwap) {
 
         for (MetaBB* suc : successors) {
             // 汇合点
-            if (suc == end || occupied[suc]) {
-                if (compare(weights[n], weights[m]) < 0) {
-                    needSwap = 1;
-                }
-                ret = suc;
+            if (occupied[suc]) {
+                if (occupied[suc] != occupied[cur] && !ret)
+                    ret = suc;
             }
+            else occupied[suc] = occupied[cur];
+            // if (suc == end || occupied[suc]) {
+
+            // }
 
             if (visited.find(suc) != visited.end()) continue;
 
-            occupied[suc] = occupied[cur];
             que.push_back(suc);
         }
 
@@ -239,22 +263,43 @@ MetaBB* bfs(MetaBB* n, MetaBB* m, MetaBB* end, int& needSwap) {
 }
 
 
+bool CraphBasedBBMatcher::isPartOfLoop(MetaBB* bb) {
+    return isStartOfLoop(bb) || isEndOfLoop(bb);
+}
+
+bool CraphBasedBBMatcher::isStartOfLoop(MetaBB* bb) {
+    std::vector<int> features = bb->getFeature();
+
+    return features[2] >= 2 && features[3] == 1;
+}
+
+bool CraphBasedBBMatcher::isEndOfLoop(MetaBB* bb) {
+    for (MetaBB* suc : bb->getNextBB()) {
+        if (visitedSet.find(suc) != visitedSet.end()) return true;
+    }
+    return false;
+}
+
+
 // Find the FIRST merge point of Control Flow.
 // Using finger search to limit the complexity to O(n).
 // Keep the left-leaning property before return.
-MetaBB* findJoint(MetaBB* split, MetaBB* merge) {
+MetaBB* CraphBasedBBMatcher::findJoint(MetaBB* split, MetaBB* merge) {
     
     assert(split->getNextBB().size() >= 2);
 
     MetaBB* l = leftChild(split);
     MetaBB* r = rightChild(split);
 
-    int needSwap = 0;
-    MetaBB* joint = bfs(l, r, merge, needSwap);
+    std::unordered_map<MetaBB*, weight> weights;
+    MetaBB* joint = bfs(split, l, r, merge, weights);
 
-    if (needSwap) {
+    assert(joint);
+
+    if (compare(weights[l], weights[r]) < 0) {
         split->swapSuccessors();
     }
+    // printf("INFO: Swap flag for %d and %d is %d.\n", l->getID(), r->getID(), needSwap);
 
     return joint;
 }
@@ -264,15 +309,31 @@ MetaBB* findJoint(MetaBB* split, MetaBB* merge) {
 // u -...-> x (ASM side)
 // v -...-> y (IR  side)
 void CraphBasedBBMatcher::match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y) {
-
+    // 非法情况直接返回
+    if (u == nullptr || v == nullptr || x == nullptr || y == nullptr) return;
     if (u == x || v == y) return;
+    
+    assert(u); assert(x);
+    assert(v); assert(y);
 
-    assert(u);
-    assert(v);
+    // visitedMap[u] = u; visitedMap[v] = v;
+    // visitedMap[x] = x; visitedMap[y] = y;
+
+    visitedSet.insert(u); visitedSet.insert(v);
+    visitedSet.insert(x); visitedSet.insert(y);
+
+    printf(
+        "INFO: Start match for ASM(start) %d, ASM(end) %d, IR(start) %d, IR(end) %d.\n",
+        u->getID(), x->getID(),
+        v->getID(), y->getID()
+    );
+
 
     // 都为红色，可以直接匹配
     if (getColor(u) && getColor(v)) {
         bbMap[u] = v;
+        matchedSet.insert(u);
+        matchedSet.insert(v);
         match(next(u), next(v), x, y);
     }
     // 全为黑的情况
@@ -280,26 +341,30 @@ void CraphBasedBBMatcher::match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y) {
         // 访存操作完全一致则匹配成功
         if (u->memOpSimilarity(v) > 0.999) {
             bbMap[u] = v;
+            matchedSet.insert(u);
+            matchedSet.insert(v);
         }
-        // 继续往后匹配
-        if (u->isLinearInCFG() && v->isLinearInCFG() || u->isSelfLoop() && v->isSelfLoop()) {
+        // 根据当前节点的性质决定如何继续往后匹配
+        if (u->isLinearInCFG() && v->isLinearInCFG() || isPartOfLoop(u) && isPartOfLoop(v)) {
+            // printf("INFO: Next Match ASM BB %d AND IR BB %d\n", next(u)->getID(), next(v)->getID());
             match(next(u), next(v), x, y);
         }
-        else if (u->isLinearInCFG() && !v->isLinearInCFG()) {
+        else if (u->isLinearInCFG() && !(v->isLinearInCFG())) {
             printf("WARN: Skip ASM BB %d AND IR BB %d\n", u->getID(), v->getID());
             match(next(u), v, x, y);
             return;
         }
-        else if (!u->isLinearInCFG() && v->isLinearInCFG()) {
+        else if (!(u->isLinearInCFG()) && v->isLinearInCFG()) {
             printf("WARN: Skip ASM BB %d AND IR BB %d\n", u->getID(), v->getID());
             match(u, next(v), x, y);
             return;
         }
         else {
+            assert(!(u->isLinearInCFG()) && !(v->isLinearInCFG()));
             MetaBB* u_joint = findJoint(u, x);
             MetaBB* v_joint = findJoint(v, y);
             
-            printf("INFO: Find Joint point, ASM %d IR %d\n", u_joint->getID(), v_joint->getID());
+            printf("INFO: Find Joint point, ASM %d --> %d, IR %d --> %d\n", u->getID(), u_joint->getID(), v->getID(), v_joint->getID());
             match(leftChild(u), leftChild(v), u_joint, v_joint);
             match(rightChild(u), rightChild(v), u_joint, v_joint);
             match(u_joint, v_joint, x, y);
