@@ -1009,7 +1009,7 @@ namespace MetaTrans {
                     }
                 }
                 if(numOfOp != numOfMatchedOp) {
-                    std::cout << BOLD << RED << "ERROR:: numOfOp != numOfMatchedOp (after auto match), cannot build mapping!\n";
+                    std::cout << BOLD << RED << "ERROR:: numOfOp != numOfMatchedOp (after auto match), cannot build mapping!\n" << RST;
                     return "";
                 }
 
