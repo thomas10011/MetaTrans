@@ -763,7 +763,7 @@ namespace MetaTrans {
         std::cout <<  "\nDEBUG:: Entering updateMappingTable()....\n" <<std::endl;
 
         //Update MTable of 1-N mapping
-        auto it = MapTable->MTable[index].find(asmInst);
+        auto it = MapTable->MTable[index].find(MetaUtil::lower(asmInst));
         // std:: cout << "DEBUG::buildMapping() checked the MTable\n";
         // std:: cout << "DEBUG::buildOperandMapping returns string = " << str << std::endl;
         if(it != MapTable->MTable[index].end()){
@@ -774,7 +774,7 @@ namespace MetaTrans {
 
         if(mapstr != "" && it == MapTable->MTable[index].end()){
             std:: cout << "DEBUG::buildMapping() Writing to MTable " << MapTable->getTableName(index) << std::endl;
-            MapTable->MTable[index][asmInst] = irInst;
+            MapTable->MTable[index][MetaUtil::lower(asmInst)] = irInst;
             MetaUtil::writeMapping(mapstr, MapTable->getTableName(index));
         }
         
