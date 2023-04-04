@@ -72,7 +72,8 @@ namespace MetaTrans {
                                                                 ;
                 // print match result.
                 printf("<<<<<<<<<<<<<<<<<<<< BB Match Result >>>>>>>>>>>>>>>>>>>>\n");
-                printf("\nFunction Name: %s\n\n", mF->getFunctionName().c_str());
+                printf("\nFunction Name: %s\n", mF->getFunctionName().c_str());
+                printf("\nBB Match Precision: %.2f%!\n\n", 100.0 * result.size() / f->getBB().size());
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
                     MetaBB& x = *(pair->first);
                     MetaBB& y = *(pair->second);

@@ -203,13 +203,12 @@ int compare(weight x, weight y) {
 }
 
 
-// 寻找Joint节点
-// 如有必要会交换 l 和 r 以保持左倾性
-MetaBB* bfs(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* end, std::unordered_map<MetaBB*, weight>& weights) {
+bool checkSwap(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* joint) {
 
     std::list<MetaBB*> que;
     std::unordered_set<MetaBB*> visited;
     std::unordered_map<MetaBB*, MetaBB*> occupied;
+     std::unordered_map<MetaBB*, weight> weights;
     
     // 以防有指向父亲的边
     visited.insert(p);
@@ -218,18 +217,13 @@ MetaBB* bfs(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* end, std::unordered_map<Met
     que.push_back(r); occupied[r] = r;
     weights[l] = { 0, 0, 0, l->getID() };
     weights[r] = { 0, 0, 0, r->getID() };
-
-    MetaBB* ret = nullptr;
     
     while (!que.empty()) {
         MetaBB* cur = que.front(); que.pop_front();
 
-        if (cur == ret) {
-
-            return cur;
-        }
-
         visited.insert(cur);
+
+        if (cur == joint) continue;
 
         // 更新这一控制流的权重
         MetaBB* anc = occupied[cur];
@@ -240,26 +234,67 @@ MetaBB* bfs(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* end, std::unordered_map<Met
         std::vector<MetaBB*> successors = cur->getNextBB();
 
         for (MetaBB* suc : successors) {
+            if (cur == joint) break;
+            if (visited.find(suc) != visited.end()) continue;
+
+            que.push_back(suc);
+        }
+        
+    }
+
+    if (compare(weights[l], weights[r]) < 0) {
+        printf("INFO: Swapped %d and %d.\n", l->getID(), r->getID());
+        p->swapSuccessors();
+        return true;
+    }
+
+    return false;
+
+}
+
+// 寻找Joint节点
+// 如有必要会交换 l 和 r 以保持左倾性
+MetaBB* bfs(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* end) {
+
+    std::list<MetaBB*> que;
+    std::unordered_set<MetaBB*> visited;
+    std::unordered_map<MetaBB*, MetaBB*> occupied;
+    
+    // 以防有指向父亲的边
+    visited.insert(p);
+
+    que.push_back(l); occupied[l] = l;
+    que.push_back(r); occupied[r] = r;
+
+    MetaBB* ret = nullptr;
+    
+    while (!que.empty()) {
+        MetaBB* cur = que.front(); que.pop_front();
+
+        if (cur == ret) return cur;
+
+        visited.insert(cur);
+
+        std::vector<MetaBB*> successors = cur->getNextBB();
+
+        for (MetaBB* suc : successors) {
+            if (cur == end) break;
+
             // 汇合点
             if (occupied[suc]) {
-                if (occupied[suc] != occupied[cur] && !ret)
+                if (occupied[suc] != occupied[cur] && !ret) 
                     ret = suc;
             }
             else occupied[suc] = occupied[cur];
-            // if (suc == end || occupied[suc]) {
-
-            // }
 
             if (visited.find(suc) != visited.end()) continue;
 
             que.push_back(suc);
         }
-
         
     }
 
     return ret;
-
 }
 
 
@@ -291,15 +326,11 @@ MetaBB* CraphBasedBBMatcher::findJoint(MetaBB* split, MetaBB* merge) {
     MetaBB* l = leftChild(split);
     MetaBB* r = rightChild(split);
 
-    std::unordered_map<MetaBB*, weight> weights;
-    MetaBB* joint = bfs(split, l, r, merge, weights);
+    MetaBB* joint = bfs(split, l, r, merge);
 
     assert(joint);
 
-    if (compare(weights[l], weights[r]) < 0) {
-        split->swapSuccessors();
-    }
-    // printf("INFO: Swap flag for %d and %d is %d.\n", l->getID(), r->getID(), needSwap);
+    checkSwap(split, l, r, joint);
 
     return joint;
 }

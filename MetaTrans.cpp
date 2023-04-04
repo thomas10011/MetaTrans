@@ -1888,7 +1888,8 @@ namespace MetaTrans {
     int MetaBB::getNumMemOp() { return features[0] + features[1]; }
 
     int MetaBB::isLinearInCFG() {
-        return features[2] == 1 && features[3] == 1;
+
+        return features[2] <= 1 && features[3] == 1;
     }
 
     int MetaBB::isSelfLoop() {
