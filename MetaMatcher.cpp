@@ -126,14 +126,6 @@ std::pair<MetaInst*, MetaInst*> LinearMetaBBMatcher::matchInstGraph(MetaBB& u, M
 CraphBasedBBMatcher::CraphBasedBBMatcher() { }
 
 
-// 0 - black
-// 1 - red
-int getColor(MetaBB* bb) {
-    if (bb->getNumMemOp() == 0 && bb->isLinearInCFG()) return 1;
-    return 0;
-}
-
-
 MetaBBMatcher& CraphBasedBBMatcher::match() {
     MetaBB* asmRoot = x->getRoot();
     MetaBB* irRoot  = y->getRoot();
@@ -147,7 +139,6 @@ MetaBBMatcher& CraphBasedBBMatcher::match() {
     match(asmRoot, irRoot, asmExit, irExit);
 
     return *this;
-
 }
 
 MetaBB* CraphBasedBBMatcher::next(MetaBB* bb) {
@@ -159,21 +150,22 @@ MetaBB* CraphBasedBBMatcher::next(MetaBB* bb) {
             if (visitedSet.find(next) == visitedSet.end()) return next;
         }
 
-        
         if (sucs.size() > 1)
-            printf("self: %d, suc0: %d, suc1: %d\n", bb->getID(), sucs[0]->getID(), sucs[1]->getID());
-        printf("content of visitedSet (size %d): ", visitedSet.size());
-        for (auto iter = visitedSet.begin(); iter != visitedSet.end(); ++iter) {
-            printf("%d ", (*iter)->getID());
-        }
-        printf("\n");
-        printf("Error! Not found the backward edge\n");
-
+            printf("INFO: self = %d, suc0 = %d, suc1 = %d\n", bb->getID(), sucs[0]->getID(), sucs[1]->getID());
+        printf("WANR: Child of current Node all has been visited, skip and continue.\n");
+        
+        // 后代都访问过了，别重复访问，返回空指针
         return nullptr;
     }
     return bb->getNextBB()[0];
 }
 
+// 0 - black
+// 1 - red
+int getColor(MetaBB* bb) {
+    if (bb->getNumMemOp() == 0 && bb->isLinearInCFG()) return 1;
+    return 0;
+}
 
 MetaBB* leftChild(MetaBB* bb) {
     return bb->getNextBB()[0];
@@ -193,20 +185,17 @@ struct weight {
 // 比较权重大小
 int compare(weight x, weight y) {
     int ret = 0;
-    ret = x.num_bb - y.num_bb;
-    if (ret) return ret;
-    ret = x.num_inst - y.num_inst;
-    if (ret) return ret;
-    ret = x.num_memop - y.num_memop;
-    if (ret) return ret;
+    ret = x.num_bb    - y.num_bb   ; if (ret) return ret;
+    ret = x.num_inst  - y.num_inst ; if (ret) return ret;
+    ret = x.num_memop - y.num_memop; if (ret) return ret;
     return y.order - x.order;
 }
 
 
 bool checkSwap(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* joint) {
 
-    std::list<MetaBB*> que;
-    std::unordered_set<MetaBB*> visited;
+    std::list<MetaBB*>                   que;
+    std::unordered_set<MetaBB*>          visited;
     std::unordered_map<MetaBB*, MetaBB*> occupied;
      std::unordered_map<MetaBB*, weight> weights;
     
@@ -234,9 +223,8 @@ bool checkSwap(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* joint) {
         std::vector<MetaBB*> successors = cur->getNextBB();
 
         for (MetaBB* suc : successors) {
-            if (cur == joint) break;
             if (visited.find(suc) != visited.end()) continue;
-
+            occupied[suc] = occupied[cur];
             que.push_back(suc);
         }
         
@@ -244,6 +232,8 @@ bool checkSwap(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* joint) {
 
     if (compare(weights[l], weights[r]) < 0) {
         printf("INFO: Swapped %d and %d.\n", l->getID(), r->getID());
+        printf("INFO: Weight l, %d, %d, %d, %d\n", weights[l].num_bb, weights[l].num_inst, weights[l].num_memop, weights[l].order);
+        printf("INFO: Weight r, %d, %d, %d, %d\n", weights[r].num_bb, weights[r].num_inst, weights[r].num_memop, weights[r].order);
         p->swapSuccessors();
         return true;
     }
@@ -256,8 +246,8 @@ bool checkSwap(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* joint) {
 // 如有必要会交换 l 和 r 以保持左倾性
 MetaBB* bfs(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* end) {
 
-    std::list<MetaBB*> que;
-    std::unordered_set<MetaBB*> visited;
+    std::list<MetaBB*>                   que;
+    std::unordered_set<MetaBB*>          visited;
     std::unordered_map<MetaBB*, MetaBB*> occupied;
     
     // 以防有指向父亲的边
@@ -304,7 +294,6 @@ bool CraphBasedBBMatcher::isPartOfLoop(MetaBB* bb) {
 
 bool CraphBasedBBMatcher::isStartOfLoop(MetaBB* bb) {
     std::vector<int> features = bb->getFeature();
-
     return features[2] >= 2 && features[3] == 1;
 }
 
@@ -323,9 +312,8 @@ MetaBB* CraphBasedBBMatcher::findJoint(MetaBB* split, MetaBB* merge) {
     
     assert(split->getNextBB().size() >= 2);
 
-    MetaBB* l = leftChild(split);
-    MetaBB* r = rightChild(split);
-
+    MetaBB* l     = leftChild(split);
+    MetaBB* r     = rightChild(split);
     MetaBB* joint = bfs(split, l, r, merge);
 
     assert(joint);
@@ -347,9 +335,6 @@ void CraphBasedBBMatcher::match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y) {
     assert(u); assert(x);
     assert(v); assert(y);
 
-    // visitedMap[u] = u; visitedMap[v] = v;
-    // visitedMap[x] = x; visitedMap[y] = y;
-
     visitedSet.insert(u); visitedSet.insert(v);
     visitedSet.insert(x); visitedSet.insert(y);
 
@@ -359,9 +344,15 @@ void CraphBasedBBMatcher::match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y) {
         v->getID(), y->getID()
     );
 
-
+    // 一黑一红的情况
+    if      (getColor(u) && !getColor(v)) {
+        match(next(u), v, x, y);
+    }
+    else if (!getColor(u) && getColor(v)) {
+        match(u, next(v), x, y);
+    }
     // 都为红色，可以直接匹配
-    if (getColor(u) && getColor(v)) {
+    else if (getColor(u) && getColor(v)) {
         bbMap[u] = v;
         matchedSet.insert(u);
         matchedSet.insert(v);
@@ -383,31 +374,23 @@ void CraphBasedBBMatcher::match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y) {
         else if (u->isLinearInCFG() && !(v->isLinearInCFG())) {
             printf("WARN: Skip ASM BB %d AND IR BB %d\n", u->getID(), v->getID());
             match(next(u), v, x, y);
-            return;
+            
         }
         else if (!(u->isLinearInCFG()) && v->isLinearInCFG()) {
             printf("WARN: Skip ASM BB %d AND IR BB %d\n", u->getID(), v->getID());
             match(u, next(v), x, y);
-            return;
         }
         else {
-            assert(!(u->isLinearInCFG()) && !(v->isLinearInCFG()));
             MetaBB* u_joint = findJoint(u, x);
             MetaBB* v_joint = findJoint(v, y);
             
             printf("INFO: Find Joint point, ASM %d --> %d, IR %d --> %d\n", u->getID(), u_joint->getID(), v->getID(), v_joint->getID());
+            
             match(leftChild(u), leftChild(v), u_joint, v_joint);
             match(rightChild(u), rightChild(v), u_joint, v_joint);
             match(u_joint, v_joint, x, y);
         }
 
-    }
-    // 一黑一红的情况
-    else if (getColor(u) && !getColor(v)) {
-        match(next(u), v, x, y);
-    }
-    else if (!getColor(u) && getColor(v)) {
-        match(u, next(v), x, y);
     }
     
 }
