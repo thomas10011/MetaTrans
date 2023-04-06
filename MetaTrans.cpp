@@ -1020,7 +1020,7 @@ namespace MetaTrans {
                     // Check if RS points to any RD in the fused instructions
                     int ret = ifFind((vec[id]),fused);
                     if( ret != -1 )
-                        str += std::to_string(ret+1)+ "." + "rd ";
+                        str += std::to_string(ret+1)+ "." + "0 ";  // Using 0 represents RD
                     else if (ret > i)
                         std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
 
@@ -1067,12 +1067,13 @@ namespace MetaTrans {
                                     // to address the case of like add a1, a0, a0, 
                                     // wherein a0 has been used twice
                                     if(ifFind( asmOpVec[opid],tmpvec)){
-                                        asmOpVec[opid]  = NULL;
+                                        asmOpVec[opid] = NULL;
                                         continue;
                                     }
                                     // Instruction Id + "." + Op ID.
                                     // E.g. 1.1, 2.1, 2.2, etc.
                                     str += std::to_string(idd+1) + "." + std::to_string(opid+1);
+                                    str += " ";
                                     tmpvec.push_back(asmOpVec[find]);
                                     break;
                                 }
@@ -1083,7 +1084,7 @@ namespace MetaTrans {
                         asmOpVec.clear();
                     }       
                 }
-                str += ";";
+                str += " ; ";
             }
 
         dumpMapping(str);
