@@ -286,11 +286,11 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Instruction implementation.
 
-    MetaInst::MetaInst() { 
+    MetaInst::MetaInst() : color(-1, -1) { 
         paths.resize(3);
     }
 
-    MetaInst::MetaInst(std::vector<InstType> ty) : type(ty) {
+    MetaInst::MetaInst(std::vector<InstType> ty) : type(ty), color(-1, -1) {
         paths.resize(3);
     }
 
@@ -422,6 +422,14 @@ namespace MetaTrans {
 
     bool MetaInst::isMetaCall() { return false; }
 
+    void MetaInst::setAddrGen(bool b){
+        this->AddrGenFlag = b;
+    }
+
+    bool MetaInst::ifAddrGen(){
+        return this->AddrGenFlag;
+    }
+
     std::string MetaInst::toString() {
         std::string opList = operandList.size() == 0 ? "[]" : "[";
         for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
@@ -470,16 +478,9 @@ namespace MetaTrans {
         return str;
     }
 
-    void MetaInst::addColor(int c, int t) { colors.insert(ColorData(c,t)); }
+    void MetaInst::setColor(int c, int t) { color.color = c; color.type = t; }
 
-    std::set<ColorData>& MetaInst::getColors() { return colors; }
-
-    bool MetaInst::hasColor(int c) {
-        for(auto & each : colors) {
-            if (each.color == c) return true;
-        }
-        return false;
-    }
+    ColorData* MetaInst::getColor() { return &color; }
 
     unsigned long MetaInst::getHashcode() {return hashCode;}
 

@@ -75,6 +75,14 @@ enum InstType {
     SIGN
 };
 
+enum COLORTYPE {
+    ADDRESSINGCOLOR,
+    COMPUTING,
+    CONTROLFLOW,
+    LOADINST,
+    STOREINST
+};
+
 // struct for path (data compute/addressing/control flow)
 struct Path {
     MetaInst *firstNode;
@@ -297,9 +305,9 @@ protected:
 
     InstMetaData metaData;
 
-    std::set<ColorData> colors; // color, type(0 data computing 1 addressing 2 control flow)
+    ColorData color; // color, type(0 addressing 1 data computing 2 control flow)
 
-    std::vector<Path*> paths ; // fitst node of path, (0 data computing 1 addressing 2 control flow)
+    std::vector<Path*> paths ; // fitst node of path, (0 addressing 1 data computing 2 control flow)
 
     int EquivClassTag;    
 
@@ -320,6 +328,8 @@ protected:
     bool Trained = false;
 
     llvm::Instruction* TransInst = NULL;
+
+    bool AddrGenFlag;
 
 public:
 
@@ -385,11 +395,9 @@ public:
 
     bool virtual isStore();
 
-    void addColor(int c, int t);
+    void setColor(int c, int t);
 
-    std::set<ColorData>& getColors();
-
-    bool hasColor(int c);
+    ColorData* getColor();
 
     unsigned long getHashcode();
 
@@ -449,6 +457,9 @@ public:
 
     void setTransInst(llvm::Instruction* inst);
 
+    void setAddrGen(bool b);
+
+    bool ifAddrGen();
 
 };
 

@@ -155,7 +155,7 @@ namespace MetaTrans {
                  [](unsigned char c) { return std::tolower(c); });
         return result;
     }
-
+    
     InstType MetaUtil::stringToInstType(std::string str) {
         str = upper(str);
         return YamlUtil::str_inst_type_map[str];
@@ -305,12 +305,19 @@ namespace MetaTrans {
         return 0;
     }
 
-    void MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
-        if(visited.count(inst)) return;
+    // if type is COMPUTING, each time check whether inst is addrGen; if is, type change to ADDRESSING next time;
+    // if type is ADDRESSING, color inst as ADDRESSING until 'lui'
+    // return final color
+    int MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
+        if(visited.count(inst)) return color;
         visited.insert(inst);
-        inst->addColor(color, type);
+        if(type == COLORTYPE::COMPUTING && inst->ifAddrGen()) {
+            color++;
+            type = COLORTYPE::ADDRESSINGCOLOR;
+        }
+        inst->setColor(color, type);
         for(int i = -1; i < depth; i++) {std::cout << "  ";}
-        printf("%x(%d) ", inst, color);
+        printf("%x(%d, %d) %s ", inst, color, type, inst->getOriginInst().c_str());
         std::vector<InstType> types = inst->getInstType();
         for(int i = 0; i < types.size(); i++) {
             std::cout << InstTypeName[types[i]] << ", ";
@@ -326,21 +333,26 @@ namespace MetaTrans {
             // }
         }
         printf(" -> \n");
-        if(!inst->isType(InstType::LOAD) && !inst->isType(InstType::PHI)) { // Paint until `load` or `phi` or no upstream instruction
+        if(!(inst->getOriginInst() == "lui")) { // Paint until `lui` or no upstream instruction
             std::vector<MetaOperand*> ops = inst->getOperandList();
             for(int i = 0; i < ops.size(); i++) {
                 if(ops[i]->isMetaInst()) {
-                    paintInsColorRecursive((MetaInst*)(ops[i]), color, type, depth + 1, p, visited);
+                    int oldColor = color;
+                    int newColor = paintInsColorRecursive((MetaInst*)(ops[i]), color, type, depth + 1, p, visited);
+                    if(newColor != oldColor) {
+                        // printf("oldColor %d  newColor  %d \n", oldColor, newColor);
+                        color = newColor + 1;
+                    }
                 }
             }
         }
         visited.erase(inst);
+        return color;
     }
 
-    void MetaUtil::paintColor(MetaFunction* mF, int startColor) {
+    int MetaUtil::paintColor(MetaFunction* mF, int startColor) {
         std::tuple<int, int, int> counts(0,0,0); // Store, Load, Branch
-        std::vector<std::string> name = {"Addressing", "Data Compute",
-                                         "Control Flow"};
+        std::vector<int> colorTypes = {COLORTYPE::ADDRESSINGCOLOR, COLORTYPE::COMPUTING, COLORTYPE::CONTROLFLOW};
         std::cout << "\n\n<<== Coloring TIR for CFG: " << mF->getFunctionName() << " ==>>" << "\n";
         for (auto func_iter = mF->bb_begin(); func_iter != mF->bb_end(); ++func_iter) {
             MetaBB* bb = *func_iter;
@@ -352,15 +364,13 @@ namespace MetaTrans {
                         std::get<0>(counts) = std::get<0>(counts) + 1;
                         std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
                         std::cout << "IsStore " << ops.size() <<  std::endl;
+                        inst->setColor(startColor, COLORTYPE::STOREINST);
                         for(int i = 0; i < ops.size(); i++) {
-                                inst->addColor(startColor, i);
                                 Path* p = new Path{(MetaInst*)(ops[i]), i, 0, 0, 0, 0};
                                 inst->addToPath(p);
-                                printf("Color: %d, Type: %s\n", startColor,
-                                       name[i].c_str());
                                 printf("%x(%d) STORE,  -> \n", inst, startColor);
                                 std::unordered_set<MetaInst*> set;
-                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, i, 0, p, set);
+                                startColor = paintInsColorRecursive((MetaInst*)(ops[i]), startColor, COLORTYPE::COMPUTING, 0, p, set);
                                 printf("%x, type: %d, numLoad: %d, numStore: "
                                        "%d, numPHI: %d, numGEP: %d\n",
                                        p->firstNode, p->type, p->numLoad,
@@ -377,13 +387,13 @@ namespace MetaTrans {
                         std::get<1>(counts) = std::get<1>(counts) + 1;
                         std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
                         std::cout << "IsLoad " << ops.size() <<  std::endl;
+                        inst->setColor(startColor, COLORTYPE::LOADINST);
                         for(int i = 0; i < ops.size(); i++) {
                                 Path* p = new Path{(MetaInst*)(ops[i]), 1, 0, 0, 0, 0};
-                                inst->addColor(startColor, 0);
-                                printf("Color: %d, Type: Addressing\n", startColor);
+                                inst->addToPath(p);
                                 printf("%x(%d) LOAD,  -> \n", inst, startColor);
                                 std::unordered_set<MetaInst*> set;
-                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 1, 0, p, set);
+                                startColor = paintInsColorRecursive((MetaInst*)(ops[i]), startColor, COLORTYPE::COMPUTING, 0, p, set);
                                 printf("%x, type: %d, numLoad: %d, numStore: "
                                        "%d, numPHI: %d, numGEP: %d\n",
                                        p->firstNode, p->type, p->numLoad,
@@ -403,14 +413,14 @@ namespace MetaTrans {
                         std::get<2>(counts) = std::get<2>(counts) + 1;
                         std::cout << "IsBranch" << std::endl;
                         std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
+                        inst->setColor(startColor, COLORTYPE::CONTROLFLOW);
                         for(int i = 0; i < ops.size(); i++) {
                                 Path* p = new Path{(MetaInst*)(ops[i]), 2, 0, 0, 0, 0};
                                 inst->addToPath(p);
-                                inst->addColor(startColor, 2);
                                 printf("Color: %d, Type: Control Flow\n", startColor);
                                 printf("%x(%d) BRANCH,  -> \n", inst, startColor);
                                 std::unordered_set<MetaInst*> set;
-                                paintInsColorRecursive((MetaInst*)(ops[i]), startColor, 2, 0, p, set);
+                                startColor = paintInsColorRecursive((MetaInst*)(ops[i]), startColor, COLORTYPE::COMPUTING, 0, p, set);
                                 printf("%x, type: %d, numLoad: %d, numStore: "
                                        "%d, numPHI: %d, numGEP: %d\n",
                                        p->firstNode, p->type, p->numLoad,
@@ -426,6 +436,7 @@ namespace MetaTrans {
             counts = std::make_tuple(0, 0, 0);
         };
         std::cout << "\n\n<<== Coloring TIR for CFG End! " << " ==>>" << "\n";
+        return startColor;
     }
 
     unsigned long MetaUtil::hashCode(std::vector<MetaInst*> instList) {
