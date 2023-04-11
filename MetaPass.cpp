@@ -247,7 +247,7 @@ namespace MetaTrans {
             .buildGraph()
             .buildMetaData();
 
-        MetaUtil::paintColor(mF, globalColor++);
+        globalColor = MetaUtil::paintColor(mF, globalColor++);
         MetaUtil::setDataRoot(mF);
 
         buildCount++;
