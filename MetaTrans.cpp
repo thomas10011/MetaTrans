@@ -331,12 +331,13 @@ namespace MetaTrans {
     MetaInst& MetaInst::buildFromJSON(MetaUnitBuildContext& context) {
        llvm::json::Object JSON  = context.getHoldObject();
 
-        std::string     originInst          = JSON["originInst"]         .getAsString().getValue().str();
-        std::string     dataRoot            = JSON["dataRoot"]           .getAsString().getValue().str();
-        std::string     globalSymbolName    = JSON["globalSymbolName"]   .getAsString().getValue().str();
-        unsigned long   hashCode            = JSON.getInteger("hashCode").getValue();
-        int64_t         id                  = JSON.getInteger("id")      .getValue();
-        int64_t         addr                = JSON.getInteger("address") .getValue();
+        std::string     originInst          = JSON["originInst"]          .getAsString().getValue().str();
+        std::string     dataRoot            = JSON["dataRoot"]            .getAsString().getValue().str();
+        std::string     globalSymbolName    = JSON["globalSymbolName"]    .getAsString().getValue().str();
+        unsigned long   hashCode            = JSON.getInteger("hashCode") .getValue();
+        int64_t         id                  = JSON.getInteger("id")       .getValue();
+        int64_t         addr                = JSON.getInteger("address")  .getValue();
+        bool            isAddrGen           = JSON.getBoolean("isAddrGen").getValue();
 
         (*this)
             .setOriginInst          (originInst)
@@ -473,6 +474,7 @@ namespace MetaTrans {
             "\"originInst\":" + "\"" +originInst + "\"" + "," +
             "\"isMetaCall\":" + "false" + "," +
             "\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
+            "\"isAddrGen\":" + (ifAddrGen() ? "true" : "false") + "," +
             "\"operandList\":" + opList + "," + 
             "\"userList\":" + userList + "," + 
             "\"path\":" + path + "," +

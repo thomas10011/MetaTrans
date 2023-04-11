@@ -333,7 +333,7 @@ namespace MetaTrans {
             // }
         }
         printf(" -> \n");
-        if(!(inst->getOriginInst() == "lui")) { // Paint until `lui` or no upstream instruction
+        if(!(inst->getOriginInst() == "lui" || inst->isMetaPhi())) { // Paint until `lui` or no upstream instruction
             std::vector<MetaOperand*> ops = inst->getOperandList();
             for(int i = 0; i < ops.size(); i++) {
                 if(ops[i]->isMetaInst()) {
