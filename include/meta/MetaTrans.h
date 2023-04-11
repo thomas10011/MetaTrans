@@ -329,7 +329,7 @@ protected:
 
     llvm::Instruction* TransInst = NULL;
 
-    bool AddrGenFlag;
+    bool AddrGenFlag = false;
 
 public:
 

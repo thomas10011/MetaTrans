@@ -245,6 +245,8 @@ public:
 
     static int paintColor(MetaFunction* mF, int startColor);
 
+    static int paintColorCheck(MetaFunction* mF);
+
     static unsigned long hashCode(std::vector<MetaInst*> instList);
     
     static unsigned long long getAvailableMemory();

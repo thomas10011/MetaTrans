@@ -2562,6 +2562,7 @@ namespace MetaTrans {
         // 染色，为了matching
         for (int i = 0, color = 0; i < funcs.size(); ++i, ++color) {
             color = MetaUtil::paintColor(funcs[i], color);
+            MetaUtil::paintColorCheck(funcs[i]);
         }
             
     }

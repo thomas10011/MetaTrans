@@ -427,6 +427,9 @@ namespace MetaTrans {
                                        p->numStore, p->numPHI, p->numGEP);
                                 startColor++;
                         }
+                    }else if(inst->isType(InstType::JUMP)) {
+                        std::cout << "IsJump" << std::endl;
+                        inst->setColor(startColor, COLORTYPE::CONTROLFLOW);
                     }
                 else {
                     // TODO: isMetaPhi
@@ -437,6 +440,26 @@ namespace MetaTrans {
         };
         std::cout << "\n\n<<== Coloring TIR for CFG End! " << " ==>>" << "\n";
         return startColor;
+    }
+
+    int MetaUtil::paintColorCheck(MetaFunction* mF) {
+        int count = 0, addrcount = 0, computecount = 0;
+        std::cout << "\n\n<<== paintColorCheck for CFG: " << mF->getFunctionName() << " ==>>" << "\n";
+        for (auto func_iter = mF->bb_begin(); func_iter != mF->bb_end(); ++func_iter) {
+            MetaBB* bb = *func_iter;
+            for (auto bb_iter = bb->inst_begin(); bb_iter != bb->inst_end(); ++bb_iter) {
+                MetaInst *inst = *bb_iter;
+                if(inst->getColor()->type == -1) {
+                    count++;
+                    if(inst->ifAddrGen()) {addrcount++; inst->setColor(-1, COLORTYPE::ADDRESSINGCOLOR);}
+                    else if(inst->isLoad()) {inst->setColor(-1, COLORTYPE::LOADINST);}
+                    else if(inst->isStore()) {inst->setColor(-1, COLORTYPE::STOREINST);}
+                    else if(inst->isType(InstType::BRANCH) || inst->isType(InstType::JUMP)) {inst->setColor(-1, COLORTYPE::CONTROLFLOW);}
+                    else {computecount++; inst->setColor(-1, COLORTYPE::COMPUTING);}
+                }
+            }
+        }
+        std::cout << std::oct << "Un-colored number : " << count << ", addr number : " << addrcount << ", compute number : " << computecount  << std::endl;
     }
 
     unsigned long MetaUtil::hashCode(std::vector<MetaInst*> instList) {
