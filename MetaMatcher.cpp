@@ -417,34 +417,32 @@ MetaAddressMatcher& MetaAddressMatcher::setIrBB(MetaBB* bb) {
 }
 
 
-std::vector<MetaInst*> findUntilLui(MetaInst* inst) {
-    std::vector<MetaInst*> res;
+bool findUntilLui(std::vector<MetaInst*>& res, MetaInst* cur) {
 
-    MetaInst* cur = inst;
+    assert(cur);
+    printf("Cur Inst: %s, %d.\n", cur->getOriginInst().c_str(), cur->getID());
+    if (cur->isMetaPhi()) return false;
+    if (cur->getOriginInst() == "LUI" || cur->getOriginInst() == "lui") {
+        res.push_back(cur);
+        return true;
+    }
 
+    res.push_back(cur);
     for (MetaOperand* operand : cur->getOperandList()) {
-        
         if (operand->isMetaConstant()) continue;
         if (operand->isMetaArgument()) continue;
-        cur = (MetaInst*) operand;
 
-        res.push_back(cur);
-
-        if (cur->getOriginInst() == "LUI") break;
+        if (findUntilLui(res, (MetaInst*)operand)) return true;
+        
     }
-    printf("INFO: result of lui\n");
-    for (MetaInst* inst : res) {
-        printf("%s\n", inst->toString().c_str());
-    }
-    printf("\n");
-    return res;
+    res.pop_back();
+    return false;
 }
 
-std::vector<MetaInst*> findUntilPti(MetaInst* inst) {
-    std::vector<MetaInst*> res;
+bool findUntilPti(std::vector<MetaInst*>& res, MetaInst* inst) {
     MetaInst* cur = inst;
 
-    return res;
+    return true;
 }
 
 MetaAddressMatcher& MetaAddressMatcher::match() {
@@ -454,7 +452,7 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
     std::vector<MetaInst*> matchedLoad = asb->findTheSameInst(irbb);
 
     if (matchedLoad.size() == 0) {
-        printf("WARN: Did't find matched load instruction.\n");
+        printf("ERRO: Did't find matched load instruction.\n");
         return *this;
     }
     if (matchedLoad.size() > 1) {
@@ -466,19 +464,28 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
     std::string type = asb->isLoad() ? "load" : "store";
     printf("matched %s: %s\n", type.c_str(), curIR->getOriginInst().c_str());
 
-    std::vector<MetaInst*>  addrIR  = findUntilPti(curIR);
-    std::vector<MetaInst*>  addrASM = findUntilLui(curASM);
+    std::vector<MetaInst*>  addrIR ;
+    std::vector<MetaInst*>  addrASM;
+    bool irRes  = findUntilPti(addrIR, curIR);
+    bool asmRes = findUntilLui(addrASM, curASM);
     
+
+    printf("INFO: result of lui.\n");
+    for (MetaInst* inst : addrASM) {
+        printf("%s ", inst->getOriginInst().c_str());
+    }
+    printf("\n");
+
+    // codes[0]是load指令，所以从1开始拷贝
     CodePiece asmCodes, irCodes;
-    for (int i = 0; i < addrIR.size(); ++i) {
+    for (int i = 1; i < addrIR.size(); ++i) {
         irCodes.addInst(addrIR[i]->getOriginInst());
     }
-    for (int i = 0; i < addrASM.size(); ++i) {
+    for (int i = 1; i < addrASM.size(); ++i) {
         asmCodes.addInst(addrASM[i]->getOriginInst());
     }
 
     codeMap[asmCodes.hashCode()] = {asmCodes, irCodes};
-
     return *this;
 }
 

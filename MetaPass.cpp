@@ -88,12 +88,16 @@ namespace MetaTrans {
                 }
                 printf("\n<<<<<<<<<<<<<<<<<<<< End Match Result >>>>>>>>>>>>>>>>>>>>\n\n");
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
-                    printf("MetaBB: %d <-> %d, Training Strats\n",pair->first->getID(), pair->second->getID() );
-                    pair->first->trainBB(pair->second);
+                    printf("MetaBB: %d <-> %d, Training Address Strats\n",pair->first->getID(), pair->second->getID() );
                     for (auto it = pair->first->begin(); it != pair->first->end(); ++it) {
-                        if ((*it)->isLoad() || (*it)->isStore())
+                        if ((*it)->isLoad())
                             (*addrMatcher).setAsmInst(*it).setIrBB(&*(pair->second)).match();
                     }
+                }
+                printf("-----------------------------------\n");
+                for (auto pair = result.begin(); pair != result.end(); ++pair) {
+                    printf("MetaBB: %d <-> %d, Training Strats\n",pair->first->getID(), pair->second->getID() );
+                    pair->first->trainBB(pair->second);
                 }
                 printf("-----------------------------------\n");
             };
