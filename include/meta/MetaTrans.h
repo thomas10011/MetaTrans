@@ -395,6 +395,12 @@ public:
 
     bool virtual isStore();
 
+    bool virtual isAddressing();
+
+    bool virtual isComputing();
+
+    bool virtual isControlFlow();
+
     void setColor(int c, int t);
 
     ColorData* getColor();

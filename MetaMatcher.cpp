@@ -417,29 +417,30 @@ MetaAddressMatcher& MetaAddressMatcher::setIrBB(MetaBB* bb) {
 }
 
 
-bool findUntilLui(std::vector<MetaInst*>& res, MetaInst* cur) {
-
+void findUntilLui(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* cur) {
     assert(cur);
-    printf("Cur Inst: %s, %d.\n", cur->getOriginInst().c_str(), cur->getID());
-    if (cur->isMetaPhi()) return false;
+    printf("Cur Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
+    if (cur->isMetaPhi()) return;
+    // TODO: 暂时硬编码，之后考虑加一个标志位来判断递归基
     if (cur->getOriginInst() == "LUI" || cur->getOriginInst() == "lui") {
-        res.push_back(cur);
-        return true;
+        codes.push_back(cur);
+        res.push_back(codes);
+        codes.pop_back();
+        return;
     }
 
-    res.push_back(cur);
+    if (cur->isAddressing()) codes.push_back(cur);
     for (MetaOperand* operand : cur->getOperandList()) {
         if (operand->isMetaConstant()) continue;
         if (operand->isMetaArgument()) continue;
-
-        if (findUntilLui(res, (MetaInst*)operand)) return true;
-        
+        findUntilLui(res, codes, (MetaInst*)operand);
     }
-    res.pop_back();
-    return false;
+    if (cur->isAddressing()) codes.pop_back();
+
 }
 
-bool findUntilPti(std::vector<MetaInst*>& res, MetaInst* inst) {
+
+bool findUntilPti(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* inst) {
     MetaInst* cur = inst;
 
     return true;
@@ -464,28 +465,37 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
     std::string type = asb->isLoad() ? "load" : "store";
     printf("matched %s: %s\n", type.c_str(), curIR->getOriginInst().c_str());
 
+    std::vector<std::vector<MetaInst*>> resIR;
+    std::vector<std::vector<MetaInst*>> resASM;
     std::vector<MetaInst*>  addrIR ;
     std::vector<MetaInst*>  addrASM;
-    bool irRes  = findUntilPti(addrIR, curIR);
-    bool asmRes = findUntilLui(addrASM, curASM);
-    
+    findUntilPti(resIR , addrIR , curIR );
+    findUntilLui(resASM, addrASM, curASM);
 
-    printf("INFO: result of lui.\n");
-    for (MetaInst* inst : addrASM) {
-        printf("%s ", inst->getOriginInst().c_str());
+    printf("INFO: Result of lui found %d pieces.\n", resASM.size());
+    for (auto codes : resASM) {
+        printf("INFO: Length of cur piece is %d\n", codes.size());
+        for (MetaInst* inst : codes) {
+            printf("%s(%d) ", inst->getOriginInst().c_str(), inst->getID());
+        }
+        printf("\n");
     }
-    printf("\n");
 
     // codes[0]是load指令，所以从1开始拷贝
     CodePiece asmCodes, irCodes;
-    for (int i = 1; i < addrIR.size(); ++i) {
-        irCodes.addInst(addrIR[i]->getOriginInst());
-    }
-    for (int i = 1; i < addrASM.size(); ++i) {
-        asmCodes.addInst(addrASM[i]->getOriginInst());
+
+    for (int i = 0; i < resASM.size(); ++i) {
+        // addrIR = resIR[i];
+        addrASM = resASM[i];
+        // for (int j = 1; j < addrIR.size(); ++j) {
+        //     irCodes.addInst(addrIR[j]->getOriginInst());
+        // }
+        for (int j = 1; j < addrASM.size(); ++j) {
+            asmCodes.addInst(addrASM[j]->getOriginInst());
+        }
+        // codeMap[asmCodes.hashCode()] = {asmCodes, irCodes};
     }
 
-    codeMap[asmCodes.hashCode()] = {asmCodes, irCodes};
     return *this;
 }
 
