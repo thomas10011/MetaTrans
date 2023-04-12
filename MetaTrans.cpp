@@ -345,6 +345,7 @@ namespace MetaTrans {
             .setDataRoot            (dataRoot)
             .setGlobalSymbolName    (globalSymbolName)
             .setAddress             (address)
+            .setAddrGen             (isAddrGen)
             .setID                  (id)
             ;
 
@@ -375,6 +376,8 @@ namespace MetaTrans {
     bool MetaInst::isLoad() { for (auto ty : type) if (ty == InstType::LOAD) return true; return false; }
 
     bool MetaInst::isStore() { for (auto ty : type) if (ty == InstType::STORE) return true; return false; }
+
+    bool MetaInst::isMemOp() { return isLoad() && isStore(); }
 
     bool MetaInst::isAddressing() { return getColor()->type == 0; }
 
@@ -429,7 +432,7 @@ namespace MetaTrans {
 
     bool MetaInst::isMetaCall() { return false; }
 
-    void MetaInst::setAddrGen(bool b){
+    MetaInst& MetaInst::setAddrGen(bool b){
         this->AddrGenFlag = b;
     }
 

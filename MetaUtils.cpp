@@ -307,11 +307,11 @@ namespace MetaTrans {
 
     // if type is COMPUTING, each time check whether inst is addrGen; if is, type change to ADDRESSING next time;
     // if type is ADDRESSING, color inst as ADDRESSING until 'lui'
-    // return final color
+    // return last color used
     int MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
         if(visited.count(inst)) return color;
         visited.insert(inst);
-        if(type == COLORTYPE::COMPUTING && inst->ifAddrGen()) {
+        if(type != COLORTYPE::ADDRESSINGCOLOR && inst->ifAddrGen()) {
             color++;
             type = COLORTYPE::ADDRESSINGCOLOR;
         }
@@ -363,7 +363,7 @@ namespace MetaTrans {
                     if(inst->isType(InstType::STORE)){
                         std::get<0>(counts) = std::get<0>(counts) + 1;
                         std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
-                        std::cout << "IsStore " << ops.size() <<  std::endl;
+                        std::cout << "Store Coloring... "  <<  std::endl;
                         inst->setColor(startColor, COLORTYPE::STOREINST);
                         for(int i = 0; i < ops.size(); i++) {
                                 Path* p = new Path{(MetaInst*)(ops[i]), i, 0, 0, 0, 0};

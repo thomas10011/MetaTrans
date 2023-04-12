@@ -395,6 +395,8 @@ public:
 
     bool virtual isStore();
 
+    bool virtual isMemOp();
+
     bool virtual isAddressing();
 
     bool virtual isComputing();
@@ -463,7 +465,7 @@ public:
 
     void setTransInst(llvm::Instruction* inst);
 
-    void setAddrGen(bool b);
+    MetaInst& setAddrGen(bool b);
 
     bool ifAddrGen();
 

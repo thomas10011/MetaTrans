@@ -420,7 +420,8 @@ MetaAddressMatcher& MetaAddressMatcher::setIrBB(MetaBB* bb) {
 void findUntilLui(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* cur) {
     assert(cur);
     printf("Cur Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
-    if (cur->isMetaPhi()) return;
+    // 遇到phi和load / store直接Return
+    if (cur->isMetaPhi() || (codes.size() && cur->isMemOp())) return;
     // TODO: 暂时硬编码，之后考虑加一个标志位来判断递归基
     if (cur->getOriginInst() == "LUI" || cur->getOriginInst() == "lui") {
         codes.push_back(cur);
@@ -429,21 +430,37 @@ void findUntilLui(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst
         return;
     }
 
-    if (cur->isAddressing()) codes.push_back(cur);
+    if (cur->isAddressing() || cur->isLoad() || cur->isStore()) codes.push_back(cur);
     for (MetaOperand* operand : cur->getOperandList()) {
         if (operand->isMetaConstant()) continue;
         if (operand->isMetaArgument()) continue;
         findUntilLui(res, codes, (MetaInst*)operand);
     }
-    if (cur->isAddressing()) codes.pop_back();
+    if (cur->isAddressing() || cur->isMemOp()) codes.pop_back();
 
 }
 
 
-bool findUntilPti(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* inst) {
-    MetaInst* cur = inst;
+void findUntilGep(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* cur) {
+    assert(cur);
+    printf("Cur Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
+    // 遇到phi和load / store直接Return
+    if (cur->isMetaPhi() || (codes.size() && cur->isMemOp())) return;
+    // TODO: 暂时硬编码，之后考虑加一个标志位来判断递归基
+    if (cur->getOriginInst() == "getelementptr") {
+        codes.push_back(cur);
+        res.push_back(codes);
+        codes.pop_back();
+        return;
+    }
 
-    return true;
+    for (MetaOperand* operand : cur->getOperandList()) {
+        if (operand->isMetaConstant()) continue;
+        if (operand->isMetaArgument()) continue;
+        findUntilGep(res, codes, (MetaInst*)operand);
+    }
+    
+    return;
 }
 
 MetaAddressMatcher& MetaAddressMatcher::match() {
@@ -465,11 +482,14 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
     std::string type = asb->isLoad() ? "load" : "store";
     printf("matched %s: %s\n", type.c_str(), curIR->getOriginInst().c_str());
 
+    // 实际上IR那侧可以直接就翻为GEP，所以结构就是一个Code Piece的Set
     std::vector<std::vector<MetaInst*>> resIR;
     std::vector<std::vector<MetaInst*>> resASM;
     std::vector<MetaInst*>  addrIR ;
     std::vector<MetaInst*>  addrASM;
-    findUntilPti(resIR , addrIR , curIR );
+    printf("INFO: Start finding GEP\n");
+    findUntilGep(resIR , addrIR , curIR );
+    printf("INFO: Start finding LUI\n");
     findUntilLui(resASM, addrASM, curASM);
 
     printf("INFO: Result of lui found %d pieces.\n", resASM.size());
@@ -481,19 +501,32 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
         printf("\n");
     }
 
-    // codes[0]是load指令，所以从1开始拷贝
-    CodePiece asmCodes, irCodes;
+    printf("INFO: Result of gep found %d pieces.\n", resIR.size());
+    for (auto codes : resIR) {
+        printf("INFO: Length of cur piece is %d\n", codes.size());
+        for (MetaInst* inst : codes) {
+            printf("%s(%d) ", inst->getOriginInst().c_str(), inst->getID());
+        }
+        printf("\n");
+    }
 
+    assert(resIR.size() <= resASM.size());
+
+    // 竟然没匹配找到GEP？非法情况，返回
+    if (resIR.size() == 0) return *this;
+
+    CodePiece asmCodes, irCodes;
     for (int i = 0; i < resASM.size(); ++i) {
-        // addrIR = resIR[i];
+        addrIR = resIR[0];
         addrASM = resASM[i];
-        // for (int j = 1; j < addrIR.size(); ++j) {
-        //     irCodes.addInst(addrIR[j]->getOriginInst());
-        // }
+        for (int j = 0; j < addrIR.size(); ++j) {
+            irCodes.addInst(addrIR[j]->getOriginInst());
+        }
+        // codes[0]是load指令，所以从1开始拷贝
         for (int j = 1; j < addrASM.size(); ++j) {
             asmCodes.addInst(addrASM[j]->getOriginInst());
         }
-        // codeMap[asmCodes.hashCode()] = {asmCodes, irCodes};
+        codeMap[asmCodes.hashCode()] = {asmCodes, irCodes};
     }
 
     return *this;
