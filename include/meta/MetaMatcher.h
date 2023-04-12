@@ -18,7 +18,11 @@ CodePiece(std::vector<std::string> init);
 
 CodePiece& addInst(std::string inst);
 
+CodePiece& clear();
+
 uint64_t hashCode();
+
+std::string toString();
 
 };
 

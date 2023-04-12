@@ -208,6 +208,7 @@ public:
             std::cout << "key: "<< pair->first << "  -->>  " << "value: " << pair->second << std::endl;
     }
     
+    static std::string join(std::string sep, std::vector<std::string> list);
 
     static std::string toString(DataType type);
 

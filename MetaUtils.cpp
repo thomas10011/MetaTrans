@@ -129,6 +129,16 @@ namespace MetaTrans {
 
     }
 
+    std::string MetaUtil::join(std::string sep, std::vector<std::string> list) {
+        if (list.size() == 0) return "";
+        if (list.size() == 1) return list[0];
+        std::string ret = list[0];
+        for (int i = 1; i < list.size(); ++i) {
+            ret += sep + list[i];
+        }
+        return ret;
+    }
+
     std::string MetaUtil::toString(DataType type) {
         switch (type) {
             case DataType::INT:    return "INT"   ;

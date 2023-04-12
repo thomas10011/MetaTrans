@@ -25,6 +25,9 @@ uint64_t CodePiece::hashCode() {
     return hash;
 }
 
+std::string CodePiece::toString() {
+    return MetaUtil::join(" ", instList);
+}
 
 MetaBBMatcher::MetaBBMatcher() : x(nullptr), y(nullptr) {
     
@@ -515,18 +518,20 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
     // 竟然没匹配找到GEP？非法情况，返回
     if (resIR.size() == 0) return *this;
 
-    CodePiece asmCodes, irCodes;
+    
     for (int i = 0; i < resASM.size(); ++i) {
+        CodePiece asmCodes, irCodes;
         addrIR = resIR[0];
         addrASM = resASM[i];
         for (int j = 0; j < addrIR.size(); ++j) {
             irCodes.addInst(addrIR[j]->getOriginInst());
         }
-        // codes[0]是load指令，所以从1开始拷贝
-        for (int j = 1; j < addrASM.size(); ++j) {
+        // codes[0]是load指令，所以如果不把load加到pattern里面的话，要从1开始拷贝
+        for (int j = 0; j < addrASM.size(); ++j) {
             asmCodes.addInst(addrASM[j]->getOriginInst());
         }
         codeMap[asmCodes.hashCode()] = {asmCodes, irCodes};
+        printf("INFO: Create Addressing Mapping: (%s) -->> (%s)\n", asmCodes.toString().c_str(), irCodes.toString().c_str());
     }
 
     return *this;

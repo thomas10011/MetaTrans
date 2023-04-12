@@ -87,6 +87,8 @@ namespace MetaTrans {
                     );
                 }
                 printf("\n<<<<<<<<<<<<<<<<<<<< End Match Result >>>>>>>>>>>>>>>>>>>>\n\n");
+
+                // 开始Addressing的Match
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
                     printf("MetaBB: %d <-> %d, Training Address Strats\n",pair->first->getID(), pair->second->getID() );
                     for (auto it = pair->first->begin(); it != pair->first->end(); ++it) {
@@ -94,6 +96,15 @@ namespace MetaTrans {
                             (*addrMatcher).setAsmInst(*it).setIrBB(&*(pair->second)).match();
                     }
                 }
+                printf("<<<<<<<<<<<<<<<<<<<< Addr Match Result >>>>>>>>>>>>>>>>>>>>\n\n");
+                std::vector<CodePiecePair> addrRes = addrMatcher->getResult();
+                for (CodePiecePair pair : addrRes) {
+                    printf("%s : %s\n", pair.first.toString().c_str(), pair.second.toString().c_str());
+                }
+                printf("\n<<<<<<<<<<<<<<<<<<<< End Addr Match Result >>>>>>>>>>>>>>>>>>>>\n\n");
+
+
+                // train BB
                 printf("-----------------------------------\n");
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
                     printf("MetaBB: %d <-> %d, Training Strats\n",pair->first->getID(), pair->second->getID() );
