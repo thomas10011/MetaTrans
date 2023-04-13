@@ -377,7 +377,7 @@ namespace MetaTrans {
 
     bool MetaInst::isStore() { for (auto ty : type) if (ty == InstType::STORE) return true; return false; }
 
-    bool MetaInst::isMemOp() { return isLoad() && isStore(); }
+    bool MetaInst::isMemOp() { return isLoad() || isStore(); }
 
     bool MetaInst::isAddressing() { return getColor()->type == 0; }
 
@@ -2562,11 +2562,6 @@ namespace MetaTrans {
             }
         }
 
-        // 染色，为了matching
-        for (int i = 0, color = 0; i < funcs.size(); ++i, ++color) {
-            color = MetaUtil::paintColor(funcs[i], color);
-            MetaUtil::paintColorCheck(funcs[i]);
-        }
             
     }
 

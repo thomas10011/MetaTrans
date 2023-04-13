@@ -55,6 +55,12 @@ namespace MetaTrans {
 
         std::cout << asmUnit->toString() << std::endl;
         
+        // 染色，为了matching
+        std::vector<MetaFunction*> funcs = asmUnit->getFuncList();
+        for (int i = 0, color = 0; i < funcs.size(); ++i, ++color) {
+            color = MetaUtil::paintColor(funcs[i], color);
+            MetaUtil::paintColorCheck(funcs[i]);
+        }
 
         for (auto iter = asmUnit->begin(); iter != asmUnit->end(); ++iter) {
             MetaFunction* f = *iter;

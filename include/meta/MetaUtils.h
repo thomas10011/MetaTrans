@@ -166,6 +166,7 @@ public:
             std::is_same<T, DataType>::value ,
             "Type of template not support!"
         );
+        if (type_vector.size() == 0) return "{ null }";
         std::string s = "{ " + MetaUtil::toString(type_vector[0]);
         for (unsigned i = 1u; i < type_vector.size(); i++) { s += ", " + MetaUtil::toString(type_vector[i]); }
         s += " }";
