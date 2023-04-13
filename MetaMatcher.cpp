@@ -196,6 +196,8 @@ int compare(weight x, weight y) {
 
 
 bool checkSwap(MetaBB* p, MetaBB* l, MetaBB* r, MetaBB* joint) {
+    // joint为空是边界情况
+    if (!joint) return false;
 
     std::list<MetaBB*>                   que;
     std::unordered_set<MetaBB*>          visited;
@@ -313,13 +315,11 @@ bool CraphBasedBBMatcher::isEndOfLoop(MetaBB* bb) {
 // Keep the left-leaning property before return.
 MetaBB* CraphBasedBBMatcher::findJoint(MetaBB* split, MetaBB* merge) {
     
-    assert(split->getNextBB().size() >= 2);
+    if (split->getNextBB().size() < 2) return merge;
 
     MetaBB* l     = leftChild(split);
     MetaBB* r     = rightChild(split);
     MetaBB* joint = bfs(split, l, r, merge);
-
-    assert(joint);
 
     checkSwap(split, l, r, joint);
 
@@ -387,7 +387,8 @@ void CraphBasedBBMatcher::match(MetaBB* u, MetaBB* v, MetaBB* x, MetaBB* y) {
             MetaBB* u_joint = findJoint(u, x);
             MetaBB* v_joint = findJoint(v, y);
             
-            printf("INFO: Find Joint point, ASM %d --> %d, IR %d --> %d\n", u->getID(), u_joint->getID(), v->getID(), v_joint->getID());
+            if (u_joint && v_joint)
+                printf("INFO: Find Joint point, ASM %d --> %d, IR %d --> %d\n", u->getID(), u_joint->getID(), v->getID(), v_joint->getID());
             
             match(leftChild(u), leftChild(v), u_joint, v_joint);
             match(rightChild(u), rightChild(v), u_joint, v_joint);
@@ -432,8 +433,8 @@ void findUntilLui(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst
         codes.pop_back();
         return;
     }
-
-    if (cur->isAddressing() || cur->isLoad() || cur->isStore()) codes.push_back(cur);
+    
+    if (cur->isAddressing() || cur->isMemOp()) codes.push_back(cur);
     for (MetaOperand* operand : cur->getOperandList()) {
         if (operand->isMetaConstant()) continue;
         if (operand->isMetaArgument()) continue;
