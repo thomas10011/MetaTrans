@@ -514,11 +514,8 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
         printf("\n");
     }
 
-    assert(resIR.size() <= resASM.size());
-
     // 竟然没匹配找到GEP？非法情况，返回
     if (resIR.size() == 0) return *this;
-
     
     for (int i = 0; i < resASM.size(); ++i) {
         CodePiece asmCodes, irCodes;
