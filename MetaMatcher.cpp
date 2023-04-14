@@ -4,31 +4,6 @@
 
 namespace MetaTrans {
 
-CodePiece::CodePiece() { }
-
-CodePiece::CodePiece(std::vector<std::string> init) : instList(init) { }
-
-CodePiece& CodePiece::addInst(std::string inst) {
-    instList.push_back(inst);
-    return *this;
-}
-
-uint64_t CodePiece::hashCode() {
-    uint64_t factor = 1, hash = 0;
-    for (int i = 0; i < instList.size(); ++i) {
-        std::string inst = instList[i];
-        for (int j = 0; j < inst.length(); ++j) {
-            hash   += inst[j] * factor;
-            factor *= 13331;
-        }
-    }
-    return hash;
-}
-
-std::string CodePiece::toString() {
-    return MetaUtil::join(" ", instList);
-}
-
 MetaBBMatcher::MetaBBMatcher() : x(nullptr), y(nullptr) {
     
 }
@@ -542,6 +517,12 @@ std::vector<CodePiecePair> MetaAddressMatcher::getResult() {
     }
     return ret;
 }
+
+
+std::unordered_map<uint64_t, CodePiecePair>& MetaAddressMatcher::getResultMap() {
+    return codeMap;
+}
+
 
 bool MetaAddressMatcher::matched(MetaInst* inst) {
     return matchedSet.find(inst) != matchedSet.end();

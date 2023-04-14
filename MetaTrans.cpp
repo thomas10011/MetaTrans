@@ -2346,6 +2346,60 @@ namespace MetaTrans {
     std::vector<MetaArgument*>::iterator MetaFunction::arg_end() { return args.end(); }
 
 
+//===-------------------------------------------------------------------------------===//
+/// Addressing Mapping Table implementation.
+
+    AddrMappingTable* AddrMappingTable::table = nullptr;
+
+    AddrMappingTable::AddrMappingTable() { }
+
+    AddrMappingTable::~AddrMappingTable() { }
+
+	AddrMappingTable::AddrMappingTable(const AddrMappingTable&) { }
+
+	AddrMappingTable& AddrMappingTable::operator=(const AddrMappingTable&) { }
+
+    AddrMappingTable& AddrMappingTable::getInstanceRef() {
+        return *getInstance();
+    }
+
+    // 单线程懒汉式
+    AddrMappingTable* AddrMappingTable::getInstance() {
+        if (AddrMappingTable::table == nullptr) AddrMappingTable::table = new AddrMappingTable();
+        return AddrMappingTable::table;
+    }
+
+    AddrMappingTable& AddrMappingTable::update(const std::unordered_map<uint64_t, CodePiecePair>& m) {
+        using iterator = std::unordered_map<uint64_t, CodePiecePair>::const_iterator;
+        for (iterator it = m.begin(); it != m.end(); ++it) {
+            map[it->first] = it->second;
+        }
+        return *this;
+    }
+
+    AddrMappingTable& AddrMappingTable::update(const std::vector<CodePiecePair>& pairs) {
+        for (auto pair : pairs) map[pair.first.hashCode()] = pair;
+        return *this;
+    }
+
+    AddrMappingTable& AddrMappingTable::addMapping(CodePiece asmCodes, CodePiece irCodes) {
+        map[asmCodes.hashCode()] = { asmCodes, irCodes };
+        return *this;
+    }
+
+    AddrMappingTable& AddrMappingTable::flush() {
+        std::vector<std::string> lines;
+        using iterator = std::unordered_map<uint64_t, CodePiecePair>::iterator;
+        for (iterator it = map.begin(); it != map.end(); ++it) {
+            CodePiecePair pair = it->second;
+            std::string line = pair.first.toString() + " : " + pair.second.toString();
+            lines.push_back(line);
+        }
+        std::string home = getenv("HOME");
+        MetaUtil::writeToFile(MetaUtil::join("\n", lines), home + "/Address.mapping");
+        return *this;
+    }
+
 
 //===-------------------------------------------------------------------------------===//
 /// Mapping Table implementation.
@@ -2667,6 +2721,36 @@ namespace MetaTrans {
         if (parent == nullptr) return this;
         return parent->getRootScope();
     }
+
+
+//===-------------------------------------------------------------------------------===//
+/// CodePiece implementation.
+
+CodePiece::CodePiece() { }
+
+CodePiece::CodePiece(std::vector<std::string> init) : instList(init) { }
+
+CodePiece& CodePiece::addInst(std::string inst) {
+    instList.push_back(inst);
+    return *this;
+}
+
+uint64_t CodePiece::hashCode() {
+    uint64_t factor = 1, hash = 0;
+    for (int i = 0; i < instList.size(); ++i) {
+        std::string inst = instList[i];
+        for (int j = 0; j < inst.length(); ++j) {
+            hash   += inst[j] * factor;
+            factor *= 13331;
+        }
+    }
+    return hash;
+}
+
+std::string CodePiece::toString() {
+    return MetaUtil::join(" ", instList);
+}
+
 
 //===-------------------------------------------------------------------------------===//
 /// MetaUnitBuildContext implementation.

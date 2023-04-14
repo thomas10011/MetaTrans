@@ -37,6 +37,8 @@ class MetaScope;
 
 struct MetaFunctionPass;
 
+class AddrMappingTable;
+
 enum InstType {
     LOAD,
     STORE,
@@ -743,6 +745,64 @@ public:
     std::vector<MetaArgument*>::iterator arg_begin();
 
     std::vector<MetaArgument*>::iterator arg_end();
+
+};
+
+
+class CodePiece {
+private:
+
+std::vector<std::string> instList;
+
+public:
+
+CodePiece();
+
+CodePiece(std::vector<std::string> init);
+
+CodePiece& addInst(std::string inst);
+
+CodePiece& clear();
+
+uint64_t hashCode();
+
+std::string toString();
+
+};
+
+typedef std::pair<CodePiece, CodePiece> CodePiecePair;
+
+
+// Singleton Pattern
+class AddrMappingTable {
+
+private:
+
+    static AddrMappingTable* table;
+
+    std::unordered_map<uint64_t, CodePiecePair> map;
+    
+    AddrMappingTable();
+    
+    ~AddrMappingTable();
+
+	AddrMappingTable(const AddrMappingTable&);
+
+	AddrMappingTable& operator=(const AddrMappingTable&);
+
+public:
+    
+    static AddrMappingTable& getInstanceRef();
+
+    static AddrMappingTable* getInstance();
+
+    AddrMappingTable& update(const std::unordered_map<uint64_t, CodePiecePair>& m);
+
+    AddrMappingTable& update(const std::vector<CodePiecePair>& pairs);
+
+    AddrMappingTable& addMapping(CodePiece asmCodes, CodePiece irCodes);
+
+    AddrMappingTable& flush();
 
 };
 

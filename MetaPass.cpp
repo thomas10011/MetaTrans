@@ -46,6 +46,8 @@ namespace MetaTrans {
 
         MapTable = new MappingTable();
 
+        AddrMappingTable& addrMapTable = AddrMappingTable::getInstanceRef();
+
         MapTable->setName(name+"/")
                 ->loadMappingTable()
                 ->initTableMeta();
@@ -107,6 +109,7 @@ namespace MetaTrans {
                 for (CodePiecePair pair : addrRes) {
                     printf("%s : %s\n", pair.first.toString().c_str(), pair.second.toString().c_str());
                 }
+                addrMapTable.update(addrMatcher->getResultMap()).flush();
                 printf("\n<<<<<<<<<<<<<<<<<<<< End Addr Match Result >>>>>>>>>>>>>>>>>>>>\n\n");
 
 

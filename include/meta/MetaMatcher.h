@@ -5,29 +5,6 @@
 namespace MetaTrans {
 
 
-class CodePiece {
-private:
-
-std::vector<std::string> instList;
-
-public:
-
-CodePiece();
-
-CodePiece(std::vector<std::string> init);
-
-CodePiece& addInst(std::string inst);
-
-CodePiece& clear();
-
-uint64_t hashCode();
-
-std::string toString();
-
-};
-
-typedef std::pair<CodePiece, CodePiece> CodePiecePair;
-
 class InstMatchResult {
 private:
 protected:
@@ -95,6 +72,8 @@ public:
     virtual MetaAddressMatcher& match();
 
     std::vector<CodePiecePair> getResult();
+
+    std::unordered_map<uint64_t, CodePiecePair>& getResultMap();
     
     bool matched(MetaInst* inst);
     
