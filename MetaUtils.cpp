@@ -129,7 +129,53 @@ namespace MetaTrans {
 
     }
 
-    std::string MetaUtil::join(std::string sep, std::vector<std::string> list) {
+
+    void MetaUtil::strip(std::string s, std::string& text) {
+        int n = s.length(), m = text.length();
+
+        int i = 0, j = m;
+        while (i < j) {
+            int k = 0;
+            for (; k < n && i + k < j && s[k] == text[i + k]; ++k) ;
+            if (k < n) break;
+            i += k;
+        }
+        while (i < j) {
+            int k = 0;
+            for (; k < n && i < j - k - 1 && s[n - k - 1] == text[j - k - 1]; ++k) ;
+            if (k < n) break;
+            j -= k;
+        }
+
+        text = text.substr(i, j - i);
+    }
+
+
+    std::vector<std::string> MetaUtil::split(std::string delimiter, const std::string& text) {
+        int n = delimiter.length(), m = text.length();
+        int next[n];
+        for (int i = 1, j = next[0] = -1; i < n; ) {
+            if (j < 0 || delimiter[i - 1] == delimiter[j]) next[i++] = ++j;
+            else j = next[j];
+        }
+        std::vector<std::string> ret; 
+        int start = 0;
+        for (int i = 0, j = 0; i < m; ) {
+            if (j == n - 1 && delimiter[j] == text[i]) {
+                ret.push_back(text.substr(start, i - j - start));
+                start = i + 1; j = next[j]; 
+            }
+            else if (j < 0 || delimiter[j] == text[i]) {
+                ++i; ++j;
+            }
+            else j = next[j];
+        }
+        ret.push_back(text.substr(start, m));
+        return ret;
+    }
+
+
+    std::string MetaUtil::join(std::string sep, const std::vector<std::string>& list) {
         if (list.size() == 0) return "";
         if (list.size() == 1) return list[0];
         std::string ret = list[0];

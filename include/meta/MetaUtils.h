@@ -208,8 +208,12 @@ public:
         for (auto pair = map.begin(); pair != map.end(); ++pair)
             std::cout << "key: "<< pair->first << "  -->>  " << "value: " << pair->second << std::endl;
     }
-    
-    static std::string join(std::string sep, std::vector<std::string> list);
+
+    static void strip(std::string s, std::string& text);
+
+    static std::vector<std::string> split(std::string delimiter, const std::string& text);
+
+    static std::string join(std::string delimiter, const std::vector<std::string>& list);
 
     static std::string toString(DataType type);
 
