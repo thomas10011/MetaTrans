@@ -758,6 +758,8 @@ public:
 
 CodePiece();
 
+CodePiece(std::string s);
+
 CodePiece(std::vector<std::string> init);
 
 CodePiece& addInst(std::string inst);

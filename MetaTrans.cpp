@@ -2351,7 +2351,19 @@ namespace MetaTrans {
 
     AddrMappingTable* AddrMappingTable::table = nullptr;
 
-    AddrMappingTable::AddrMappingTable() { }
+    AddrMappingTable::AddrMappingTable() {
+        std::string home = getenv("HOME");
+        std::string data = MetaUtil::readFromFile(home + "/Address.mapping");
+        if (data.length() == 0) return;
+        std::vector<std::string> lines = MetaUtil::split("\n", data);
+        
+        for (std::string line : lines) {
+            std::vector<std::string> kv = MetaUtil::split(" : ", line);
+            CodePiece asmCodes(kv[0]), irCodes(kv[1]);
+            map[asmCodes.hashCode()] = { asmCodes, irCodes };
+        }
+    }
+
 
     AddrMappingTable::~AddrMappingTable() { }
 
@@ -2727,6 +2739,10 @@ namespace MetaTrans {
 /// CodePiece implementation.
 
 CodePiece::CodePiece() { }
+
+CodePiece::CodePiece(std::string s) {
+    instList = MetaUtil::split(" ", s);
+}
 
 CodePiece::CodePiece(std::vector<std::string> init) : instList(init) { }
 

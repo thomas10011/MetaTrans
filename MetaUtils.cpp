@@ -281,9 +281,14 @@ namespace MetaTrans {
         std::ifstream in;
         std::string data;
         in.open(file);
-        in >> data;
+        if (!in.good()) return "";
+        std::vector<std::string> lines;
+        std::string line;
+        while (std::getline(in, line)) {
+            lines.push_back(line);
+        }
         in.close();
-        return data;
+        return MetaUtil::join("\n", lines);
     }
 
     DataType MetaUtil::extractDataType(Type& dataType) {

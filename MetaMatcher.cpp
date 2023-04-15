@@ -398,7 +398,7 @@ MetaAddressMatcher& MetaAddressMatcher::setIrBB(MetaBB* bb) {
 
 void findUntilLui(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* cur) {
     assert(cur);
-    printf("Cur Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
+    printf("Cur ASM Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
     // 遇到phi和load / store直接Return
     if (cur->isMetaPhi() || (codes.size() && cur->isMemOp())) return;
     // TODO: 暂时硬编码，之后考虑加一个标志位来判断递归基
@@ -422,7 +422,7 @@ void findUntilLui(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst
 
 void findUntilGep(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* cur) {
     assert(cur);
-    printf("Cur Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
+    printf("Cur IR Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
     // 遇到phi和load / store直接Return
     if (cur->isMetaPhi() || (codes.size() && cur->isMemOp())) return;
     // TODO: 暂时硬编码，之后考虑加一个标志位来判断递归基
@@ -458,6 +458,9 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
 
     curIR = matchedLoad[0];
 
+    // TODO 这个assert过不去
+    // assert(curASM->getParentScope() == curIR->getParentScope());
+
     std::string type = asb->isLoad() ? "load" : "store";
     printf("matched %s: %s\n", type.c_str(), curIR->getOriginInst().c_str());
 
@@ -491,7 +494,7 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
 
     // 竟然没匹配找到GEP？非法情况，返回
     if (resIR.size() == 0) return *this;
-    
+        
     for (int i = 0; i < resASM.size(); ++i) {
         CodePiece asmCodes, irCodes;
         addrIR = resIR[0];
