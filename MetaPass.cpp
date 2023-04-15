@@ -98,7 +98,7 @@ namespace MetaTrans {
 
                 // 开始Addressing的Match
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
-                    printf("MetaBB: %d <-> %d, Training Address Strats\n",pair->first->getID(), pair->second->getID() );
+                    printf("MetaBB: %d <-> %d, Training Address Starts\n",pair->first->getID(), pair->second->getID() );
                     for (auto it = pair->first->begin(); it != pair->first->end(); ++it) {
                         if ((*it)->isLoad())
                             (*addrMatcher).setAsmInst(*it).setIrBB(&*(pair->second)).match();
@@ -116,7 +116,7 @@ namespace MetaTrans {
                 // train BB
                 printf("-----------------------------------\n");
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
-                    printf("MetaBB: %d <-> %d, Training Strats\n",pair->first->getID(), pair->second->getID() );
+                    printf("MetaBB: %d <-> %d, Training Starts\n",pair->first->getID(), pair->second->getID() );
                     pair->first->trainBB(pair->second);
                 }
                 printf("-----------------------------------\n");

@@ -442,24 +442,12 @@ void findUntilGep(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst
     return;
 }
 
-MetaAddressMatcher& MetaAddressMatcher::match() {
-    MetaInst* curASM = asb    ;
-    MetaInst* curIR  = nullptr;
+MetaAddressMatcher& MetaAddressMatcher::matchFor(MetaInst* ir) {
+    MetaInst* curASM = asb;
+    MetaInst* curIR  = ir ;
 
-    std::vector<MetaInst*> matchedLoad = asb->findTheSameInst(irbb);
-
-    if (matchedLoad.size() == 0) {
-        printf("ERRO: Did't find matched load instruction.\n");
-        return *this;
-    }
-    if (matchedLoad.size() > 1) {
-        printf("WARN: Find multiple load when match addressing.\n");
-    }
-
-    curIR = matchedLoad[0];
-
-    // TODO 这个assert过不去
-    // assert(curASM->getParentScope() == curIR->getParentScope());
+    // 保证找到的ir一定是在对应BB中的
+    assert(curIR->getParentScope() == irbb);
 
     std::string type = asb->isLoad() ? "load" : "store";
     printf("matched %s: %s\n", type.c_str(), curIR->getOriginInst().c_str());
@@ -509,6 +497,25 @@ MetaAddressMatcher& MetaAddressMatcher::match() {
         codeMap[asmCodes.hashCode()] = {asmCodes, irCodes};
         printf("INFO: Create Addressing Mapping: (%s) -->> (%s)\n", asmCodes.toString().c_str(), irCodes.toString().c_str());
     }
+
+    return *this;
+}
+MetaAddressMatcher& MetaAddressMatcher::match() {
+    MetaInst* curASM = asb    ;
+    MetaInst* curIR  = nullptr;
+
+    std::vector<MetaInst*> matchedLoad = asb->findTheSameInst(irbb);
+
+    if (matchedLoad.size() == 0) {
+        printf("ERRO: Did't find matched load instruction.\n");
+        return *this;
+    }
+    if (matchedLoad.size() > 1) {
+        printf("WARN: Find multiple load when match addressing.\n");
+    }
+
+    // 为匹配上的每一个load都尝试match一下
+    for (MetaInst* curIR : matchedLoad) matchFor(curIR);
 
     return *this;
 }

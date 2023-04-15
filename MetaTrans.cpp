@@ -1584,10 +1584,13 @@ namespace MetaTrans {
 
     MetaPhi::MetaPhi() {
         type.push_back(InstType::PHI);
+        setOriginInst("phi");
         MetaInst(type);
     }
 
-    MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) { }
+    MetaPhi::MetaPhi(std::vector<InstType> ty) : MetaInst(ty) {
+        setOriginInst("phi");
+    }
 
     MetaPhi& MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
         bbValueMap.insert({bb, op});

@@ -47,6 +47,10 @@ std::unordered_map<MetaBB*, MetaBB*>::iterator end();
 
 // Matching addressing code for two load instruction.
 class MetaAddressMatcher {
+private:
+
+    MetaAddressMatcher& matchFor(MetaInst* ir);
+
 protected: 
 
     MetaInst *asb, *ir;
