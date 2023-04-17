@@ -398,7 +398,14 @@ MetaAddressMatcher& MetaAddressMatcher::setIrBB(MetaBB* bb) {
 
 void findUntilLui(std::vector<std::vector<MetaInst*>>& res, std::vector<MetaInst*>& codes, MetaInst* cur) {
     assert(cur);
-    printf("Cur ASM Inst: %s, id = %d, color = %d.\n", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
+
+    printf("Cur ASM Inst Path(len=%d): ", codes.size() + 1);
+    for (MetaInst* inst : codes) {
+        printf("(%s, id=%d, color=%d)-->>", inst->getOriginInst().c_str(), inst->getID(), inst->getColor()->type);
+    }
+    printf("(%s, id=%d, color=%d) ", cur->getOriginInst().c_str(), cur->getID(), cur->getColor()->type);
+    printf("\n");
+
     // 遇到phi和load / store直接Return
     if (cur->isMetaPhi() || (codes.size() && cur->isMemOp())) return;
     // TODO: 暂时硬编码，之后考虑加一个标志位来判断递归基
