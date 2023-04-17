@@ -533,6 +533,8 @@ public:
 
     virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context) override;
 
+    bool virtual isMetaCall() override;
+
     std::string virtual toString() override;
 
 };

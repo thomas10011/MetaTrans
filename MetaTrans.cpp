@@ -1687,21 +1687,31 @@ namespace MetaTrans {
         return *this;
     }
 
-    MetaFunction* MetaCall::getMetaFunction() {
-        return func;
-    }
+    MetaFunction* MetaCall::getMetaFunction() { return func; }
+
+    bool MetaCall::isMetaCall() { return true; }
 
     MetaInst& MetaCall::buildFromJSON(MetaUnitBuildContext& context) {
         llvm::json::Object JSON = context.getHoldObject();
         
-        int64_t id = JSON.getInteger("id").getValue();
-        int64_t address = JSON.getInteger("address").getValue();
+        std::string     func                = JSON.getString("funcName").getValue().str();
+        std::string     originInst          = JSON["originInst"]          .getAsString().getValue().str();
+        std::string     dataRoot            = JSON["dataRoot"]            .getAsString().getValue().str();
+        std::string     globalSymbolName    = JSON["globalSymbolName"]    .getAsString().getValue().str();
+        unsigned long   hashCode            = JSON.getInteger("hashCode") .getValue();
+        int64_t         id                  = JSON.getInteger("id")       .getValue();
+        int64_t         addr                = JSON.getInteger("address")  .getValue();
+        bool            isAddrGen           = JSON.getBoolean("isAddrGen").getValue();
 
-        std::string func = JSON.getString("funcName").getValue().str();
-
+        setFuncName(func);
+        setOriginInst(originInst);
+        setDataRoot(dataRoot);
+        setGlobalSymbolName(globalSymbolName);
+        setHashcode(hashCode);
         setID(id);
         setAddress(address);
-        setFuncName(func);
+        setAddrGen(isAddrGen);
+
         return *this; 
     }
 
@@ -1710,16 +1720,27 @@ namespace MetaTrans {
         for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
         opList[opList.length() - 1] = ']'; 
         
+        std::string userList = users.size() == 0 ? "[]" : "[";
+        for (MetaOperand* user : users) { userList = userList + std::to_string(user->getID()) + ","; }
+        userList[userList.length() - 1] = ']';
+
         std::string str = "{";
         return str + 
             "\"id\":" + std::to_string(id) + "," +
             "\"address\":" + std::to_string(MetaInst::getAddress()) + "," + 
-            "\"type\":" + MetaUtil::toString(type) + "," +
-            "\"isMetaPhi\":false," + 
+            "\"originInst\":" + "\"" + getOriginInst() + "\"" + "," +
             "\"isMetaCall\":true," + 
+            "\"isMetaPhi\":false," + 
+            "\"type\":" + MetaUtil::toString(type) + "," +
+            "\"isAddrGen\":" + (ifAddrGen() ? "true" : "false") + "," +
             "\"operandList\":" + opList + "," +
-            "\"funcName\":" + "\"" + funcName + "\"" + 
-            "}";
+            "\"userList\":" + userList + "," + 
+            "\"funcName\":" + "\"" + funcName + "\"" + "," +
+            "\"hashCode\":" + std::to_string(hashCode) + "," + 
+            "\"dataRoot\":\"" + dataRoot + "\"," + 
+            "\"globalSymbolName\":\"" + globalSymbolName + "\"" +
+            "}"
+            ;
     }
 
 //===-------------------------------------------------------------------------------===//
@@ -1846,6 +1867,8 @@ namespace MetaTrans {
                 }
             }
         }
+
+        return *this;
 
     }
 
