@@ -259,5 +259,31 @@ public:
 
 };
 
-} // namespace meta util
+template<class X, class Y>
+class BidirectionMap {
+private:
+    std::unordered_map<X, Y> forward;
+    std::unordered_map<Y, X> backward;
+
+public:
+
+    BidirectionMap& put(X key, Y value) {
+        forward[key] = value;
+        backward[value] = key;
+        return *this;
+    }
+
+    BidirectionMap& put(Y key, X value) {
+        backward[key] = value;
+        forward[value] = key;
+        return *this;
+    }
+
+    Y get(X key) { return forward[key]; }
+    X get(Y key) { return backward[key]; }
+    
+};
+
+
+} // namespace MetaTrans
 
