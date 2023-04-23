@@ -126,12 +126,14 @@ namespace MetaTrans {
         int64_t     id     = object.getInteger("id")      .getValue();
         bool        global = object.getBoolean("isGloabl").getValue();
         bool        imm    = object.getBoolean("isImm")   .getValue();
+        MetaPrimType type(object.getString("type").getValue().str());
 
         (*this)
             .setName(name)
             .setValueStr(value)
             .setGlobal(global)
             .setImm(imm)
+            .setType(type)
             .setParentScope(context.getCurScope())
             .registerToMetaUnit()
             .setID(id)
@@ -147,7 +149,7 @@ namespace MetaTrans {
 
     MetaConstant::MetaConstant(DataType ty) : type(ty), global(false), imm(false) { }
 
-    MetaConstant& MetaConstant::setDataType(DataType ty) { type = ty; }
+    MetaConstant& MetaConstant::setType(MetaPrimType ty) { primaryType = ty; }
 
     DataType MetaConstant::getDataType() { return type; }
 
@@ -205,6 +207,16 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaConstant& MetaConstant::setDataType(DataType ty) {
+        primaryType.setType(ty);
+        return *this;
+    }
+
+    MetaConstant& MetaConstant::setWidth(int w) {
+        primaryType.setWidth(w);
+        return *this;
+    }
+
     std::string MetaConstant::getValueStr() {
         return valueStr;
     }
@@ -220,6 +232,7 @@ namespace MetaTrans {
     std::string MetaConstant::toString() {
         std::string str = "";
         return str + "{" 
+            + "\"type\":" + "\"" + primaryType.toString() + "\"" + ","
             + "\"name\":" + "\"" + getName() + "\"" + ","
             + "\"value\":" + (valueStr.length() ? "\"" + valueStr + "\"" : "\"\"") + "," 
             + "\"id\":" + std::to_string(id) + ","
@@ -239,7 +252,9 @@ namespace MetaTrans {
 
     MetaArgument::~MetaArgument() { }
 
-    MetaArgument::MetaArgument(DataType ty) : type(ty) { }
+    MetaArgument::MetaArgument(DataType ty) {
+        type.setType(ty);
+    }
 
     MetaArgument& MetaArgument::setArgIndex(int i) {
         argIndex = i;
@@ -251,13 +266,23 @@ namespace MetaTrans {
         return *this;
     }
     
-    MetaArgument& MetaArgument::setArgType(DataType ty) {
-        type = ty;
+    MetaArgument& MetaArgument::setDataType(DataType ty) {
+        type.setType(ty);
         return *this;
     }
 
     MetaArgument& MetaArgument::setWidth(int w) {
-        width = w;
+        type.setWidth(w);
+        return *this;
+    }
+
+    MetaArgument& MetaArgument::setPtrLevel(int l) {
+        type.setPrtLevel(l);
+        return *this;
+    }
+
+    MetaArgument& MetaArgument::setType(MetaPrimType type) {
+        this->type = type;
         return *this;
     }
 
@@ -272,14 +297,15 @@ namespace MetaTrans {
 
     int MetaArgument::getWidth() { return width; }
 
-    DataType MetaArgument::getArgType() { return type; }
+    MetaPrimType MetaArgument::getType() { return type; }
 
     bool MetaArgument::isMetaArgument() { return true; }
 
     std::string MetaArgument::toString() {
         std::string str = "";
         return str + "{" 
-            + "\"id\":" + std::to_string(id) +
+            + "\"id\":" + std::to_string(id) + ","
+            + "\"type\":" + "\"" + type.toString() + "\""
             "}";
     }
 

@@ -215,6 +215,8 @@ public:
 
     static std::string join(std::string delimiter, const std::vector<std::string>& list);
 
+    static bool startwith(std::string s, std::string& text);
+
     static std::string toString(DataType type);
 
     static DataType stringToDataType(std::string str);
@@ -234,6 +236,12 @@ public:
     static DataType extractDataType(Type& dataType);
 
     static int extractDataWidth(Type& dataType);
+
+    static DataType extractDataType(std::string& src);
+
+    static int extractDataWidth(std::string& src);
+
+    static int extractPtrLevel(std::string& src);
 
     static void writeToFile(std::string, std::string file);
 

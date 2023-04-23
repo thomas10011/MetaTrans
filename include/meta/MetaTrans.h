@@ -191,6 +191,8 @@ protected:
     DataUnion value;
 
     std::string valueStr;
+    
+    MetaPrimType primaryType;
 
 public:
     
@@ -203,8 +205,6 @@ public:
     virtual ~MetaConstant();
 
     MetaConstant(DataType ty);
-
-    MetaConstant& setDataType(DataType ty);
 
     DataType getDataType();
 
@@ -232,6 +232,12 @@ public:
 
     MetaConstant& setValueStr(std::string str);
 
+    MetaConstant& setDataType(DataType ty);
+
+    MetaConstant& setWidth(int w);
+
+    MetaConstant& setType(MetaPrimType ty);
+
     bool isGlobal();
 
     bool isImm();
@@ -256,7 +262,7 @@ protected:
 
     int offset;
 
-    DataType type; 
+    MetaPrimType type;
 
 public:
 
@@ -272,11 +278,15 @@ public:
 
     MetaArgument& setOffset(int o);
 
-    MetaArgument& setArgType(DataType ty);
+    MetaArgument& setDataType(DataType ty);
 
     MetaArgument& setWidth(int w);
 
+    MetaArgument& setPtrLevel(int l);
+
     MetaArgument& setParentScope(MetaScope* scope);
+
+    MetaArgument& setType(MetaPrimType ty);
 
     int getArgIndex();
 
@@ -284,7 +294,7 @@ public:
 
     int getWidth();
 
-    DataType getArgType();
+    MetaPrimType getType();
 
     virtual bool isMetaArgument() override;
 

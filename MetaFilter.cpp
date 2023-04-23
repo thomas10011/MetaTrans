@@ -15,7 +15,7 @@ namespace MetaTrans {
                 .setArgIndex(index++)
                 .setOffset(offset)
                 .setParentScope(builder.mF)
-                .setArgType(MetaUtil::extractDataType(*(it->getType())))
+                .setDataType(MetaUtil::extractDataType(*(it->getType())))
                 .setWidth(MetaUtil::extractDataWidth(*(it->getType())))
                 ;
             offset += arg.getWidth();

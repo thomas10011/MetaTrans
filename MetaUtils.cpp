@@ -185,18 +185,27 @@ namespace MetaTrans {
         return ret;
     }
 
+
+    bool MetaUtil::startwith(std::string s, std::string& text) {
+        if (s.length() > text.length()) return false;
+        for (int i = 0; i < s.length(); ++i) if (s[i] != text[i]) return false;
+        return true;
+    }
+
     std::string MetaUtil::toString(DataType type) {
         switch (type) {
-            case DataType::INT:    return "INT"   ;
-            case DataType::FLOAT:  return "FLOAT" ;
-            case DataType::VOID:   return "VOID"  ;
+            case DataType::INT:    return "int"   ;
+            case DataType::FLOAT:  return "float"  ;
+            case DataType::VOID:   return "void"  ;
+            case DataType::BOOL:   return "bool"  ;
         }
     }
 
     DataType MetaUtil::stringToDataType(std::string str) {
-        if (str == "INT" ) return DataType::INT;
-        else if (str == "FLOAT") return DataType::FLOAT;
-        else if (str == "VOID") return DataType::VOID;
+        if      (str == "int" )  return DataType::INT   ;
+        else if (str == "float")  return DataType::FLOAT ;
+        else if (str == "void")  return DataType::VOID  ;
+        else if (str == "bool")  return DataType::VOID  ;
     }
 
     std::string MetaUtil::upper(std::string s) {
@@ -366,6 +375,34 @@ namespace MetaTrans {
         return 0;
     }
 
+    DataType MetaUtil::extractDataType(std::string& src) {
+        if (MetaUtil::startwith("char", src)) return DataType::INT;
+        if (MetaUtil::startwith("int", src)) return DataType::INT;
+        if (MetaUtil::startwith("float", src)) return DataType::FLOAT;
+        if (MetaUtil::startwith("double", src)) return DataType::FLOAT;
+        if (MetaUtil::startwith("bool", src)) return DataType::BOOL;
+        // TODO
+        return DataType::VOID;
+    }
+
+
+    int MetaUtil::extractDataWidth(std::string& src) {
+        if (MetaUtil::startwith("char", src)) return 8;
+        if (MetaUtil::startwith("int", src)) return 32;
+        if (MetaUtil::startwith("long", src)) return 32;
+        if (MetaUtil::startwith("long long", src)) return 64;
+        if (MetaUtil::startwith("float", src)) return 32;
+        if (MetaUtil::startwith("double", src)) return 64;
+        if (MetaUtil::startwith("bool", src)) return 8;
+        return 0;
+    }
+
+    int MetaUtil::extractPtrLevel(std::string& src) {
+        int count = 0;
+        for (int i = 0; i < src.length(); ++i) if (src[i] == '*') ++count;
+        return count;
+    }
+
     // if type is COMPUTING, each time check whether inst is addrGen; if is, type change to ADDRESSING next time;
     // if type is ADDRESSING, color inst as ADDRESSING until 'lui'
     // return last color used
@@ -502,8 +539,19 @@ namespace MetaTrans {
                                     p->numStore, p->numPHI, p->numGEP);
                             startColor++;
                     }
-                }
-                else if(inst->isType(InstType::JUMP)) {
+                }else if(inst->isType(InstType::CALL) || inst->isMetaCall()) {
+                    std::cout << "IsCall" << std::endl;
+                    std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
+                    inst->setColor(startColor, COLORTYPE::CONTROLFLOW);
+                    for(int i = 0; i < ops.size(); i++) {
+                        Path* p = new Path{(MetaInst*)(ops[i]), 2, 0, 0, 0, 0};
+                        printf("Color: %d, Type: Call\n", startColor);
+                        printf("%x(%d) CALL,  -> \n", inst, startColor);
+                        std::unordered_set<MetaInst*> set;
+                        startColor = paintInsColorRecursive((MetaInst*)(ops[i]), startColor, COLORTYPE::COMPUTING, 0, p, set);
+                        startColor++;
+                    }
+                }else if(inst->isType(InstType::JUMP)) {
                     std::cout << "IsJump" << std::endl;
                     inst->setColor(startColor, COLORTYPE::CONTROLFLOW);
                 }
