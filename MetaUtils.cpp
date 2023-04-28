@@ -327,6 +327,7 @@ namespace MetaTrans {
             case Type::ArrayTyID:
             case Type::FixedVectorTyID:
             case Type::ScalableVectorTyID:
+                printf("NFO: Unrecognized type %d\n", dataType.getTypeID());
                 break;
             default:
                 break;
@@ -376,17 +377,20 @@ namespace MetaTrans {
     }
 
     DataType MetaUtil::extractDataType(std::string& src) {
+        MetaUtil::strip(" ", src);
         if (MetaUtil::startwith("char", src)) return DataType::INT;
         if (MetaUtil::startwith("int", src)) return DataType::INT;
         if (MetaUtil::startwith("float", src)) return DataType::FLOAT;
         if (MetaUtil::startwith("double", src)) return DataType::FLOAT;
         if (MetaUtil::startwith("bool", src)) return DataType::BOOL;
         // TODO
+        printf("WARN: Didn't find type of %s\n", src.c_str());
         return DataType::VOID;
     }
 
 
     int MetaUtil::extractDataWidth(std::string& src) {
+        MetaUtil::strip(" ", src);
         if (MetaUtil::startwith("char", src)) return 8;
         if (MetaUtil::startwith("int", src)) return 32;
         if (MetaUtil::startwith("long", src)) return 32;
@@ -394,6 +398,7 @@ namespace MetaTrans {
         if (MetaUtil::startwith("float", src)) return 32;
         if (MetaUtil::startwith("double", src)) return 64;
         if (MetaUtil::startwith("bool", src)) return 8;
+        printf("WARN: Didn't find length of %s\n", src.c_str());
         return 0;
     }
 
