@@ -365,7 +365,18 @@ public:
 
     void dumpPath(int index);
 
+    // 创建固定个数的nullptr操作数
+    MetaInst& initOperands(int num);
+
     MetaInst& addOperand(MetaOperand* op);
+
+    MetaInst& addOperandAt(MetaOperand* op, int index);
+
+    MetaInst& addOperandAtLast(MetaOperand* op);
+
+    // if nullptr exists in operandList, return false.
+    // else return true
+    bool checkOperands();
 
     std::string getOriginInst();
 

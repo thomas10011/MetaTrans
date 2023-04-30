@@ -347,11 +347,39 @@ namespace MetaTrans {
         MetaOperand::setParentScope(scope);
         return *this;
     }
+    
+    MetaInst& MetaInst::initOperands(int num) {
+        while (num-- > 0) operandList.push_back(nullptr);
+        return *this;
+    }
 
     MetaInst& MetaInst::addOperand(MetaOperand* op) {
         operandList.push_back(op);
         op->addUser(this);
         return *this;
+    }
+
+    MetaInst& MetaInst::addOperandAt(MetaOperand* op, int index) {
+        // while (operandList.size() <= index) operandList.push_back(nullptr);
+        operandList[index] = op;
+        return *this;
+    }
+
+    MetaInst& MetaInst::addOperandAtLast(MetaOperand* op) {
+        operandList[operandList.size() - 1] = op;
+    }
+
+    bool MetaInst::checkOperands() {
+        printf("size of %s operands: %d\n", originInst.c_str(), operandList.size());
+        for (int i = 0; i < operandList.size(); ++i) {
+            MetaOperand* op = operandList[i];
+            printf("%d ", op);
+        }
+        for (int i = 0; i < operandList.size(); ++i) {
+            MetaOperand* op = operandList[i];
+            if (!op) return false;
+        }
+        return true;
     }
 
     MetaInst& MetaInst::buildFromJSON(MetaUnitBuildContext& context) {
