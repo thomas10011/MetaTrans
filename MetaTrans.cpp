@@ -361,25 +361,28 @@ namespace MetaTrans {
 
     MetaInst& MetaInst::addOperandAt(MetaOperand* op, int index) {
         // while (operandList.size() <= index) operandList.push_back(nullptr);
-        operandList[index] = op;
+        operandList.at(index) = op;
         return *this;
     }
 
     MetaInst& MetaInst::addOperandAtLast(MetaOperand* op) {
-        operandList[operandList.size() - 1] = op;
+        operandList.at(operandList.size() - 1) = op;
     }
 
     bool MetaInst::checkOperands() {
-        printf("size of %s operands: %d\n", originInst.c_str(), operandList.size());
+        int validNum = 0;
+        // This will contains rs1/2/3 and immediate
         for (int i = 0; i < operandList.size(); ++i) {
             MetaOperand* op = operandList[i];
-            printf("%d ", op);
+            if (!op) {
+                printf("WARNING: checkOperands FAIL! at operandList[%d]\n", i);
+            }else {
+                validNum++;
+                printf("operandList[%d]: %d \n", i, op);
+            }
         }
-        for (int i = 0; i < operandList.size(); ++i) {
-            MetaOperand* op = operandList[i];
-            if (!op) return false;
-        }
-        return true;
+        printf("ERROR: %d %s checkOperands validNum %d %c= this->NumOperands %d\n", this, originInst.c_str(), validNum, this->NumOperands, validNum != this->NumOperands ? '!' : '=');
+        return validNum == this->NumOperands;
     }
 
     MetaInst& MetaInst::buildFromJSON(MetaUnitBuildContext& context) {
@@ -441,13 +444,23 @@ namespace MetaTrans {
 
     int MetaInst::getOperandNum() { return operandList.size(); }
 
+    int MetaInst::getNumOperands() {return NumOperands;}
+
+    void MetaInst::setNumOperands(int i) {NumOperands = i;}
+
     std::vector<InstType> MetaInst::getInstType() { return type; }
 
-    std::vector<MetaOperand*>& MetaInst::getOperandList() { return operandList; }
+    std::vector<MetaOperand*> MetaInst::getOperandList() {
+        std::vector<MetaOperand*> ans;
+        for(int i = 0; i < operandList.size(); i++) 
+            if(operandList[i]) 
+                ans.push_back(operandList[i]);
+        return ans;
+    }
 
     std::vector<MetaInst*> MetaInst::getOperandOnlyInstList() {
         std::vector<MetaInst*> ans;
-        for(int i = 0; i < operandList.size(); i++) if(operandList[i]->isMetaInst()) ans.push_back(dynamic_cast<MetaInst*>(operandList[i]));
+        for(int i = 0; i < operandList.size(); i++) if(operandList[i] && operandList[i]->isMetaInst()) ans.push_back(dynamic_cast<MetaInst*>(operandList[i]));
         return ans;
     }
 
@@ -496,7 +509,7 @@ namespace MetaTrans {
 
     std::string MetaInst::toString() {
         std::string opList = operandList.size() == 0 ? "[]" : "[";
-        for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        for (MetaOperand* oprand : operandList) { if(oprand) opList = opList + std::to_string(oprand->getID()) + ","; }
         std::string userList = users.size() == 0 ? "[]" : "[";
         for (MetaOperand* user : users) { userList = userList + std::to_string(user->getID()) + ","; }
         std::string path = "[";
@@ -1771,7 +1784,7 @@ namespace MetaTrans {
 
     std::string MetaCall::toString() {
         std::string opList = operandList.size() == 0 ? "[]" : "[";
-        for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        for (MetaOperand* oprand : operandList) { if(oprand) opList = opList + std::to_string(oprand->getID()) + ","; }
         opList[opList.length() - 1] = ']'; 
         
         std::string userList = users.size() == 0 ? "[]" : "[";

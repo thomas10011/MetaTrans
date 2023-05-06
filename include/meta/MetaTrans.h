@@ -313,7 +313,7 @@ protected:
 
     std::vector<std::vector<int>> typeSrc;
 
-    std::vector<MetaOperand*> operandList;
+    std::vector<MetaOperand*> operandList; // when `initOperands`, resize it to MAX_OPERAND. so [0-2] is rs1-rs3, [3] is imm
 
     InstMetaData metaData;
 
@@ -342,6 +342,8 @@ protected:
     llvm::Instruction* TransInst = NULL;
 
     bool AddrGenFlag = false;
+
+    int NumOperands = 0;
 
 public:
 
@@ -386,7 +388,7 @@ public:
 
     std::vector<InstType> getInstType();
 
-    std::vector<MetaOperand*>& getOperandList();
+    std::vector<MetaOperand*> getOperandList();
 
     std::vector<MetaInst*> getOperandOnlyInstList();
 
@@ -491,6 +493,10 @@ public:
     MetaInst& setAddrGen(bool b);
 
     bool ifAddrGen();
+
+    int getNumOperands();
+
+    void setNumOperands(int i);
 
 };
 

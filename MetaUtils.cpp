@@ -452,7 +452,7 @@ namespace MetaTrans {
         visited.insert(inst);
         std::vector<MetaOperand*> ops = inst->getOperandList();
         for(int i = 0; i < ops.size(); i++) {
-            if (!(ops[i]->isMetaInst())) continue;
+            if (!ops[i] || !(ops[i]->isMetaInst())) continue;
 
             int newColor = paintInsColorRecursive((MetaInst*)(ops[i]), color, type, depth + 1, p, visited);
             if(newColor != color) {
