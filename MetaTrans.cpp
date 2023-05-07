@@ -381,8 +381,24 @@ namespace MetaTrans {
                 printf("operandList[%d]: %d \n", i, op);
             }
         }
-        printf("ERROR: %d %s checkOperands validNum %d %c= this->NumOperands %d\n", this, originInst.c_str(), validNum, this->NumOperands, validNum != this->NumOperands ? '!' : '=');
+        printf("INFO: %d %s checkOperands validNum %d %c= this->NumOperands %d\n", this, originInst.c_str(), this->NumOperands, validNum != this->NumOperands ? '!' : '=', validNum);
         return validNum == this->NumOperands;
+    }
+
+    MetaInst& MetaInst::checkNullOperands() {
+        for (MetaOperand* op : operandList) {
+            if (op == nullptr) printf("ERROR: Find nullptr operand with inst %s (id=%d)!\n", getOriginInst().c_str(), getID());
+        }
+        return *this;
+    }
+
+    MetaInst& MetaInst::filterNullOperands() {
+        auto iter = operandList.begin();
+        while (iter != operandList.end()) {
+            if (*iter == nullptr) iter = operandList.erase(iter);
+            else ++iter;
+        }
+        return *this;
     }
 
     MetaInst& MetaInst::buildFromJSON(MetaUnitBuildContext& context) {

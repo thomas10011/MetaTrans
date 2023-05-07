@@ -370,6 +370,11 @@ public:
     // 创建固定个数的nullptr操作数
     MetaInst& initOperands(int num);
 
+    // 将所有为nullptr的operand去除
+    MetaInst& filterNullOperands();
+
+    MetaInst& checkNullOperands();
+
     MetaInst& addOperand(MetaOperand* op);
 
     MetaInst& addOperandAt(MetaOperand* op, int index);
