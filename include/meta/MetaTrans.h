@@ -393,7 +393,7 @@ public:
 
     std::vector<InstType> getInstType();
 
-    std::vector<MetaOperand*> getOperandList();
+    std::vector<MetaOperand*>& getOperandList();
 
     std::vector<MetaInst*> getOperandOnlyInstList();
 

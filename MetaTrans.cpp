@@ -378,10 +378,10 @@ namespace MetaTrans {
                 printf("WARNING: checkOperands FAIL! at operandList[%d]\n", i);
             }else {
                 validNum++;
-                printf("operandList[%d]: %d \n", i, op);
+                printf("operandList[%d]: %s \n", i, op->toString().c_str());
             }
         }
-        printf("INFO: %d %s checkOperands validNum %d %c= this->NumOperands %d\n", this, originInst.c_str(), this->NumOperands, validNum != this->NumOperands ? '!' : '=', validNum);
+        printf("INFO: %d %s checkOperands validNum %d %c= this->NumOperands %d\n", this, originInst.c_str(), validNum, validNum != this->NumOperands ? '!' : '=', this->NumOperands);
         return validNum == this->NumOperands;
     }
 
@@ -466,12 +466,8 @@ namespace MetaTrans {
 
     std::vector<InstType> MetaInst::getInstType() { return type; }
 
-    std::vector<MetaOperand*> MetaInst::getOperandList() {
-        std::vector<MetaOperand*> ans;
-        for(int i = 0; i < operandList.size(); i++) 
-            if(operandList[i]) 
-                ans.push_back(operandList[i]);
-        return ans;
+    std::vector<MetaOperand*>& MetaInst::getOperandList() {
+        return operandList;
     }
 
     std::vector<MetaInst*> MetaInst::getOperandOnlyInstList() {
