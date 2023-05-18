@@ -413,6 +413,7 @@ namespace MetaTrans {
     // return last color used
     int MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
         if(visited.count(inst)) return color;
+        if (inst->isMetaPhi()) return color;
 
         if (type == COLORTYPE::ADDRESSINGCOLOR) {
             printf("INFO: Coloring inst(%s, %d) for addressing. \n", inst->getOriginInst().c_str(), inst->getID());

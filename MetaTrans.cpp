@@ -374,9 +374,7 @@ namespace MetaTrans {
         // This will contains rs1/2/3 and immediate
         for (int i = 0; i < operandList.size(); ++i) {
             MetaOperand* op = operandList[i];
-            if (!op) {
-                printf("WARNING: checkOperands FAIL! at operandList[%d]\n", i);
-            }else {
+            if (op) {
                 validNum++;
                 printf("operandList[%d]: %s \n", i, op->toString().c_str());
             }
