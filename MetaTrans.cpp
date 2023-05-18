@@ -374,9 +374,7 @@ namespace MetaTrans {
         // This will contains rs1/2/3 and immediate
         for (int i = 0; i < operandList.size(); ++i) {
             MetaOperand* op = operandList[i];
-            if (!op) {
-                printf("WARNING: checkOperands FAIL! at operandList[%d]\n", i);
-            }else {
+            if (op) {
                 validNum++;
                 printf("operandList[%d]: %s \n", i, op->toString().c_str());
             }
@@ -840,7 +838,7 @@ namespace MetaTrans {
 
     void dumpMapping(std::string mapping){
 
-        std::cout <<  "\nDEBUG:: Create Instruction Mapping:\n" << BOLD << GRN << mapping << RST <<std::endl;
+        std::cout <<  "\nDEBUG:: Create Instruction Mapping: " << BOLD << GRN << mapping << RST <<std::endl;
         std::cout << std::endl;
     }
 
@@ -1094,8 +1092,8 @@ namespace MetaTrans {
                 if(fused[i]->getOriginInst().find("icmp") != std::string::npos) {
                 // Now: icmp->operand[0] = icmp.rs2, icmp->operand[1] = icmp.rs1; bge/lt/...->operand[0] = target_imm, [1] = rs1, [2] = rs2; need to reverse icmp->operand
                     std::reverse(std::begin(tmpvec), std::end(tmpvec));
-                    if(numOfOp < 1) {
-                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " < 1, cannot build mapping!\n" << RST;
+                    if(numOfOp < 2) {
+                        std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " < 2, cannot build mapping!\n" << RST;
                         return "";
                     }
                 }
@@ -1127,7 +1125,7 @@ namespace MetaTrans {
                             if(tmpvec[idd] == NULL) {
                                 continue;
                             }else if(tmpvec[idd]->isMetaConstant()) {
-                                // skip++;
+                                skip++;
                                 continue;
                             }
                             find = ifFind ((tmpvec[idd]), AsmMatch);

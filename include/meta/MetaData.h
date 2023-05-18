@@ -17,7 +17,7 @@ enum DataType {
 
 typedef struct ColorData {
     int color;
-    int type; // 0 addressing 1 data computing 2 control flow
+    int type; // 0 addressing 1 computing 2 control flow 3 memory operation
     explicit ColorData(const int& c, const int& t) : color(c), type(t) {}
     bool operator <(const ColorData& obj) const {
         return color < obj.color;

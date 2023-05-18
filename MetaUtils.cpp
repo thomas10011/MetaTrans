@@ -327,7 +327,6 @@ namespace MetaTrans {
             case Type::ArrayTyID:
             case Type::FixedVectorTyID:
             case Type::ScalableVectorTyID:
-                printf("NFO: Unrecognized type %d\n", dataType.getTypeID());
                 break;
             default:
                 break;
@@ -412,7 +411,8 @@ namespace MetaTrans {
     // if type is ADDRESSING, color inst as ADDRESSING until 'lui'
     // return last color used
     int MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
-        if(visited.count(inst)) return color;
+        if (visited.count(inst)) return color;
+        if (inst->isMetaPhi()) return color;
 
         if (type == COLORTYPE::ADDRESSINGCOLOR) {
             printf("INFO: Coloring inst(%s, %d) for addressing. \n", inst->getOriginInst().c_str(), inst->getID());
@@ -446,7 +446,7 @@ namespace MetaTrans {
 
         printf(" -> \n");
 
-        if (inst->getOriginInst() == "lui" || inst->isMemOp() || inst->isMetaPhi()) return color;
+        if (inst->getOriginInst() == "lui" || inst->isMemOp()) return color;
 
         // Paint until `lui` or no upstream instruction
         visited.insert(inst);
@@ -479,7 +479,7 @@ namespace MetaTrans {
                     std::get<0>(counts) = std::get<0>(counts) + 1;
                     std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
                     std::cout << "Store Coloring... "  <<  std::endl;
-                    inst->setColor(startColor, COLORTYPE::STOREINST);
+                    inst->setColor(startColor, COLORTYPE::MEMOP);
                     for (int i = 0; i < ops.size(); i++) {
                             Path* p = new Path{(MetaInst*)(ops[i]), i, 0, 0, 0, 0};
                             inst->addToPath(p);
@@ -503,7 +503,7 @@ namespace MetaTrans {
                     std::get<1>(counts) = std::get<1>(counts) + 1;
                     std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
                     std::cout << "IsLoad " << ops.size() <<  std::endl;
-                    inst->setColor(startColor, COLORTYPE::LOADINST);
+                    inst->setColor(startColor, COLORTYPE::MEMOP);
                     for(int i = 0; i < ops.size(); i++) {
                             Path* p = new Path{(MetaInst*)(ops[i]), 1, 0, 0, 0, 0};
                             inst->addToPath(p);
@@ -547,7 +547,8 @@ namespace MetaTrans {
                 }else if(inst->isType(InstType::CALL) || inst->isMetaCall()) {
                     std::cout << "IsCall" << std::endl;
                     std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
-                    inst->setColor(startColor, COLORTYPE::CONTROLFLOW);
+                    // call应该当成computing翻译而不是control flow
+                    inst->setColor(startColor, COLORTYPE::COMPUTING);
                     for(int i = 0; i < ops.size(); i++) {
                         Path* p = new Path{(MetaInst*)(ops[i]), 2, 0, 0, 0, 0};
                         printf("Color: %d, Type: Call\n", startColor);
@@ -578,9 +579,9 @@ namespace MetaTrans {
                 if(inst->getColor()->type == -1) {
                     count++;
                     if(inst->ifAddrGen()) {addrcount++; inst->setColor(-1, COLORTYPE::ADDRESSINGCOLOR);}
-                    else if(inst->isLoad()) {inst->setColor(-1, COLORTYPE::LOADINST);}
-                    else if(inst->isStore()) {inst->setColor(-1, COLORTYPE::STOREINST);}
-                    else if(inst->isType(InstType::BRANCH) || inst->isType(InstType::JUMP)) {inst->setColor(-1, COLORTYPE::CONTROLFLOW);}
+                    else if(inst->isLoad()) {inst->setColor(-1, COLORTYPE::MEMOP);}
+                    else if(inst->isStore()) {inst->setColor(-1, COLORTYPE::MEMOP);}
+                    else if(inst->isType(InstType::BRANCH) || inst->isType(InstType::JUMP) || inst->isType(InstType::RET)) {inst->setColor(-1, COLORTYPE::CONTROLFLOW);}
                     else {computecount++; inst->setColor(-1, COLORTYPE::COMPUTING);}
                     printf(
                         "WARN: Found uncolored inst(%s, %d, %s), isAddrGen = %d.\n", 

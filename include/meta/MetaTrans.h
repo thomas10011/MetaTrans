@@ -81,8 +81,7 @@ enum COLORTYPE {
     ADDRESSINGCOLOR,
     COMPUTING,
     CONTROLFLOW,
-    LOADINST,
-    STOREINST
+    MEMOP
 };
 
 // struct for path (data compute/addressing/control flow)
@@ -313,7 +312,7 @@ protected:
 
     std::vector<std::vector<int>> typeSrc;
 
-    std::vector<MetaOperand*> operandList; // when `initOperands`, resize it to MAX_OPERAND. so [0-2] is rs1-rs3, [3] is imm
+    std::vector<MetaOperand*> operandList; // when `initOperands`, resize it to MAX_OPERAND_WITH_ARGUMENTS. so [0-2] is rs1-rs3, [3] is imm; [4-11] a0-a7 and [12-19] fa0-fa7 only for jal 
 
     InstMetaData metaData;
 
@@ -502,6 +501,8 @@ public:
     int getNumOperands();
 
     void setNumOperands(int i);
+
+    
 
 };
 
