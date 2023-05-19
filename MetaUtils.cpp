@@ -129,6 +129,32 @@ namespace MetaTrans {
 
     }
 
+    bool MetaUtil::contain(std::string s, std::string& text) {
+        int n = s.length(), m = text.length();
+        int next[n];
+        for (int i = 1, j = next[0] = -1; i < n; ) {
+            if (j < 0 || s[i - 1] == s[j]) next[i++] = ++j;
+            else j = next[j];
+        }
+        for (int i = 0, j = 0; i < m; ) {
+            if (j == n - 1 && s[j] == text[i]) {
+                return true;
+            }
+            else if (j < 0 || s[j] == text[i]) {
+                ++i; ++j;
+            }
+            else j = next[j];
+        }
+        return false;
+    }
+
+    bool MetaUtil::isEmpty(std::string s) {
+        if (s.length() == 0) return true;
+        for (int i = 0; i < s.length(); ++i) {
+            if (s[i] != ' ' || s[i] != '\n' || s[i] != '\t') return false;
+        }
+        return true;
+    }
 
     void MetaUtil::strip(std::string s, std::string& text) {
         int n = s.length(), m = text.length();

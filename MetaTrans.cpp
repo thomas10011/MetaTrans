@@ -217,6 +217,12 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaConstant& MetaConstant::abs() {
+        if (MetaUtil::startwith("-", valueStr)) {
+            valueStr = valueStr.substr(1);
+        }
+    }
+
     std::string MetaConstant::getValueStr() {
         return valueStr;
     }
@@ -2823,6 +2829,8 @@ namespace MetaTrans {
 /// MetaScope implementation.
     
     MetaScope::MetaScope() : parent(nullptr), id(-1) { }
+
+    MetaScope::~MetaScope() { }
 
     int MetaScope::getID() { return id; }
 

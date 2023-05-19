@@ -209,12 +209,22 @@ public:
             std::cout << "key: "<< pair->first << "  -->>  " << "value: " << pair->second << std::endl;
     }
 
+    // text中是否包含s
+    static bool contain(std::string s, std::string& text);
+
+    // s是否为空串或者由空字符组成
+    static bool isEmpty(std::string s);
+
+    // 去除text两端的s
     static void strip(std::string s, std::string& text);
 
+    // 根据delimiter切分text
     static std::vector<std::string> split(std::string delimiter, const std::string& text);
 
+    // 根据delimiter连接字符串
     static std::string join(std::string delimiter, const std::vector<std::string>& list);
 
+    // text是否以s开头
     static bool startwith(std::string s, std::string& text);
 
     static std::string toString(DataType type);

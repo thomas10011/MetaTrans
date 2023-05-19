@@ -111,6 +111,8 @@ private:
 protected:
 public:
                 MetaScope       ()                ;
+                
+    virtual     ~MetaScope      ()                ;
 
     MetaScope&  setParentScope  (MetaScope* scope);
 
@@ -236,6 +238,9 @@ public:
     MetaConstant& setWidth(int w);
 
     MetaConstant& setType(MetaPrimType ty);
+
+    // 取绝对值
+    MetaConstant& abs();
 
     bool isGlobal();
 
