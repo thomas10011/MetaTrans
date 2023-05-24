@@ -368,11 +368,14 @@ namespace MetaTrans {
     MetaInst& MetaInst::addOperandAt(MetaOperand* op, int index) {
         // while (operandList.size() <= index) operandList.push_back(nullptr);
         operandList.at(index) = op;
+        op->addUser(this);
         return *this;
     }
 
     MetaInst& MetaInst::addOperandAtLast(MetaOperand* op) {
         operandList.at(operandList.size() - 1) = op;
+        op->addUser(this);
+        return *this;
     }
 
     bool MetaInst::checkOperands() {
