@@ -585,6 +585,7 @@ protected:
     
     // point to next BB if exists.
     std::vector<MetaBB*> successors;
+    std::vector<MetaBB*> predecessors;
 
     // first non phi instruction.
     MetaInst* entry;
@@ -595,6 +596,8 @@ protected:
     std::vector<int> features;
 
     double modular;
+    
+    MetaBB& addPrevBB(MetaBB* prev);
 
 public:
 
@@ -649,6 +652,8 @@ public:
     int isSelfLoop();
 
     std::vector<MetaBB*> getNextBB();
+
+    std::vector<MetaBB*> getPrevBB();
 
     MetaBB* getNextBB(int index);
 

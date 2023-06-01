@@ -1896,6 +1896,13 @@ namespace MetaTrans {
 
     MetaBB& MetaBB::addNextBB(MetaBB* next) {
         successors.push_back(next);
+        next->addPrevBB(this);
+        return *this;
+    }
+
+
+    MetaBB& MetaBB::addPrevBB(MetaBB* prev) {
+        predecessors.push_back(prev);
         return *this;
     }
 
@@ -1993,6 +2000,8 @@ namespace MetaTrans {
     }
 
     std::vector<MetaBB*> MetaBB::getNextBB() { return successors; }
+
+    std::vector<MetaBB*> MetaBB::getPrevBB() { return predecessors; }
 
     std::vector<int> MetaBB::getFeature() { return features; }
 
