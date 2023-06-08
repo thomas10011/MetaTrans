@@ -451,7 +451,7 @@ namespace MetaTrans {
         inst->setColor(color, type);
 
         for(int i = -1; i < depth; i++) {std::cout << "  ";}
-        printf("%x(%d, %d) %s ", inst, color, type, inst->getOriginInst().c_str());
+        printf("0x%x(%d, %d) %s ", inst->getAddress(), color, type, inst->getOriginInst().c_str());
         std::vector<InstType> types = inst->getInstType();
         // 处理Path相关
         for (int i = 0; i < types.size(); i++) {

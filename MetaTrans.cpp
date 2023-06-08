@@ -575,7 +575,13 @@ namespace MetaTrans {
         return str;
     }
 
-    void MetaInst::setColor(int c, int t) { color.color = c; color.type = t; }
+    void MetaInst::setColor(int c, int t) {
+        if (color.type != -1) {
+            printf("WARN: Trying to change inst(id = %d) color from %d to %d! This operation will be ignored.\n", getID(), color.type, t);
+            return;
+        }
+        color.color = c; color.type = t; 
+    }
 
     ColorData* MetaInst::getColor() { return &color; }
 
