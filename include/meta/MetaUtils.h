@@ -227,6 +227,8 @@ public:
     // text是否以s开头
     static bool startwith(std::string s, std::string& text);
 
+    static bool isNumber(std::string s);
+
     static std::string toString(DataType type);
 
     static DataType stringToDataType(std::string str);

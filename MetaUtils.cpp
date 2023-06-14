@@ -2,6 +2,7 @@
 #include <fstream>
 #include <iostream>
 #include <unistd.h>
+#include <regex>
 
 
 namespace MetaTrans {
@@ -216,6 +217,11 @@ namespace MetaTrans {
         if (s.length() > text.length()) return false;
         for (int i = 0; i < s.length(); ++i) if (s[i] != text[i]) return false;
         return true;
+    }
+
+    bool MetaUtil::isNumber(std::string s) {
+        std::regex reg("[-+]?([0-9]*\.[0-9]+|[0-9]+)");
+        return std::regex_match(s, reg);
     }
 
     std::string MetaUtil::toString(DataType type) {
@@ -439,6 +445,7 @@ namespace MetaTrans {
     int MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
         if (visited.count(inst)) return color;
         if (inst->isMetaPhi()) return color;
+        if (inst->isType(InstType::JUMP)) return color;
 
         if (type == COLORTYPE::ADDRESSINGCOLOR) {
             printf("INFO: Coloring inst(%s, %d) for addressing. \n", inst->getOriginInst().c_str(), inst->getID());
