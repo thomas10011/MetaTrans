@@ -277,6 +277,9 @@ public:
     
     static unsigned long long getAvailableMemory();
 
+    static int count_args(const char* fmt);
+
+
 };
 
 template<class X, class Y>

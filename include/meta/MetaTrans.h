@@ -349,6 +349,8 @@ protected:
 
     int NumOperands = 0;
 
+    MetaPrimType dataType;
+
 public:
 
     MetaInst();
@@ -362,6 +364,8 @@ public:
     MetaInst& setInstType(std::vector<InstType> ty);
 
     MetaInst& setInstType(InstType ty);
+
+    MetaInst& setDataType(MetaPrimType ty);
 
     MetaInst& setTypeSrc(std::vector<std::vector<int>>);
 
@@ -506,6 +510,8 @@ public:
     int getNumOperands();
 
     void setNumOperands(int i);
+
+    MetaPrimType getDataType();
 
     
 

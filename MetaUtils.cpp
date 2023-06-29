@@ -709,4 +709,58 @@ namespace MetaTrans {
         set.erase(inst);
         return ans;
     }
+
+    // A function that returns true if a character is a format flag
+    bool is_flag(char c) {
+    return c == '+' || c == '-' || c == '0' || c == '#' || c == ' ';
+    }
+
+    // A function that returns true if a character is a length modifier
+    bool is_length(char c) {
+    return c == 'h' || c == 'l' || c == 'j' || c == 'z' || c == 't' || c == 'L';
+    }
+
+    // A function that counts the number of arguments based on the format string printf/scanf
+    int MetaUtil::count_args(const char* fmt) {
+        int count = 0; // The number of arguments
+        bool percent = false; // A flag to indicate if we are parsing a format specifier
+        bool width = false; // A flag to indicate if we are parsing a field width
+        bool precision = false; // A flag to indicate if we are parsing a precision
+        char c; // The current character
+
+        while ((c = *fmt++) != '\0') { // Loop until the end of the string
+            if (percent) { // If we are parsing a format specifier
+            if (c == '%') { // If we see an escaped percent sign
+                percent = false; // Reset the flag
+            } else if (is_flag(c)) { // If we see a format flag
+                // Do nothing, just skip it
+            } else if (c == '*') { // If we see a variable field width or precision
+                count++; // Increment the argument count
+                if (width) { // If we are parsing a field width
+                width = false; // Reset the flag
+                } else if (precision) { // If we are parsing a precision
+                precision = false; // Reset the flag
+                }
+            } else if (c >= '1' && c <= '9') { // If we see a digit
+                if (!width && !precision) { // If we are not parsing a field width or precision
+                width = true; // Set the flag for field width
+                }
+            } else if (c == '.') { // If we see a decimal point
+                precision = true; // Set the flag for precision
+            } else if (is_length(c)) { // If we see a length modifier
+                // Do nothing, just skip it
+            } else { // If we see anything else
+                count++; // Increment the argument count
+                percent = false; // Reset the flag
+            }
+            } else { // If we are not parsing a format specifier
+            if (c == '%') { // If we see a percent sign
+                percent = true; // Set the flag for format specifier
+            }
+            }
+        }
+
+        return count; // Return the number of arguments
+    }
+
 }

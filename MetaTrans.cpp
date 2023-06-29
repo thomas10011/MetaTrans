@@ -344,6 +344,11 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaInst& MetaInst::setDataType(MetaPrimType ty) {
+        this->dataType = ty;
+        return *this;
+    }
+
     MetaInst& MetaInst::addInstType(InstType ty) {
         type.push_back(ty);
         return *this;
@@ -451,6 +456,10 @@ namespace MetaTrans {
 
     std::string MetaInst::getOriginInst() {
         return originInst;
+    }
+
+    MetaPrimType MetaInst::getDataType() {
+        return dataType;
     }
 
     bool MetaInst::isLoad() { for (auto ty : type) if (ty == InstType::LOAD) return true; return false; }
