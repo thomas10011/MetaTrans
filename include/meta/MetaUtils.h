@@ -224,6 +224,9 @@ public:
     // 根据delimiter连接字符串
     static std::string join(std::string delimiter, const std::vector<std::string>& list);
 
+    // 去除text两端的空字符，返回新的字符串，不改变str
+    static std::string trim(std::string str);
+
     // text是否以s开头
     static bool startwith(std::string s, std::string& text);
 

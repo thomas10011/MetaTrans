@@ -2404,7 +2404,7 @@ namespace MetaTrans {
 
     std::vector<MetaBB*>& MetaFunction::getBB() { return bbs; }
 
-    MetaArgument* MetaFunction::getArgument(int index) { return args[index]; }
+    MetaArgument* MetaFunction::getArgument(int index) { return args.at(index); }
 
     std::string MetaFunction::getFunctionName() { return funcName; }
 
@@ -2992,6 +2992,9 @@ std::string CodePiece::toString() {
     MetaFunction* MetaUnitBuildContext::getMetaFunction(int64_t id) {
         return (MetaFunction*) scopeMap[id];
     }
+
+//===-------------------------------------------------------------------------------===//
+
 
 
 } // end namespace MetaTrans

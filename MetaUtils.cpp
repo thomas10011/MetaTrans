@@ -212,6 +212,21 @@ namespace MetaTrans {
         return ret;
     }
 
+    std::string MetaUtil::trim(std::string str) {
+        // remove the space in the head and tail
+        if (str.length() == 0) {
+            return str;
+        }else if(str.length() == 1 && str[0] == ' ') {
+            return "";
+        }
+        std::string ans = str;
+        std::string blanks("\f\v\r\t\n ");
+        ans.erase(0,str.find_first_not_of(blanks));
+        ans.erase(str.find_last_not_of(blanks) + 1);
+        return ans;
+    }
+
+
 
     bool MetaUtil::startwith(std::string s, std::string& text) {
         if (s.length() > text.length()) return false;
@@ -453,6 +468,10 @@ namespace MetaTrans {
         if(type != COLORTYPE::ADDRESSINGCOLOR && inst->ifAddrGen()) {
             color++;
             type = COLORTYPE::ADDRESSINGCOLOR;
+        }
+        if(type == COLORTYPE::ADDRESSINGCOLOR && !inst->ifAddrGen()) {
+            color++;
+            type = COLORTYPE::COMPUTING;
         }
 
         inst->setColor(color, type);
