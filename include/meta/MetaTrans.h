@@ -347,6 +347,8 @@ protected:
 
     bool AddrGenFlag = false;
 
+    bool sign = true;
+
     int NumOperands = 0;
 
     MetaPrimType dataType;
@@ -507,6 +509,12 @@ public:
 
     bool ifAddrGen();
 
+    bool isUnsigned();
+
+    bool isSigned();
+
+    MetaInst& setSigned(bool sign);
+
     int getNumOperands();
 
     void setNumOperands(int i);
@@ -563,6 +571,8 @@ protected:
 
     MetaFunction* func;
 
+    bool tailCall = false;
+
 public:
 
     MetaCall();
@@ -574,6 +584,10 @@ public:
     std::string getFuncName();
 
     MetaFunction* getMetaFunction();
+
+    bool isTailCall();
+
+    MetaCall& setTailCall(bool);
 
     virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context) override;
 

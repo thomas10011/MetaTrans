@@ -10,7 +10,7 @@
 using namespace llvm;
 
 namespace MetaTrans {
-    static std::vector<std::string> InstTypeName = {"LOAD", "STORE", "COMPARE", "CALL", "BRANCH", "JUMP", "PHI", "ADD", "SUB", "MUL", "DIV", "REMAINDER", "AND", "OR", "XOR", "SHIFT", "NEG", "RET", "ALLOCATION", "ADDRESSING", "EXCEPTION", "SWAP", "MIN", "MAX", "SQRT", "FENCE", "CONVERT", "HINT", "MOV"};
+    static std::vector<std::string> InstTypeName = {"LOAD", "STORE", "COMPARE", "CALL", "BRANCH", "JUMP", "PHI", "ADD", "SUB", "MUL", "DIV", "REMAINDER", "AND", "OR", "XOR", "SHIFT", "NEG", "RET", "ALLOCATION", "ADDRESSING", "EXCEPTION", "SWAP", "MIN", "MAX", "SQRT", "FENCE", "CONVERT", "HINT", "MOV", "CSR", "SIGN"};
 
 class YamlUtil {
 
@@ -225,10 +225,10 @@ public:
     static std::string join(std::string delimiter, const std::vector<std::string>& list);
 
     // 去除text两端的空字符，返回新的字符串，不改变str
-    static std::string trim(std::string str);
+    static std::string trim(const std::string& str);
 
     // text是否以s开头
-    static bool startwith(std::string s, std::string& text);
+    static bool startwith(std::string s, const std::string& text);
 
     static bool isNumber(std::string s);
 

@@ -212,7 +212,7 @@ namespace MetaTrans {
         return ret;
     }
 
-    std::string MetaUtil::trim(std::string str) {
+    std::string MetaUtil::trim(const std::string& str) {
         // remove the space in the head and tail
         if (str.length() == 0) {
             return str;
@@ -228,7 +228,7 @@ namespace MetaTrans {
 
 
 
-    bool MetaUtil::startwith(std::string s, std::string& text) {
+    bool MetaUtil::startwith(std::string s, const std::string& text) {
         if (s.length() > text.length()) return false;
         for (int i = 0; i < s.length(); ++i) if (s[i] != text[i]) return false;
         return true;
@@ -464,15 +464,16 @@ namespace MetaTrans {
 
         if (type == COLORTYPE::ADDRESSINGCOLOR) {
             printf("INFO: Coloring inst(%s, %d) for addressing. \n", inst->getOriginInst().c_str(), inst->getID());
+            type = COLORTYPE::ADDRESSINGCOLOR;
         }
         if(type != COLORTYPE::ADDRESSINGCOLOR && inst->ifAddrGen()) {
             color++;
             type = COLORTYPE::ADDRESSINGCOLOR;
         }
-        if(type == COLORTYPE::ADDRESSINGCOLOR && !inst->ifAddrGen()) {
-            color++;
-            type = COLORTYPE::COMPUTING;
-        }
+        // if(type == COLORTYPE::ADDRESSINGCOLOR && !inst->ifAddrGen()) {
+        //     color++;
+        //     type = COLORTYPE::COMPUTING;
+        // }
 
         inst->setColor(color, type);
 
@@ -527,6 +528,11 @@ namespace MetaTrans {
             std::cout << "-- Coloring Meta BB: " << " --" << "\n";
             for (auto bb_iter = bb->inst_begin(); bb_iter != bb->inst_end(); ++bb_iter) { 
                 MetaInst* inst = *bb_iter;
+
+                printf("INFO: coloring for inst addr = %x, ", inst->getAddress());
+                printf("type = %d\n", inst->getInstType().at(0));
+                
+
                 if (inst->isType(InstType::STORE)) {
                     std::get<0>(counts) = std::get<0>(counts) + 1;
                     std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
@@ -554,6 +560,7 @@ namespace MetaTrans {
                 else if (inst->isType(InstType::LOAD)) {
                     std::get<1>(counts) = std::get<1>(counts) + 1;
                     std::vector<MetaInst*> ops = inst->getOperandOnlyInstList();
+                    printf("INFO: Painting color for load addr = %x\n", inst->getAddress());
                     std::cout << "IsLoad " << ops.size() <<  std::endl;
                     inst->setColor(startColor, COLORTYPE::MEMOP);
                     for(int i = 0; i < ops.size(); i++) {

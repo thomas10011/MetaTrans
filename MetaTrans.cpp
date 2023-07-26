@@ -393,7 +393,8 @@ namespace MetaTrans {
                 printf("operandList[%d]: %s \n", i, op->toString().c_str());
             }
         }
-        printf("INFO: %d %s checkOperands validNum %d %c= this->NumOperands %d\n", this, originInst.c_str(), validNum, validNum != this->NumOperands ? '!' : '=', this->NumOperands);
+        std::cout << "INFO: " << this << " " << originInst.c_str() << " checkOperands validNum " << validNum << " " << (validNum != this->NumOperands ? '!' : '=') << " this->NumOperands " << this->NumOperands << std::endl;
+
         return validNum == this->NumOperands;
     }
 
@@ -527,8 +528,18 @@ namespace MetaTrans {
 
     bool MetaInst::isMetaCall() { return false; }
 
+    bool MetaInst::isSigned() { return sign; }
+
+    bool MetaInst::isUnsigned() { return !sign; }
+
+    MetaInst& MetaInst::setSigned(bool sign) {
+        this->sign = sign;
+        return *this;
+    }
+
     MetaInst& MetaInst::setAddrGen(bool b){
         this->AddrGenFlag = b;
+        return *this;
     }
 
     bool MetaInst::ifAddrGen(){
@@ -1777,6 +1788,7 @@ namespace MetaTrans {
 
     MetaCall& MetaCall::setFuncName(std::string name) {
         funcName = name;
+        return *this;
     }
 
     std::string MetaCall::getFuncName() {
@@ -1791,6 +1803,13 @@ namespace MetaTrans {
     MetaFunction* MetaCall::getMetaFunction() { return func; }
 
     bool MetaCall::isMetaCall() { return true; }
+
+    bool MetaCall::isTailCall() { return tailCall; }
+
+    MetaCall& MetaCall::setTailCall(bool flag) {
+        tailCall = flag;
+        return *this;
+    }
 
     MetaInst& MetaCall::buildFromJSON(MetaUnitBuildContext& context) {
         llvm::json::Object JSON = context.getHoldObject();
