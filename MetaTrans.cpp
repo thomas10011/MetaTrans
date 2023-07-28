@@ -1559,16 +1559,18 @@ namespace MetaTrans {
         //std::cout << "DEBUG:: trainEquivClass:: asmvec size check completes \n";
 
         for(auto it = asmvec.begin(); it != asmvec.end(); it++){
-             std::cout << "DEBUG:: trainEquivClass:: enter loops \n";
+             std::cout << "DEBUG:: trainEquivClass:: checking IR inst starting with Type: "<< (*it)->getInstType()[0] <<std::endl;
 
 
-            if(!(*it)->getInstType().size())
+            if(!(*it)->getInstType().size()){
+                std::cout << "DEBUG:: trainEquivClass:: This instruction has been trained!\n ";
                 continue;
-            
+            }
             //Skipping trained inst
-            if((*it)->Trained)
+            if((*it)->Trained){
+                std::cout << "DEBUG:: trainEquivClass:: This instruction has been trained!\n ";
                 continue;
-
+            }
             // Skip Load Store & Branch instruction in EquivClass training
             // TODO:: BE CAUTIOUS OF AMO INSTRUCTIONS that have implicit load, store operations!!!
             if( (*it)->getInstType()[0] == InstType::LOAD || (*it)->getInstType()[0] == InstType::STORE )
