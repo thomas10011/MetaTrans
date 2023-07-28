@@ -310,6 +310,8 @@ private:
     
     std::string originInst;
 
+    MetaInst& erase();
+
 protected:
 
     // a vector to indicate the real type of a instruction.
@@ -391,6 +393,10 @@ public:
 
     MetaInst& addOperandAtLast(MetaOperand* op);
 
+    MetaInst& removeOperand(MetaOperand* op);
+
+    MetaInst& replaceOperand(MetaOperand* src, MetaOperand* dest);
+
     // if nullptr exists in operandList, return false.
     // else return true
     bool checkOperands();
@@ -404,6 +410,8 @@ public:
     std::vector<InstType> getInstType();
 
     std::vector<MetaOperand*>& getOperandList();
+
+    MetaOperand* getOperand(int idx);
 
     std::vector<MetaInst*> getOperandOnlyInstList();
 
@@ -521,7 +529,7 @@ public:
 
     MetaPrimType getDataType();
 
-    
+    MetaInst& fold();
 
 };
 
@@ -714,6 +722,8 @@ public:
     MetaUnit& getMetaUnit();
 
     MetaBB& swapSuccessors();
+
+    MetaBB& removeInst(MetaInst* inst);
 
 };
 

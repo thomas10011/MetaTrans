@@ -88,6 +88,11 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaOperand& MetaOperand::unregisterFromMetaUnit() {
+        getMetaUnit().unregisterOperand(this);
+        return *this;
+    }
+
     std::vector<MetaInst*> MetaOperand::getUsers() {
         return users;
     }
@@ -1690,6 +1695,45 @@ namespace MetaTrans {
     }
 
 
+    MetaInst& MetaInst::fold() {
+        if (operandList.size() != 1) {
+            printf("ERROR: Trying to fold a non linear instruction! Skipped.\n");
+            return *this;
+        }
+        MetaOperand* origin = operandList.at(0);
+        for (auto user : users) { user->replaceOperand(this, origin); }
+        this->erase();
+        return *this;
+    }
+
+    MetaInst&  MetaInst::removeOperand(MetaOperand* op) {
+        for (auto it = operandList.begin(); it != operandList.end(); ) {
+            if (*it == op) it = operandList.erase(it);
+            else ++it;
+        }
+        return *this;
+    }
+
+    MetaInst&  MetaInst::replaceOperand(MetaOperand* src, MetaOperand* dest) {
+        for (int i = 0; i < operandList.size(); ++i) {
+            if (operandList[i] == src) operandList[i] = dest;
+        }
+        return *this;
+    }
+
+
+    MetaInst& MetaInst::erase() {
+        MetaBB* parent = (MetaBB*)(this->getParentScope());
+
+        parent->removeInst(this);
+        unregisterFromMetaUnit();
+
+        return *this;
+    }
+
+    MetaOperand* MetaInst::getOperand(int idx) { return operandList.at(idx); }
+
+
 
 //===-------------------------------------------------------------------------------===//
 /// Meta Phi Instruction implementation.
@@ -2275,6 +2319,14 @@ namespace MetaTrans {
         if (successors.size() < 2) return *this;
         std::swap(successors[0], successors[1]);
         return *this;
+    }
+
+    MetaBB& MetaBB::removeInst(MetaInst* inst) {
+        for (auto it = inst_begin(); it != inst_end(); ++it) {
+            if (*it != inst) continue;
+            instList.erase(it);
+            break;
+        }
     }
 
 //===-------------------------------------------------------------------------------===//
