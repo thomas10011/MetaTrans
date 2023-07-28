@@ -175,6 +175,8 @@ public:
 
     virtual bool isMetaInst();
 
+    virtual MetaPrimType getDataType();
+
     virtual ~MetaOperand();
 
     virtual std::string toString();
@@ -211,7 +213,7 @@ public:
 
     MetaConstant(DataType ty);
 
-    DataType getDataType();
+    virtual MetaPrimType getDataType() override;
 
     DataUnion getValue();
 
@@ -302,7 +304,7 @@ public:
 
     int getWidth();
 
-    MetaPrimType getType();
+    virtual MetaPrimType getDataType() override;
 
     virtual bool isMetaArgument() override;
 
@@ -531,7 +533,7 @@ public:
 
     void setNumOperands(int i);
 
-    MetaPrimType getDataType();
+    virtual MetaPrimType getDataType() override;
 
     MetaInst& fold();
 

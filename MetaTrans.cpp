@@ -128,6 +128,11 @@ namespace MetaTrans {
 
     bool MetaOperand::isMetaInst() { return false; }
 
+    MetaPrimType MetaOperand::getDataType() {
+        MetaPrimType ty;
+        return ty;
+    }
+
     MetaOperand::~MetaOperand() { }
 
     std::string MetaOperand::toString() { return "\"Operand\""; }
@@ -135,7 +140,9 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Meta Constant implementation.
 
-    MetaConstant::MetaConstant() : global(false), imm(false) { }
+    MetaConstant::MetaConstant() : global(false), imm(false), primaryType(DataType::INT, 64, 0) {
+
+    }
 
     MetaConstant::MetaConstant(MetaUnitBuildContext& context) {
         auto        object = context.getHoldObject();
@@ -169,7 +176,7 @@ namespace MetaTrans {
 
     MetaConstant& MetaConstant::setType(MetaPrimType ty) { primaryType = ty; }
 
-    DataType MetaConstant::getDataType() { return type; }
+    MetaPrimType MetaConstant::getDataType() { return primaryType; }
 
     DataUnion MetaConstant::getValue() { return value; }
 
@@ -180,37 +187,43 @@ namespace MetaTrans {
     MetaConstant& MetaConstant::setImm(bool v) { imm = v; return *this; }
 
     MetaConstant& MetaConstant::setValue(int8_t v) {
-        if (type != DataType::INT) return *this;
+        primaryType.setType(DataType::INT);
+        primaryType.setWidth(8);
         value.int_8_val = v; 
         return *this;
     }
 
     MetaConstant& MetaConstant::setValue(int16_t v) {
-        if (type != DataType::INT) return *this;
+        primaryType.setType(DataType::INT);
+        primaryType.setWidth(16);
         value.int_16_val = v; 
         return *this;
     }
     
     MetaConstant& MetaConstant::setValue(int32_t v) { 
-        if (type != DataType::INT) return *this;
+        primaryType.setType(DataType::INT);
+        primaryType.setWidth(32);
         value.int_32_val = v; 
         return *this;
     }
 
     MetaConstant& MetaConstant::setValue(int64_t v) { 
-        if (type != DataType::INT) return *this;
+        primaryType.setType(DataType::INT);
+        primaryType.setWidth(64);
         value.int_64_val = v; 
         return *this;
     }
 
     MetaConstant& MetaConstant::setValue(float v) {
-        if (type != DataType::FLOAT) return *this;
+        primaryType.setType(DataType::FLOAT);
+        primaryType.setWidth(32);
         value.float_val = v; 
         return *this;
     }
     
     MetaConstant& MetaConstant::setValue(double v) { 
-        if (type != DataType::FLOAT) return *this;
+        primaryType.setType(DataType::FLOAT);
+        primaryType.setWidth(64);
         value.double_val = v; 
         return *this;
     }
@@ -222,6 +235,15 @@ namespace MetaTrans {
 
     MetaConstant& MetaConstant::setValueStr(std::string str) {
         valueStr = str;
+        if (MetaUtil::isNumber(str)) {
+            if (MetaUtil::contain(".", str)) {
+                primaryType.setType(DataType::FLOAT);
+            }
+            else {
+                primaryType.setType(DataType::INT);
+            }
+            primaryType.setWidth(64); 
+        }
         return *this;
     }
 
@@ -321,7 +343,7 @@ namespace MetaTrans {
 
     int MetaArgument::getWidth() { return width; }
 
-    MetaPrimType MetaArgument::getType() { return type; }
+    MetaPrimType MetaArgument::getDataType() { return type; }
 
     bool MetaArgument::isMetaArgument() { return true; }
 
@@ -1559,18 +1581,16 @@ namespace MetaTrans {
         //std::cout << "DEBUG:: trainEquivClass:: asmvec size check completes \n";
 
         for(auto it = asmvec.begin(); it != asmvec.end(); it++){
-             std::cout << "DEBUG:: trainEquivClass:: checking IR inst starting with Type: "<< (*it)->getInstType()[0] <<std::endl;
+             std::cout << "DEBUG:: trainEquivClass:: enter loops \n";
 
 
-            if(!(*it)->getInstType().size()){
-                std::cout << "DEBUG:: trainEquivClass:: This instruction has been trained!\n ";
+            if(!(*it)->getInstType().size())
                 continue;
-            }
+            
             //Skipping trained inst
-            if((*it)->Trained){
-                std::cout << "DEBUG:: trainEquivClass:: This instruction has been trained!\n ";
+            if((*it)->Trained)
                 continue;
-            }
+
             // Skip Load Store & Branch instruction in EquivClass training
             // TODO:: BE CAUTIOUS OF AMO INSTRUCTIONS that have implicit load, store operations!!!
             if( (*it)->getInstType()[0] == InstType::LOAD || (*it)->getInstType()[0] == InstType::STORE )
