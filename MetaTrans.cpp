@@ -77,6 +77,19 @@ namespace MetaTrans {
         return *this;
     }
 
+
+    MetaOperand& MetaOperand::copyUsers(MetaOperand* op) {
+        this->users = op->getUsers();
+        return *this;
+    }
+
+    MetaOperand& MetaOperand::replaceUser(MetaInst* src, MetaInst* dest) {
+        for (int i = 0; i < users.size(); ++i) {
+            if (users[i] == src) { users[i] = dest; }
+        }
+        return *this;
+    }
+
     MetaOperand& MetaOperand::setParentScope(MetaScope* scope) { parentScope = scope; return *this; }
 
     MetaScope* MetaOperand::getParentScope() { return parentScope; }
@@ -1701,7 +1714,10 @@ namespace MetaTrans {
             return *this;
         }
         MetaOperand* origin = operandList.at(0);
-        for (auto user : users) { user->replaceOperand(this, origin); }
+        origin->copyUsers(this);
+        for (auto user : users) {
+            user->replaceOperand(this, origin);
+        }
         this->erase();
         return *this;
     }

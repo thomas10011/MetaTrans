@@ -147,6 +147,10 @@ public:
     // remove user from user list.
     MetaOperand& removeUser(MetaInst* user);
 
+    MetaOperand& replaceUser(MetaInst* src, MetaInst* dest);
+
+    MetaOperand& copyUsers(MetaOperand* op);
+
     MetaOperand& setParentScope(MetaScope* scope);
 
     MetaOperand& registerToMetaUnit();
