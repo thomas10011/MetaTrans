@@ -44,7 +44,7 @@ namespace MetaTrans {
         // TODO - scan alloca inst and add statck size in meta function.
         // Problem - if compile with -o3 then ir may have no alloca instruction.
 
-        std::unordered_map<Instruction*, MetaInst*>& instMap = builder.instMap;
+        BidirectionMap<Instruction*, MetaInst*>& instMap = builder.instMap;
 
         for (auto iter = instMap.begin(); iter != instMap.end(); ++iter) {
             Instruction* irInst = iter->first;
@@ -70,7 +70,7 @@ namespace MetaTrans {
             std::vector<MetaInst*>& instList = mB.getInstList();
             assert(b.getFirstNonPHI());
             mB
-                .setEntry       (builder.instMap[b.getFirstNonPHI()])
+                .setEntry       (builder.instMap.get(b.getFirstNonPHI()))
                 .setParentScope (builder.mF)
                 .setTerminator  (instList[instList.size() - 1])
                 ;

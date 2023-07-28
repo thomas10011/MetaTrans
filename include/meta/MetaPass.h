@@ -37,7 +37,7 @@ protected:
     // Auxiliary map, record the reflection between primitive type and Meta type.
     std::unordered_map<BasicBlock*, MetaBB*>                bbMap;
 
-    std::unordered_map<Instruction*, MetaInst*>             instMap;
+    BidirectionMap<Instruction*, MetaInst*>                 instMap;
 
     std::unordered_map<Instruction*, Value*>                LoadStoreVarMap;
 

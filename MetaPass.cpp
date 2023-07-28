@@ -523,7 +523,7 @@ namespace MetaTrans {
             .registerToMetaUnit()
             ;
 
-        instMap[&i] = newInst;
+        instMap.put(&i, newInst);
         return *this;
     }
 
@@ -560,12 +560,12 @@ namespace MetaTrans {
     MetaOperand* MetaFunctionBuilder::findMetaOperand(Value* value) {
         if (Argument*    a = dyn_cast<Argument>(value))    return (MetaOperand*)argMap[a];
         if (Constant*    c = dyn_cast<Constant>(value))    return (MetaOperand*)constantMap[c];
-        if (Instruction* i = dyn_cast<Instruction>(value)) return (MetaOperand*)instMap[i];
+        if (Instruction* i = dyn_cast<Instruction>(value)) return (MetaOperand*)instMap.get(i);
         return nullptr;
     }
 
     void MetaFunctionBuilder::copyDependencies(PHINode* phi) {
-        MetaPhi* inst = (MetaPhi*)instMap[phi];
+        MetaPhi* inst = (MetaPhi*)instMap.get(phi);
         outs() << "copying phi node chain ..." << "\n";
         for (auto bb = phi->block_begin(); bb != phi->block_end(); ++bb) {
             Value* value = phi->getIncomingValueForBlock(*bb);
@@ -585,7 +585,7 @@ namespace MetaTrans {
     }
 
     void MetaFunctionBuilder::copyDependencies(Instruction* curInst) {
-        MetaInst* inst = instMap[curInst];
+        MetaInst* inst = instMap.get(curInst);
         // deal with phi node particularly.
         if (auto phi = dyn_cast<PHINode>(curInst)) { copyDependencies(phi); }
 

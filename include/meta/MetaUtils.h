@@ -308,6 +308,26 @@ public:
     Y get(X key) { return forward[key]; }
     X get(Y key) { return backward[key]; }
     
+    using BiMapForwardIterator = typename std::unordered_map<X, Y>::iterator;
+    using BiMapBackwardIterator = typename std::unordered_map<X, Y>::iterator;
+
+    BiMapForwardIterator begin() {
+        return forward.begin();
+    }
+    BiMapForwardIterator end() {
+        return forward.end();
+    }
+    BiMapBackwardIterator rbegin() {
+        return backward.begin();
+    }
+    BiMapBackwardIterator rend() {
+        return backward.end();
+    }
+
+    void clear() {
+        forward.clear();
+        backward.clear();
+    }
 };
 
 
