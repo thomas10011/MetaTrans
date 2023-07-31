@@ -74,7 +74,8 @@ enum InstType {
     // Arch-specific
     CSR,
     //Sign-inject
-    SIGN
+    SIGN,
+    COMPLEX
 };
 
 enum COLORTYPE {

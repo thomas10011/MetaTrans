@@ -1093,6 +1093,18 @@ namespace MetaTrans {
 
     }
 
+    // Find duplicate operands and build constraint string for mapping rules
+    std::string findDuplicateOperands(std::vector<MetaOperand*> vec){
+        std::string ret = " ";
+        for(int i = 0; i < vec.size(); i++ )
+            for(int j = i+1; j < vec.size(); j++)
+                if(vec[i] == vec[j])
+                    ret += "rs" + std::to_string(i) + "=rs" + std::to_string(j)+ " ";
+                
+
+        return ret;   
+        
+    }
 
     //std::pair<std::string, std::string> 
     std::string MetaInst::buildOperandMapping(std::vector<MetaInst*> Fuse, std::string ASMorIR){
@@ -1110,7 +1122,15 @@ namespace MetaTrans {
 
         // Mapping dump instruction information
         if(ASMorIR == "IR"){
-            str         =  this->getOriginInst() + " : ";
+            // Currently for ASM only!!!
+            if(this->getInstType()[0] == InstType::COMPLEX){
+                auto dup = findDuplicateOperands(this->getOperandList());
+                if(dup != " ")
+                    str     =  this->getOriginInst() + dup + " : ";
+            }
+            else
+                str         =  this->getOriginInst() + " : ";
+
             asmOpVec    =  this->getOperandList();
         }
         else{
@@ -1300,6 +1320,12 @@ namespace MetaTrans {
         std::string str        = this->getOriginInst();
         MetaInst*   match      = NULL;
         int         find       = 0;
+
+         if(this->getInstType()[0] == InstType::COMPLEX){
+            auto dup = findDuplicateOperands(this->getOperandList());
+            if(dup != " ")
+                str     +=  dup;
+        }
 
         // Mapping dump instruction information
         str += " : ";
@@ -1626,12 +1652,16 @@ namespace MetaTrans {
              std::cout << "DEBUG:: trainEquivClass:: enter loops \n";
 
 
-            if(!(*it)->getInstType().size())
+            if(!(*it)->getInstType().size()){
+                std::cout << "DEBUG:: trainEquivClass:: ASM Inst: " << (*it)->getOriginInst() << " has no OP TYPE!\n";
                 continue;
+            }
             
             //Skipping trained inst
-            if((*it)->Trained)
+            if((*it)->Trained){
+                std::cout << "DEBUG:: trainEquivClass:: ASM Inst: " << (*it)->getOriginInst() << " has been trained!\n";
                 continue;
+            }
 
             // Skip Load Store & Branch instruction in EquivClass training
             // TODO:: BE CAUTIOUS OF AMO INSTRUCTIONS that have implicit load, store operations!!!

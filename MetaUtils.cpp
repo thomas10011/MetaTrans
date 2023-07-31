@@ -72,6 +72,7 @@ namespace MetaTrans {
         { "MOV",            InstType::MOV        },
         { "CSR",            InstType::CSR        },
         { "SIGN",           InstType::SIGN       },
+        { "COMPLEX",        InstType::COMPLEX    },
     };
 
 //===-------------------------------------------------------------------------------===//
@@ -306,6 +307,7 @@ namespace MetaTrans {
             case InstType::MOV:        return "mov"       ;
             case InstType::CSR:        return "csr"       ;
             case InstType::SIGN:       return "sign"      ;
+            case InstType::COMPLEX:    return "complex"   ;
         }
     }
 
