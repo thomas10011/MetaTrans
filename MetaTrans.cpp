@@ -811,6 +811,7 @@ namespace MetaTrans {
         int         cnt      = vec.size();
         int         range    = abs(cnt-OpCnt);
         MetaInst*   ret      = inst;
+        int         mismatch = 0;
 
         std::cout << "DEBUG:: Entering function fuseInst(), inst = " << inst->getOriginInst() << ", vec.size = " << cnt <<", inst.type.size = " << OpCnt << ".....\n";
 
@@ -821,11 +822,25 @@ namespace MetaTrans {
         
         //int max = cnt >= OpCnt? cnt:OpCnt;
 
+        // Map Function call if only if this is a 1-1 operation Mapping
+        // Can be optimized with more constraints and equivclass refinement
+        if(vec.size()== 1 && OpVec.size()==1 ){
+            if(vec[0] == InstType::CALL || OpVec[0] == InstType::CALL){
+                fused.push_back(inst);
+                return inst;
+            }
+        }
+
+        // Since Function Call has been checked
+        // Strict Type Matching can be conducted
         for(int i = 0; i < OpCnt; i++){
             if(vec[i]!=OpVec[i])
                 return NULL;
         }
-        
+
+
+
+
         // Comply with the instruction ordering
         fused.push_back(inst);
         std::cout << "DEBUG:: fused.push_back(" << inst->getOriginInst() << "), fused.size = " << fused.size() << ".....\n";
@@ -833,6 +848,12 @@ namespace MetaTrans {
         // Recursive Instruction Fusion
         if(range){
             std::vector<InstType> v(vec.begin()+OpCnt, vec.end());
+            if(v.size())
+                std::cout << "DEBUG:: fuseInst() now moves to Op type " << MetaUtil::toString(v[0]) << std::endl;
+            else
+                std::cout << "DEBUG:: fuseInst() No Op in the OpVec!\n " ;
+
+                
             auto childVec = inst->getUsers();
             // Fused Instruction implies intermediate its result (rd) which can ONLY be reused by 1 instruction!
             if(childVec.size() != 1)
@@ -1111,6 +1132,11 @@ namespace MetaTrans {
 
             for(int i = 0; i < fused.size(); i++){
                 str         += fused[i]->getOriginInst() + "  ";
+                if(fused[i]->getInstType()[0] == InstType::CALL){
+                    //std::cout << "DEBUG:: build operand mapping for function " << dynamic_cast<MetaCall*>(inst)->getFuncName() << std::endl;
+                        str +=  dynamic_cast<MetaCall*>(fused[i])->getFuncName()  + "  ";
+                }
+
                 // irOpVec  =  fused[i]->getOperandList();
                 auto vec    =  dynamic_cast<MetaInst*>(fused[i])->getOperandList();
                 auto tmpvec =  asmOpVec;
@@ -1188,7 +1214,7 @@ namespace MetaTrans {
                     else if (ret > i)
                         std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
 
-                    // Find matched ASM instsaruction of such "operand" 
+                    // Find matched ASM instruction of such "operand" 
                     auto AsmMatch  = AsmMatchVec.at(id);
                     // std::cout << "DEBUG:: fused["<<i<<"] " << fused[i]->getOriginInst() <<" .operands["<<id<<"] " << dynamic_cast<MetaInst*>(vec[id])->getOriginInst() << " ->getMatchedInst().size() = " << AsmMatch.size() << std::endl;
 
@@ -1373,13 +1399,23 @@ namespace MetaTrans {
             }
         }
 
+        // COMMENTED: We need to get perfect matching to avoid ambiguity
+        // Such as the case:
+        // ASM:: LOAD A                     IR:  1% = LOAD A
+        //       LOAD B                          2% = LOAD B
+        //       Inst A B                        3% = Inst1 %2
+        //                                       4% = Inst2 %3, %1  
+        //
+        // In such case, Traversing from LOAD A will trigger the mapping between ASM Inst and IR inst 2
+        // But the real case should be ASM Inst mapps to IR Inst1 and IR Inst2
+        
         // Handle the case that only one LOAD parent instruction is matched
         // And two RS cannot be naturally matched
-        if(find == 1 && opNum == 2){
-            int i  = opNum - mapping.begin()->first - 1;
-            int ii = opNum - mapping.begin()->second - 1 ;
-            mapping.insert(std::make_pair(i, ii));
-        }
+        // if(find == 1 && opNum == 2){
+        //     int i  = opNum - mapping.begin()->first - 1;
+        //     int ii = opNum - mapping.begin()->second - 1 ;
+        //     mapping.insert(std::make_pair(i, ii));
+        // }
 
         for(int i = 0; i < opNum; i++){
             auto it = mapping.find(i);
@@ -1482,11 +1518,15 @@ namespace MetaTrans {
 
     std::vector<MetaInst*> MetaInst::findMatchedInst(std::vector<MetaInst*> irvec){
         
-        std::cout << "DEBUG:: Enter function findMatchedInst().....\n";
-
         auto asmOpVec   = this->getInstType();
         int  asmOpCnt   = asmOpVec.size();
         int  irOpCnt    = 0;
+
+        std::cout << "DEBUG:: Enter function findMatchedInst(), ASM OpCnt = " << asmOpCnt;
+        for (int i = 0; i < asmOpCnt; i++){
+            std::cout << ", " << MetaUtil::toString(asmOpVec[i]);
+        }
+        std::cout << "\n";
         
         std::vector<MetaInst*> tmp;
 
@@ -1522,7 +1562,9 @@ namespace MetaTrans {
 
 
         // check if fusion is needed
-        if( this->MatchedInst.size() == 0 ){        
+        else if( tmp.size() == 0 ){    
+            std::cout << "DEBUG:: findMatchedInst Checking if fusion is needed!\n";
+
             for(auto it = irvec.begin(); it != irvec.end(); it++ ){
                 int  bits     =  0;
                 auto irOpVec  =  (*it)->getInstType();
