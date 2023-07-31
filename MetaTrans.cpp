@@ -685,7 +685,7 @@ namespace MetaTrans {
 
     // According to <Learning-Phase Algorithm> - Match Load/Store
     std::vector<MetaInst *> MetaInst::findTheSameInst(MetaBB *bb) {
-        std::cout << "Enter findTheSameInst for asmInst: " << std::hex << this << std::oct << std::endl;
+        std::cout << "Enter findTheSameInst for asmInst: " << std::hex << this << std::dec << std::endl;
         std::vector<MetaInst *> ans;
 
         // 1. if only one load/store/branch, directly match
@@ -710,7 +710,7 @@ namespace MetaTrans {
                 if(this->hasRelaxedSameType(IRinst) && IRinst->getDataRoot() == "TIR_GLOBAL") {
                     std::string rootAns = IRinst->getGlobalSymbolName();
                     if(rootAns == asmGlobalName) {
-                        std::cout << "findTheSameGlobalVariable " << rootAns << ": " << std::hex << IRinst << std::oct << std::endl;
+                        std::cout << "findTheSameGlobalVariable " << rootAns << ": " << std::hex << IRinst << std::dec << std::endl;
                         ans.push_back(IRinst);
                         return ans;
                     }
@@ -1899,6 +1899,14 @@ namespace MetaTrans {
     bool MetaPhi::isLoad() { return false; }
 
     bool MetaPhi::isStore() { return false; }
+
+    MetaInst& MetaPhi::replaceOperand(MetaOperand* src, MetaOperand* dest) {
+        MetaInst::replaceOperand(src, dest);
+        for (auto it = bbValueMap.begin(); it != bbValueMap.end(); ++it) {
+            if (it->second == src) bbValueMap[it->first] = dest;
+        }
+        return *this;
+    }
 
     std::unordered_map<MetaBB*, MetaOperand*> MetaPhi::getMapping(){return this->bbValueMap;}
 

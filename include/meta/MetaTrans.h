@@ -401,7 +401,7 @@ public:
 
     MetaInst& removeOperand(MetaOperand* op);
 
-    MetaInst& replaceOperand(MetaOperand* src, MetaOperand* dest);
+    virtual MetaInst& replaceOperand(MetaOperand* src, MetaOperand* dest);
 
     // if nullptr exists in operandList, return false.
     // else return true
@@ -573,6 +573,8 @@ public:
     bool virtual isLoad() override;
 
     bool virtual isStore() override;
+
+    virtual MetaInst& replaceOperand(MetaOperand* src, MetaOperand* dest) override;
 
     std::unordered_map<MetaBB*, MetaOperand*> getMapping();
 };
