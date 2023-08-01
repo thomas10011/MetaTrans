@@ -2301,12 +2301,75 @@ namespace MetaTrans {
             "}";
     }
 
+    MetaBB* MetaBB::trainLoad(MetaBB* irbb){
+        std::cout <<"DEBUG:: Entering trainLoad()......\n";
+
+        for (auto inst = this->begin(); inst != this->end(); inst++) {
+
+            if ((*inst)->getInstType()[0] == InstType::LOAD) {
+                std::vector<MetaInst *> matchvec;
+                // TODO:: CHECK If implict LOAD/STORE operations within an
+                // instruction can be traversed correctly
+                if ((*inst)->ifMatched()) {
+                    matchvec = (*inst)->getMatchedInst();
+                    std::cout << "DEBUG:: In trainBB():: ASM instruction: "
+                              << (*inst)->getOriginInst()
+                              << " has been mathced to IR instruction: "
+                              << matchvec[0]->getOriginInst() << std::endl;
+                } else {
+                    matchvec = (*inst)->findTheSameInst(irbb);
+                    if (matchvec.size() != 0) {
+                        std::cout << "DEBUG:: In trainBB():: ASM LOAD: "
+                                  << (*inst)->getOriginInst()
+                                  << " Find a new match in IR: "
+                                  << matchvec[0]->getOriginInst() << std::endl;
+                        for (auto i = matchvec.begin(); i != matchvec.end(); i++)
+                            (*i)->toString();
+                        // Build Mapping for new matched load instructions
+                        if (matchvec.size() == 1)
+                            (*inst)->buildMapping(matchvec[0]);
+                    }
+                }
+                // Skip unmatched or ambiguous instructions
+                // Can be optimized to address ambiguity if needed
+                if (matchvec.size() != 1) {
+                    if (matchvec.size() > 1) {
+                        std::cout << "DEBUG:: Matched more than one load "
+                                     "instruction!\n";
+                        for (auto i = matchvec.begin(); i != matchvec.end();
+                             i++)
+                            std::cout << (*i)->toString() << std::endl;
+                    } else
+                        std::cout
+                            << "DEBUG:: No load instruction is matched!\n";
+                    continue;
+                }
+
+                // irinst = matchvec[0];
+                // std::cout
+                //     << "DEBUG:: Calling function trainEquivClass().....\n";
+                // (*inst)->trainEquivClass(irinst);
+                // std::cout << "\nDEBUG:: TrainBB Completes the "
+                //              "trainEquivClass().....\n";
+
+                // asmvec = (*inst)->getUsers();
+                // irvec  = irinst->getUsers();
+            }
+        }
+        std::cout <<"DEBUG:: Leaving trainLoad()......\n";
+
+    }
+
+
+
     MetaBB* MetaBB::trainBB(MetaBB* irbb){
         std::cout << "\nDEBUG:: Entering function trainBB.....\n";
         MetaInst* irinst = NULL;
         std::vector<MetaInst*> asmvec;
         std::vector<MetaInst*> irvec;
         std::vector<MetaInst*> retvec;
+
+        trainLoad(irbb);
 
         for(auto inst= this->begin(); inst!= this->end(); inst++){
             // Visit all the load and store instructions

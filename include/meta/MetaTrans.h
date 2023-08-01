@@ -734,6 +734,8 @@ public:
 
     MetaBB& removeInst(MetaInst* inst);
 
+    MetaBB* trainLoad(MetaBB* irbb);
+
 };
 
 class MetaFunction : public MetaScope {
