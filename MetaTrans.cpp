@@ -464,6 +464,7 @@ namespace MetaTrans {
         int64_t         id                  = JSON.getInteger("id")       .getValue();
         int64_t         addr                = JSON.getInteger("address")  .getValue();
         bool            isAddrGen           = JSON.getBoolean("isAddrGen").getValue();
+        bool            isfake              = JSON.getBoolean("isFake").getValue();
 
         (*this)
             .setOriginInst          (originInst)
@@ -474,6 +475,9 @@ namespace MetaTrans {
             .setAddrGen             (isAddrGen)
             .setID                  (id)
             ;
+
+        if(isfake)
+            this->setFake();
 
         json::Array& ops = *(JSON["type"].getAsArray());
         for (int i = 0; i < ops.size(); ++i) {
@@ -629,7 +633,8 @@ namespace MetaTrans {
             "\"path\":" + path + "," +
             "\"hashCode\":" + std::to_string(hashCode) + "," + 
             "\"dataRoot\":\"" + dataRoot + "\"," + 
-            "\"globalSymbolName\":\"" + globalSymbolName + "\"" +
+            "\"globalSymbolName\":\"" + globalSymbolName + "\"" + "," + 
+            "\"isFake\":" + (isFake() ? "true" : "false") +
             "}"
             ;
         return str;
@@ -1246,6 +1251,7 @@ namespace MetaTrans {
                             if(tmpvec[idd] == NULL) {
                                 continue;
                             }else if(tmpvec[idd]->isMetaConstant()) {
+                                // Meta Constant should be at the end of the OP list
                                 skip++;
                                 continue;
                             }
@@ -1253,6 +1259,8 @@ namespace MetaTrans {
                             std::cout << "DEBUG:: tmpvec[" << idd << "] is " << tmpvec[idd]->toString() << std::endl;
                             if (find != -1){
                                 str += std::to_string(idd+1-skip) + " ";
+                                //str += std::to_string(idd+1-skip) + " ";
+                                
                                 // Handle the Case like add a1, a0, a0, wherein a0 has been used twice
                                 // We assume the reg mapping of the same inst will only hit once
                                 tmpvec[idd] = NULL;
@@ -1320,6 +1328,7 @@ namespace MetaTrans {
         std::string str        = this->getOriginInst();
         MetaInst*   match      = NULL;
         int         find       = 0;
+        int         hasConst   = 0;
 
          if(this->getInstType()[0] == InstType::COMPLEX){
             auto dup = findDuplicateOperands(this->getOperandList());
@@ -1336,7 +1345,7 @@ namespace MetaTrans {
         }
 
 
-        // <ASM OP ID, IR OP ID>
+        // <IR OP ID, ASM OP ID>
         std::map<int, int> mapping;
         std::cout << "DEBUG:: buildOperandMapping() ASM->getOperandNum = " << opNum << std::endl;
         std::cout << "DEBUG:: buildOperandMapping() IR->getOperandNum = " << opNumIr << std::endl;
@@ -1392,7 +1401,7 @@ namespace MetaTrans {
             // Unordered Operations can directly dump sequence
             if(!ifOrderMatters(this->getInstType()[0])){    
                 std::cout << "DEBUG:: Operand Ordering Unnecessary according to InstType check\n";
-                for(int i = 0; i < opNum; i++)
+                for(int i = 0; i < opNumIr; i++)
                     str +=  std::to_string(i+1) + " ";
                 dumpMapping(str);
                 return str;
@@ -1404,6 +1413,7 @@ namespace MetaTrans {
             std::cout << "DEBUG::buildOperandMapping() encounters 1-1 Mapping\n"; 
             for(int id = 0; id < asmOpVec.size(); id++){
                 if(asmOpVec[id]->isMetaConstant()){
+                    hasConst = 1;
                     std::cout << "DEBUG::buildOperandMapping() ASM Operand "<< id+1 << " is MetaConstant\n"; 
                     continue;
                 }
@@ -1415,9 +1425,9 @@ namespace MetaTrans {
                         continue;
                     }
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
-                        mapping.insert(std::make_pair(id, ir));
-                        std::cout << "DEBUG:: buildOperandMapping() builds operand pair < "
-                        << id << ", " << ir << " >"<<std::endl;
+                        mapping.insert(std::make_pair(ir,id));
+                        std::cout << "DEBUG:: buildOperandMapping() builds operand pair <IR.id, ASM.id>: < "
+                        << ir << ", " << id << " >"<<std::endl;
                         find++;
                         break;
                     }
@@ -1443,16 +1453,34 @@ namespace MetaTrans {
         //     mapping.insert(std::make_pair(i, ii));
         // }
 
-        for(int i = 0; i < opNum; i++){
+        for(int i = 0; i < opNumIr; i++){
             auto it = mapping.find(i);
             if(it!=mapping.end())
                 str += std::to_string(it->second+1) + "  ";
+
+            else if( this->isStore() ){
+                str += std::to_string(i+1) + "  ";
+            }
+
+            // If parent inst is the fake instruction linking zero registers
+            else if(dynamic_cast<MetaInst*>(this->getOperand(i))){
+                if(dynamic_cast<MetaInst*>(this->getOperand(i))->isFake()){
+                    std::cout << "DEBUG:: Enter the case of Fake Inst\n";
+                    str += std::to_string(i+1) + "  ";
+                }
+            }
             else{
                 std::cout << BOLD << RED << "\nERROR!! Unmapped Operand!! Invalid Mapping of "
                           << this->getOriginInst() << " : " << inst->getOriginInst() << RST << std::endl;
                 return "";
             }
         }
+
+        // IMM should always be the last Operand in ASM
+        // Temporal Fix for RV and TBD for ARM
+        // Adding imm to the rule 
+        if(hasConst)
+            str += std::to_string(opNumIr) + " ";
 
         dumpMapping(str);
         std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
@@ -1842,6 +1870,15 @@ namespace MetaTrans {
     }
 
     MetaOperand* MetaInst::getOperand(int idx) { return operandList.at(idx); }
+
+
+    bool MetaInst::isFake(){
+        return this->fake;
+    }
+
+    MetaInst& MetaInst::setFake(){
+        this->fake = true;
+    }
 
 
 
@@ -2303,23 +2340,24 @@ namespace MetaTrans {
 
     MetaBB* MetaBB::trainLoad(MetaBB* irbb){
         std::cout <<"DEBUG:: Entering trainLoad()......\n";
+        MetaInst* irinst = NULL;
 
         for (auto inst = this->begin(); inst != this->end(); inst++) {
 
-            if ((*inst)->getInstType()[0] == InstType::LOAD) {
+            if ((*inst)->getInstType()[0] == InstType::LOAD || (*inst)->getInstType()[0] == InstType::STORE ) {
                 std::vector<MetaInst *> matchvec;
                 // TODO:: CHECK If implict LOAD/STORE operations within an
                 // instruction can be traversed correctly
                 if ((*inst)->ifMatched()) {
                     matchvec = (*inst)->getMatchedInst();
-                    std::cout << "DEBUG:: In trainBB():: ASM instruction: "
+                    std::cout << "DEBUG:: In trainLoad():: ASM instruction: "
                               << (*inst)->getOriginInst()
                               << " has been mathced to IR instruction: "
                               << matchvec[0]->getOriginInst() << std::endl;
                 } else {
                     matchvec = (*inst)->findTheSameInst(irbb);
                     if (matchvec.size() != 0) {
-                        std::cout << "DEBUG:: In trainBB():: ASM LOAD: "
+                        std::cout << "DEBUG:: In trainLoad():: ASM LOAD: "
                                   << (*inst)->getOriginInst()
                                   << " Find a new match in IR: "
                                   << matchvec[0]->getOriginInst() << std::endl;
@@ -2349,11 +2387,9 @@ namespace MetaTrans {
                 // std::cout
                 //     << "DEBUG:: Calling function trainEquivClass().....\n";
                 // (*inst)->trainEquivClass(irinst);
-                // std::cout << "\nDEBUG:: TrainBB Completes the "
+                // std::cout << "\nDEBUG:: TrainLoad Completes the "
                 //              "trainEquivClass().....\n";
 
-                // asmvec = (*inst)->getUsers();
-                // irvec  = irinst->getUsers();
             }
         }
         std::cout <<"DEBUG:: Leaving trainLoad()......\n";

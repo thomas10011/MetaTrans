@@ -362,6 +362,8 @@ protected:
 
     MetaPrimType dataType;
 
+    bool fake = false;
+
 public:
 
     MetaInst();
@@ -537,6 +539,10 @@ public:
     virtual MetaPrimType getDataType() override;
 
     MetaInst& fold();
+
+    bool isFake();
+
+    MetaInst& setFake();
 
 };
 
