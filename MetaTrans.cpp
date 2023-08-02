@@ -1244,6 +1244,7 @@ namespace MetaTrans {
                     // std::cout << "DEBUG:: fused["<<i<<"] " << fused[i]->getOriginInst() <<" .operands["<<id<<"] " << dynamic_cast<MetaInst*>(vec[id])->getOriginInst() << " ->getMatchedInst().size() = " << AsmMatch.size() << std::endl;
 
                     // ASM 1-N Mapping
+                    // Current logic follows ASM operand ordering and directly apply it to IR's operand sequence
                     if(ASMorIR == "IR"){
                         int skip = 0;
                         // Check RS matching between ASM and LLVM IR
@@ -1375,9 +1376,11 @@ namespace MetaTrans {
         std::cout << std::endl;
 
         // Clean up ASM MetaConstant if exists
-        for(auto it = asmOpVec.begin(); it < asmOpVec.end(); it++)
-                if((*it)->isMetaConstant())
-                    asmOpVec.erase(it);
+        // for(auto it = asmOpVec.begin(); it < asmOpVec.end(); it++)
+        //         if((*it)->isMetaConstant())
+        //             asmOpVec.erase(it);
+        // opNum = asmOpVec.size();
+
         opNum = asmOpVec.size();
 
         // Currently, we don't evict IR constant operands,
@@ -1412,17 +1415,42 @@ namespace MetaTrans {
         if(asmVec.size() == 1 && irVec.size() == 1){
             std::cout << "DEBUG::buildOperandMapping() encounters 1-1 Mapping\n"; 
             for(int id = 0; id < asmOpVec.size(); id++){
+                // if(asmOpVec[id]->isMetaConstant()){
+                //     hasConst = 1;
+                //     std::cout << "DEBUG::buildOperandMapping() ASM Operand "<< id+1 << " is MetaConstant\n"; 
+                //     //continue;
+                // }
+
+                // Filter MetaConstant operand & add IMM operand mapping
                 if(asmOpVec[id]->isMetaConstant()){
-                    hasConst = 1;
                     std::cout << "DEBUG::buildOperandMapping() ASM Operand "<< id+1 << " is MetaConstant\n"; 
+                    // Find respective MetaConstant operand in the IR OpVec and match them
+                    for(auto i = 0; i < irOpVec.size(); i++){
+                            if(irOpVec[i]->isMetaConstant()){
+                                mapping.insert(std::make_pair(i,id));
+                                std::cout << "DEBUG:: buildOperandMapping() builds operand pair <IR.id, ASM.id>: < "
+                                          << i   << ", " << id << " >" <<std::endl;
+                                break;
+                            }
+                    }
                     continue;
                 }
+
                 auto vec = dynamic_cast<MetaInst*>(asmOpVec[id])->getMatchedInst();
                 std::cout << "DEBUG:: getMatchedInst() " << dynamic_cast<MetaInst*>(asmOpVec[id])->getOriginInst()<<" returns the vector of size " << vec.size() << "\n";
                 for(int ir = 0; ir < irOpVec.size(); ir++){
                     if(irOpVec[ir]->isMetaConstant()){
-                        std::cout << "DEBUG::buildOperandMapping() IR Operand "<< ir+1 << " is MetaConstant\n"; 
                         continue;
+                        // TODO:: Need to handle the case of multiple IMM operands for ARM
+                        // for(auto i = 0; i < asmOpVec.size(); i++){
+                        //     if(asmOpVec[i]->isMetaConstant()){
+                        //         mapping.insert(std::make_pair(ir,i));
+                        //         std::cout << "DEBUG:: buildOperandMapping() builds operand pair <IR.id, ASM.id>: < "
+                        //                   << ir   << ", " << i << " >" <<std::endl;
+                        //         break;
+                        //     }
+                        // }
+                        // continue;
                     }
                     if (ifFind (dynamic_cast<MetaInst*>(irOpVec[ir]), vec) != -1){
                         mapping.insert(std::make_pair(ir,id));
@@ -1479,8 +1507,8 @@ namespace MetaTrans {
         // IMM should always be the last Operand in ASM
         // Temporal Fix for RV and TBD for ARM
         // Adding imm to the rule 
-        if(hasConst)
-            str += std::to_string(opNumIr) + " ";
+        // if(hasConst)
+        //     str += std::to_string(opNumIr) + " ";
 
         dumpMapping(str);
         std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
