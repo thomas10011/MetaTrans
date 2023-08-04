@@ -334,23 +334,13 @@ protected:
 
     std::vector<Path*> paths ; // fitst node of path, (0 addressing 1 data computing 2 control flow)
 
-    int EquivClassTag;    
-
-    bool Matched = false;    
-
     unsigned long hashCode = 0;
 
     std::string dataRoot = "";
 
     std::string globalSymbolName = "";
 
-    std::vector<MetaInst*> MatchedInst;
-
-    int FuseID;
-
     uint64_t address;
-
-    bool Trained = false;
 
     llvm::Instruction* TransInst = NULL;
 
@@ -486,38 +476,6 @@ public:
 
     MetaInst& addToPath(Path* p);
     
-    std::vector<MetaInst *> findTheSameInst(MetaBB *bb);
-
-    void buildEquivClass();
-
-    void resetEquivClass();
-
-    bool ifMatched();
-
-    std::vector<MetaInst*> findMatchedInst(std::vector<MetaInst*> irvec);
-
-    MetaInst& trainInst(MetaInst* irinst);
-
-    MetaInst& buildMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
-
-    MetaInst& buildMapping(MetaInst* inst);
-
-    std::string buildOperandMapping(MetaInst* inst);
-
-    std::string buildOperandMapping(std::vector<MetaInst*> fused, std::string ASMorIR);
-
-    int getFuseID();
-
-    MetaInst* QualifiedForMatch();
-
-    MetaInst* trainControlFlow(MetaInst* irinst);
-
-    MetaInst* trainEquivClass(MetaInst* inst);
-
-    std::vector<MetaInst*> getMatchedInst();
-
-    MetaInst* updateMappingTable(std::string mapstr, std::string asmInst, std::string ir, int index, std::string firstASM);
-
     llvm::Instruction* getTransInst();
 
     void setTransInst(llvm::Instruction* inst);
@@ -534,11 +492,13 @@ public:
 
     int getNumOperands();
 
+    int getValidOperandNum();
+
     void setNumOperands(int i);
 
     virtual MetaPrimType getDataType() override;
 
-    MetaInst& fold();
+    bool fold();
 
     bool isFake();
 

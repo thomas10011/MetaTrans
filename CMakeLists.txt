@@ -10,6 +10,7 @@ add_llvm_library( LLVMMetaTrans MODULE
   MetaUtils.cpp
   MetaMatcher.cpp
   MetaData.cpp
+  MetaLearner.cpp
 
   PLUGIN_TOOL
   opt

@@ -4,6 +4,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "meta/MetaMatcher.h"
 #include "meta/MetaTrans.h"
+#include "meta/MetaLearner.h"
 #include <typeinfo>
 
 #define ULL unsigned long long
@@ -45,6 +46,9 @@ namespace MetaTrans {
         std::string asmStr  = MetaUtil::readFromFile(ASMJSON);
 
         MapTable = new MappingTable();
+        MetaLearner* learner = new MetaLearner();
+
+        learner->setMapTable(MapTable);
 
         AddrMappingTable& addrMapTable = AddrMappingTable::getInstanceRef();
 
@@ -117,7 +121,8 @@ namespace MetaTrans {
                 printf("-----------------------------------\n");
                 for (auto pair = result.begin(); pair != result.end(); ++pair) {
                     printf("MetaBB: %d <-> %d, Training Starts\n",pair->first->getID(), pair->second->getID() );
-                    pair->first->trainBB(pair->second);
+                    // pair->first->trainBB(pair->second);
+                    learner->trainBB(pair->first, pair->second);
                 }
                 printf("-----------------------------------\n");
             };

@@ -78,26 +78,26 @@ LinearMetaBBMatcher& LinearMetaBBMatcher::matchNextBB(int& i, int& j, std::vecto
 }
 
 LinearMetaBBMatcher& LinearMetaBBMatcher::matchInst() {
-    for (auto pair = bbMap.begin(); pair != bbMap.end(); ++pair) {
-        MetaBB& u = *(pair->first);
-        MetaBB& v = *(pair->second);
-        matchInstGraph(u, v);
-    }
+    // for (auto pair = bbMap.begin(); pair != bbMap.end(); ++pair) {
+    //     MetaBB& u = *(pair->first);
+    //     MetaBB& v = *(pair->second);
+    //     matchInstGraph(u, v);
+    // }
 
     return *this;
 }
 
 std::pair<MetaInst*, MetaInst*> LinearMetaBBMatcher::matchInstGraph(MetaBB& u, MetaBB& v) {
-    for (auto inst = u.inst_begin(); inst != u.inst_end(); inst++) {
-        MetaInst& instRef = **inst;
-        if (instRef.isLoad() || instRef.isStore()) {
-            std::vector<MetaInst*> matchedInsts = instRef.findTheSameInst(&v);
-            std::cout <<"\nDEBUG:: matchInstGraph():: matchedInsts vector size = " << matchedInsts.size() << std::endl;
-            if(matchedInsts.size()==1 && matchedInsts[0]!=NULL)
-                instRef.buildMapping(matchedInsts[0]);
-            MetaUtil::printVector(matchedInsts, "=========== Matched Inst For " + MetaUtil::toString(instRef.getInstType()) + " ===========");
-        }
-    }
+    // for (auto inst = u.inst_begin(); inst != u.inst_end(); inst++) {
+    //     MetaInst& instRef = **inst;
+    //     if (instRef.isLoad() || instRef.isStore()) {
+    //         std::vector<MetaInst*> matchedInsts = MetaLearner::findTheSameInst(&instRef, &v);
+    //         std::cout <<"\nDEBUG:: matchInstGraph():: matchedInsts vector size = " << matchedInsts.size() << std::endl;
+    //         if(matchedInsts.size()==1 && matchedInsts[0]!=NULL)
+    //             MetaLearner::buildMapping(&instRef, matchedInsts[0]);
+    //         MetaUtil::printVector(matchedInsts, "=========== Matched Inst For " + MetaUtil::toString(instRef.getInstType()) + " ===========");
+    //     }
+    // }
 
 }
 
@@ -508,21 +508,21 @@ MetaAddressMatcher& MetaAddressMatcher::matchFor(MetaInst* ir) {
     return *this;
 }
 MetaAddressMatcher& MetaAddressMatcher::match() {
-    MetaInst* curASM = asb    ;
-    MetaInst* curIR  = nullptr;
+    // MetaInst* curASM = asb    ;
+    // MetaInst* curIR  = nullptr;
 
-    std::vector<MetaInst*> matchedLoad = asb->findTheSameInst(irbb);
+    // std::vector<MetaInst*> matchedLoad = asb->findTheSameInst(irbb);
 
-    if (matchedLoad.size() == 0) {
-        printf("ERRO: Did't find matched load instruction.\n");
-        return *this;
-    }
-    if (matchedLoad.size() > 1) {
-        printf("WARN: Find multiple load when match addressing.\n");
-    }
+    // if (matchedLoad.size() == 0) {
+    //     printf("ERRO: Did't find matched load instruction.\n");
+    //     return *this;
+    // }
+    // if (matchedLoad.size() > 1) {
+    //     printf("WARN: Find multiple load when match addressing.\n");
+    // }
 
-    // 为匹配上的每一个load都尝试match一下
-    for (MetaInst* curIR : matchedLoad) matchFor(curIR);
+    // // 为匹配上的每一个load都尝试match一下
+    // for (MetaInst* curIR : matchedLoad) matchFor(curIR);
 
     return *this;
 }
