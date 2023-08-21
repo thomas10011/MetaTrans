@@ -66,13 +66,22 @@ namespace MetaTrans {
         return *this;
     }
 
+    MetaOperand& MetaOperand::addUsers(std::vector<MetaInst*> vec) {
+        std::unordered_set<MetaInst*> sset(users.begin(), users.end());
+        for(MetaInst* user : vec) {
+            if(sset.count(user) == 0)
+                users.push_back(user);
+        }
+        return *this;
+    }
+
     MetaOperand& MetaOperand::removeUser(MetaInst* user) {
-        for (auto it = users.begin(); it != users.end(); ++it) {
+        for (auto it = users.begin(); it != users.end(); ) {
             if (*it == user) {
                 printf("removed user %d!\n", user);
-                users.erase(it);
-                break;
+                it = users.erase(it);
             }
+            else ++it;
         }
         return *this;
     }
@@ -710,11 +719,11 @@ namespace MetaTrans {
 
     bool MetaInst::fold() {
         if (operandList.size() != 1) {
-            printf("ERROR: Trying to fold a non linear instruction! Skipped.\n");
             return false;
         }
         MetaOperand* origin = operandList.at(0);
-        origin->copyUsers(this);
+        origin->removeUser(this);
+        origin->addUsers(this->getUsers());
         for (auto user : users) {
             user->replaceOperand(this, origin);
         }
@@ -1749,6 +1758,7 @@ namespace MetaTrans {
         int op_id = 0, scope_id = 0, inst_address = 0;
         for (auto operand : operands) {
             operand->setID(op_id++);
+            printf("ID = %d, operand = %s\n", operand->getID(), operand->toString().c_str());
             if (fillAddress && operand->isMetaInst())
                 ((MetaInst*)operand)->setAddress(inst_address++);
         }
