@@ -620,10 +620,15 @@ std::string MetaLearner::buildOperandMapping(MetaInst* cur, std::vector<MetaInst
     std::vector<MetaOperand*>   asmOpVec;
     std::vector<MetaOperand*>   irOpVec;
     std::string                 str;
+    // `str` is final mapping rule
+    // e.g. : ASMorIR == "ASM" :   <asm_ins1> <asm_ins2> : <ir_ins> <asm_ins_index>.<operand_index> <asm_ins_index>.<operand_index>
+    //                              add mul : addmul 1.1 1.2 2.1
+    //        ASMorIR == "IR"  :   <asm_ins1> : <ir_ins> <operand_index> <operand_index> ; <ir_ins> <operand_index> <ir_ins_index>.<operand_index>
+    //                              bge : icmp 1 2; br 1.0 3
     std::string                 tmp;
     std::vector<MetaInst*>      fused;
 
-    // Mapping dump instruction information
+    // 1. Mapping dump instruction information (before ":")
     if(ASMorIR == "IR"){
         // Currently for ASM only!!!
         if(cur->getInstType()[0] == InstType::COMPLEX){
@@ -643,6 +648,8 @@ std::string MetaLearner::buildOperandMapping(MetaInst* cur, std::vector<MetaInst
         str         += " : " + cur->getOriginInst() + "  ";
     }
 
+
+    // 2. `fused.size()` determine how many ir inst after ":" , each ir inst should construct operand mapping once
     // Fused Insts are LLVM IR
     // 1 ASM inst <-> N IR Insts
     if(ASMorIR == "IR"){
@@ -650,159 +657,168 @@ std::string MetaLearner::buildOperandMapping(MetaInst* cur, std::vector<MetaInst
     }
     // Fused Insts are ASM
     // N ASM insts <-> 1 IR int
-    else
+    else {
         fused.push_back(cur);
+    }
 
-        for(int i = 0; i < fused.size(); i++){
-            str         += fused[i]->getOriginInst() + "  ";
-            if(fused[i]->getInstType()[0] == InstType::CALL){
-                //std::cout << "DEBUG:: build operand mapping for function " << dynamic_cast<MetaCall*>(inst)->getFuncName() << std::endl;
-                    str +=  dynamic_cast<MetaCall*>(fused[i])->getFuncName()  + "  ";
-            }
+    // 3. Build operand mapping for each ir inst
+    for(int i = 0; i < fused.size(); i++){
+        str         += fused[i]->getOriginInst() + "  ";
+        if(fused[i]->getInstType()[0] == InstType::CALL){
+            //std::cout << "DEBUG:: build operand mapping for function " << dynamic_cast<MetaCall*>(inst)->getFuncName() << std::endl;
+                str +=  dynamic_cast<MetaCall*>(fused[i])->getFuncName()  + "  ";
+        }
 
-            // irOpVec  =  fused[i]->getOperandList();
-            auto vec    =  dynamic_cast<MetaInst*>(fused[i])->getOperandList();
-            auto tmpvec =  asmOpVec;
+        auto curIROpVec    =  dynamic_cast<MetaInst*>(fused[i])->getOperandList(); // current ir inst's operands
+        std::vector<std::vector<MetaOperand*>> AsmMatchVec(curIROpVec.size()); // AsmMatchVec[i] is ir's operand[i]'s matched asm insts or const
+        auto _asmOpVec =  asmOpVec; // copy of asmOpVec, in case of asmOpVec is modified for special situation mapping
 
-
-            // judge if contains auto match case
-            int numOfOp = 0, numOfMatchedOp = 0, emptyElementIndex = -1;
-            std::vector<std::vector<MetaOperand*>> AsmMatchVec(vec.size());
-            for( int id = 0; id < vec.size(); id++ ){
-                if(vec[id]->isMetaConstant()) { 
-                    // if metaConst, find metaConst in `asmOpVec` as its matched inst 
-                    //TODO: only when ASmorIR=="IR" and only for train control flow
-                    std::vector<MetaOperand*> AsmMatchImm;
-                    for(auto it = asmOpVec.begin(); it != asmOpVec.end(); it++) {
-                        if(cur->isType(InstType::BRANCH) && it == asmOpVec.begin()) continue; // `asmOpVec`[0] is target imm
-                        if((*it)->isMetaConstant()) {
-                            AsmMatchImm.push_back(*it); 
-                            numOfMatchedOp++;
-                            break; // TODO: maybe more than 1 imm
-                        }
-                    }
-                    AsmMatchVec[id] = AsmMatchImm;
-                }else if(vec[id]->isMetaInst()){
-                    numOfOp++;
-                    std::vector<MetaInst*> AsmMatch = getMatchedInst(dynamic_cast<MetaInst*>(vec[id]));
-                    std::vector<MetaOperand*> AsmMatchOperand;
-                    AsmMatchOperand.assign(AsmMatch.begin(), AsmMatch.end()); // dynamic cast
-                    if(AsmMatch.size() != 0) numOfMatchedOp++; else emptyElementIndex = id;
-                    AsmMatchVec[id] = AsmMatchOperand;
-                }
-            }
-            if(numOfOp == numOfMatchedOp + 1) { // auto match at `emptyElementIndex`
-                // find unmatched inst in `tmpvec` and `vec`, auto match them
-                // only there is only 1 unmatched both in `tempvec` and `vec` then we auto match them
-                int mark = -1;
-                for(int idd = 0; idd < tmpvec.size(); idd++){
-                    if(tmpvec[idd]->isMetaConstant()) continue;
-                    if(getMatchedInst(dynamic_cast<MetaInst*>(tmpvec[idd])).size() == 0) {
-                        if(mark != -1) { // the second time found asmOpVec has unmatched inst
-                            mark = -1;
-                        }else {
-                            mark = idd;
-                        }
+        /*----- judge if contains auto match case and auto match START -----*/
+        int numOfOp = 0, numOfMatchedOp = 0, emptyElementIndex = -1;
+        for( int id = 0; id < curIROpVec.size(); id++ ){
+            if(curIROpVec[id]->isMetaConstant()) { 
+                // if metaConst, find metaConst in `asmOpVec` as its matched inst 
+                //TODO: only when ASmorIR=="IR" and only for train control flow
+                std::vector<MetaOperand*> AsmMatchImm;
+                for(auto it = _asmOpVec.begin(); it != _asmOpVec.end(); it++) {
+                    if(cur->isType(InstType::BRANCH) && it == _asmOpVec.begin()) continue; // `asmOpVec`[0] is target imm
+                    if((*it)->isMetaConstant()) {
+                        AsmMatchImm.push_back(*it); 
+                        numOfMatchedOp++;
+                        break; // TODO: maybe more than 1 imm
                     }
                 }
-                if(mark != -1) {
-                    std::cout << "DEBUG:: Auto match between " << fused[i]->getOriginInst() << " and " << dynamic_cast<MetaInst*>(tmpvec[mark])->getOriginInst() << std::endl;
-                    AsmMatchVec[emptyElementIndex].push_back(tmpvec[mark]);
+                AsmMatchVec[id] = AsmMatchImm;
+            }else if(curIROpVec[id]->isMetaInst()){
+                // if metaInst, get its matchedInst as its matched inst
+                // but if it don't have matchedInst, record its index in `AsmMatchVec` and try automatch later
+                numOfOp++;
+                std::vector<MetaInst*> AsmMatch = getMatchedInst(dynamic_cast<MetaInst*>(curIROpVec[id]));
+                std::vector<MetaOperand*> AsmMatchOperand;
+                AsmMatchOperand.assign(AsmMatch.begin(), AsmMatch.end()); // dynamic cast
+                if(AsmMatch.size() != 0) {
                     numOfMatchedOp++;
+                    } else {
+                    emptyElementIndex = id;
+                    }
+                    AsmMatchVec[id] = AsmMatchOperand;
+            }
+        }
+        if(numOfOp == numOfMatchedOp + 1) { // auto match at `emptyElementIndex`
+            // find unmatched inst in `asmOpVec` and `curIROpVec`, auto match them
+            // only there is only 1 unmatched both in `tempvec` and `curIROpVec` then we auto match them
+            int mark = -1;
+            for(int idd = 0; idd < _asmOpVec.size(); idd++){
+                if(_asmOpVec[idd]->isMetaConstant()) continue;
+                if(getMatchedInst(dynamic_cast<MetaInst*>(_asmOpVec[idd])).size() == 0) {
+                    if(mark != -1) { // the second time found asmOpVec has unmatched inst, then don't auto match
+                        mark = -1;
+                    }else {
+                        mark = idd;
+                    }
                 }
             }
-            std::cout << "DEBUG:: Matched op Analysis for " << fused[i]->getOriginInst() << ": numOfOp: " << numOfOp << ", numOfMatchedOp: " << numOfMatchedOp << std::endl;
-            // if icmp fcmp: must have 2 operands
-            if(fused[i]->getOriginInst().find("icmp") != std::string::npos) {
-            // Now: icmp->operand[0] = icmp.rs2, icmp->operand[1] = icmp.rs1; bge/lt/...->operand[0] = target_imm, [1] = rs1, [2] = rs2; need to reverse icmp->operand
-                std::reverse(std::begin(tmpvec), std::end(tmpvec));
-                if(numOfOp < 2) {
-                    std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " < 2, cannot build mapping!\n" << RST;
-                    return "";
-                }
+            if(mark != -1) {
+                std::cout << "DEBUG:: Auto match between " << fused[i]->getOriginInst() << " and " << dynamic_cast<MetaInst*>(_asmOpVec[mark])->getOriginInst() << std::endl;
+                AsmMatchVec[emptyElementIndex].push_back(_asmOpVec[mark]);
+                numOfMatchedOp++;
             }
-            if(numOfOp != numOfMatchedOp) {
-                std::cout << BOLD << RED << "ERROR:: numOfOp != numOfMatchedOp (after auto match), cannot build mapping!\n" << RST;
+        }
+        std::cout << "DEBUG:: Matched op Analysis for " << fused[i]->getOriginInst() << ": numOfOp: " << numOfOp << ", numOfMatchedOp: " << numOfMatchedOp << std::endl;
+        // if icmp fcmp: must have 2 operands
+        if(fused[i]->getOriginInst().find("icmp") != std::string::npos) {
+        // Now: icmp->operand[0] = icmp.rs2, icmp->operand[1] = icmp.rs1; bge/lt/...->operand[0] = target_imm, [1] = rs1, [2] = rs2; need to reverse icmp->operand
+            std::reverse(std::begin(_asmOpVec), std::end(_asmOpVec));
+            if(numOfOp < 2) {
+                std::cout << BOLD << RED << "ERROR:: # of operands of `compare` (" << fused[i]->getOriginInst() << ") = " << numOfOp << " < 2, cannot build mapping!\n" << RST;
                 return "";
             }
-
-            for( int id = 0; id < vec.size(); id++ ){
-                if(!vec[id]->isMetaInst() && fused[i]->getOriginInst().find("icmp") != std::string::npos) { // if icmp, allow metaConst
-                    continue;
-                }
-                // Check if RS points to any RD in the fused instructions
-                int ret = ifFind((vec[id]),fused);
-                if( ret != -1 )
-                    str += std::to_string(ret+1)+ "." + "0 ";  // Using 0 represents RD
-                else if (ret > i)
-                    std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
-
-                // Find matched ASM instruction of such "operand" 
-                auto AsmMatch  = AsmMatchVec.at(id);
-                // std::cout << "DEBUG:: fused["<<i<<"] " << fused[i]->getOriginInst() <<" .operands["<<id<<"] " << dynamic_cast<MetaInst*>(vec[id])->getOriginInst() << " ->getMatchedInst().size() = " << AsmMatch.size() << std::endl;
-
-                // ASM 1-N Mapping
-                // Current logic follows ASM operand ordering and directly apply it to IR's operand sequence
-                if(ASMorIR == "IR"){
-                    int skip = 0;
-                    // Check RS matching between ASM and LLVM IR
-                    for(int idd = 0; idd < tmpvec.size(); idd++){
-                        if(tmpvec[idd] == NULL) {
-                            continue;
-                        }else if(tmpvec[idd]->isMetaConstant()) {
-                            // Meta Constant should be at the end of the OP list
-                            skip++;
-                            continue;
-                        }
-                        find = ifFind ((tmpvec[idd]), AsmMatch);
-                        std::cout << "DEBUG:: tmpvec[" << idd << "] is " << tmpvec[idd]->toString() << std::endl;
-                        if (find != -1){
-                            str += std::to_string(idd+1-skip) + " ";
-                            //str += std::to_string(idd+1-skip) + " ";
-                            
-                            // Handle the Case like add a1, a0, a0, wherein a0 has been used twice
-                            // We assume the reg mapping of the same inst will only hit once
-                            tmpvec[idd] = NULL;
-                            break;
-                        }
-                    }
-                }
-                else{
-                    // tmpvec.clear();
-                    for( int idd = 0; idd < Fuse.size(); idd++ ){
-                        asmOpVec =  Fuse[i]->getOperandList();
-                        
-                        for( int opid = 0; opid < asmOpVec.size(); opid++ ){
-                            
-                            if(asmOpVec[opid] == NULL || asmOpVec[opid]->isMetaConstant())
-                                continue;
-
-                            find  = ifFind(dynamic_cast<MetaInst*>(asmOpVec[opid]), AsmMatch);
-
-                            if ( find != -1 ){
-                                // Skip the mapped operands of the same instruction
-                                // to address the case of like add a1, a0, a0, 
-                                // wherein a0 has been used twice
-                                if(ifFind( asmOpVec[opid],tmpvec)){
-                                    asmOpVec[opid] = NULL;
-                                    continue;
-                                }
-                                // Instruction Id + "." + Op ID.
-                                // E.g. 1.1, 2.1, 2.2, etc.
-                                str += std::to_string(idd+1) + "." + std::to_string(opid+1);
-                                str += " ";
-                                tmpvec.push_back(asmOpVec[find]);
-                                break;
-                            }
-                        }
-                        if(find != -1)
-                            break;
-                    }
-                    asmOpVec.clear();
-                }       
-            }
-            str += " ; ";
         }
+        /*----- judge if contains auto match case and auto match COMPLETE -----*/
+
+        if(numOfOp != numOfMatchedOp) {
+            std::cout << BOLD << RED << "ERROR:: numOfOp != numOfMatchedOp (after auto match), cannot build mapping!\n" << RST;
+            return "";
+        }
+        
+        // Current ir inst has how many operands, rule should have how many operands
+        for( int id = 0; id < curIROpVec.size(); id++ ){
+            if(!curIROpVec[id]->isMetaInst() && fused[i]->getOriginInst().find("icmp") != std::string::npos) { // if icmp, allow metaConst
+                continue;
+            }
+            // Check if RS points to any RD in the fused instructions
+            int ret = ifFind((curIROpVec[id]),fused);
+            if( ret != -1 )
+                str += std::to_string(ret+1)+ "." + "0 ";  // Using 0 represents RD
+            else if (ret > i)
+                std::cout << "ERROR:: Incorrect Parent Edge detected in buildOperandMapping()\n";
+
+            // Matched ASM instruction of curIROpVec[id]
+            std::vector<MetaOperand*> AsmMatch  = AsmMatchVec.at(id);
+            // std::cout << "DEBUG:: fused["<<i<<"] " << fused[i]->getOriginInst() <<" .operands["<<id<<"] " << dynamic_cast<MetaInst*>(curIROpVec[id])->getOriginInst() << " ->getMatchedInst().size() = " << AsmMatch.size() << std::endl;
+
+            // ASM 1-N Mapping
+            // Current logic follows ASM operand ordering and directly apply it to IR's operand sequence
+            if(ASMorIR == "IR"){
+                int skip = 0;
+                // Check RS matching between ASM and LLVM IR
+                for(int idd = 0; idd < _asmOpVec.size(); idd++){
+                    if(_asmOpVec[idd] == NULL) {
+                        continue;
+                    }else if(_asmOpVec[idd]->isMetaConstant()) {
+                        // Meta Constant should be at the end of the OP list
+                        skip++;
+                        continue;
+                    }
+                    find = ifFind ((_asmOpVec[idd]), AsmMatch);
+                    std::cout << "DEBUG:: _asmOpVec[" << idd << "] is " << _asmOpVec[idd]->toString() << std::endl;
+                    if (find != -1){
+                        str += std::to_string(idd+1-skip) + " "; // curIROpVec[id] is mapped to asmOpVec[idd], so rule is idd+1 (start at 1)
+                        
+                        // Handle the Case like add a1, a0, a0, wherein a0 has been used twice
+                        // We assume the reg mapping of the same inst will only hit once
+                        _asmOpVec[idd] = NULL;
+                        break;
+                    }
+                }
+            }
+            else{
+                // tmpvec.clear();
+                // Iterate Fuse (ir insts) 
+                for( int curAsmIns = 0; curAsmIns < Fuse.size(); curAsmIns++ ){
+                    asmOpVec =  Fuse[curAsmIns]->getOperandList();
+                    
+                    for( int opid = 0; opid < asmOpVec.size(); opid++ ){
+                        
+                        if(asmOpVec[opid] == NULL || asmOpVec[opid]->isMetaConstant())
+                            continue;
+
+                        find  = ifFind(dynamic_cast<MetaInst*>(asmOpVec[opid]), AsmMatch);
+
+                        if ( find != -1 ){
+                            // Skip the mapped operands of the same instruction
+                            // to address the case of like add a1, a0, a0, 
+                            // wherein a0 has been used twice
+                            if(ifFind( asmOpVec[opid],_asmOpVec)){
+                                asmOpVec[opid] = NULL;
+                                continue;
+                            }
+                            // Asm Instruction Id + "." + Op ID.
+                            // E.g. 1.1, 2.1, 2.2, etc.
+                            str += std::to_string(curAsmIns+1) + "." + std::to_string(opid+1);
+                            str += " ";
+                            _asmOpVec.push_back(asmOpVec[find]);
+                            break;
+                        }
+                    }
+                    if(find != -1)
+                        break;
+                }
+                asmOpVec.clear();
+            }       
+        }
+        str += " ; ";
+    }
 
     dumpMapping(str);
     std::cout <<"DEBUG:: Leaving function buildOperandMapping().....\n";
