@@ -145,6 +145,8 @@ public:
 
     MetaOperand& addUser(MetaInst* user);
 
+    MetaOperand& addUsers(std::vector<MetaInst*> vec);
+
     // remove user from user list.
     MetaOperand& removeUser(MetaInst* user);
 

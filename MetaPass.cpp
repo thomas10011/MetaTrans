@@ -2,6 +2,7 @@
 #include "meta/MetaFilter.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Dominators.h"
 #include "meta/MetaMatcher.h"
 #include "meta/MetaTrans.h"
 #include "meta/MetaLearner.h"
@@ -150,6 +151,22 @@ namespace MetaTrans {
                                     .setFunction(&F)
                                     .setTypeMap(typeMap)
                                     .build();
+
+        llvm::DominatorTree* T = new llvm::DominatorTree(F);
+
+        printf("INFO: Printing dom tree...\n");
+        std::string str;
+        llvm::raw_string_ostream stream(str);
+        T->print(stream);
+        printf("%s", stream.str().c_str());
+        //打印出函数F所有模块之间的支配关系
+        // for (Function::iterator I = F.begin(), E = F.end(); I != E; I++) {
+        //     for (Function::iterator J = F.begin(), JE = F.end(); J != JE; J++) {
+        //         //1表示I支配J,0表示I不支配J
+        //         errs() << I->getName() << " " << J->getName() << " " << T->dominates(*I, *J) << "\n";
+        //     }
+        // }
+
         return true;
     }
 
