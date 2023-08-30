@@ -864,6 +864,8 @@ public:
 
 
 class MappingTable {
+private:
+    std::string arch, path;
 
 public:
 
@@ -893,7 +895,11 @@ public:
     // ...
     std::vector<std::map<std::string, std::string>> MTable;
 
-    MappingTable* setName(std::string path);
+    MappingTable* setArch(std::string arch);
+
+    MappingTable* setPath(std::string path);
+
+    MappingTable* initName();
     
     MappingTable* initTableMeta();
 
@@ -902,6 +908,8 @@ public:
     MappingTable* loadMappingTable();
 
     std::string getTableName(int id);
+
+    std::string getTableMetaName();
 
     MappingTable* updateTableMeta();
 

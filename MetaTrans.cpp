@@ -1533,7 +1533,6 @@ namespace MetaTrans {
 //===-------------------------------------------------------------------------------===//
 /// Mapping Table implementation.
 
-
     MappingTable* MappingTable::initTableMeta(){
 
         // std::ifstream file(this->MappingName[0]);
@@ -1618,17 +1617,17 @@ namespace MetaTrans {
         this->MTable.push_back(filler);
 
         for(int i = 1; i < this->max; i++){
-
-            std::ifstream file(this->MappingName[i]);
+            std::string tableName = getTableName(i);
+            std::ifstream file(tableName);
             if (!file) {
-                std::ofstream new_file(this->MappingName[i]);
+                std::ofstream new_file(tableName);
                 new_file.close();
-                std::cout << "Mapping Table " << this->MappingName[i] << "does not exist! Creating a new one! \n";
+                std::cout << "Mapping Table " << tableName << " does not exist! Creating a new one! \n";
                 continue;
             }
             // Check if the file was opened successfully
             if (!file.is_open()) {
-                std::cerr << "Error: Could not open file "<< this->MappingName[i] << std::endl;
+                std::cerr << "Error: Could not open file "<< tableName << std::endl;
                 continue;
             }
 
@@ -1676,27 +1675,41 @@ namespace MetaTrans {
 
     }
 
-    MappingTable* MappingTable::setName(std::string path){
-
-        this->MappingName.push_back(path + "TableMeta.mapping");
-        for(int i = 1; i <= this->max; i++)
-            this->MappingName.push_back(path + std::to_string(i) + "-N.mapping");
+    MappingTable* MappingTable::setArch(std::string arch) {
+        this->arch = arch;
         return this;
     }
 
+    MappingTable* MappingTable::setPath(std::string path) {
+        this->path = path;
+        initName();
+        return this;
+    }
 
-    std::string MappingTable::getTableName(int id){
+    MappingTable* MappingTable::initName() {
+        this->MappingName.push_back("TableMeta.mapping");
+        for(int i = 1; i <= this->max; i++)
+            this->MappingName.push_back(std::to_string(i) + "-N.mapping");
+        return this;
+    }
+
+    std::string MappingTable::getTableName(int id) {
         if(id > this->max){
             std::cout << "ERROR:: getTableName() exceeds the range of vector MappingName!\n";
             return "";
         }
-        return MappingName[id];
+        return path + arch + "." + MappingName[id];
+    }
+
+
+    std::string MappingTable::getTableMetaName() {
+        return getTableName(0);
     }
 
 
     MappingTable* MappingTable::updateTableMeta(){
 
-        std::ofstream file(this->MappingName[0]);
+        std::ofstream file(getTableMetaName());
        
         for(auto pair: TableMeta){
             file << pair.first << " " << pair.second << std::endl;
