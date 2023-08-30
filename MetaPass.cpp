@@ -1,6 +1,7 @@
 #include "meta/MetaPass.h"
 #include "meta/MetaFilter.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/Host.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "meta/MetaMatcher.h"
@@ -12,10 +13,11 @@
 
 using namespace llvm;
 int globalColor = 0;
-extern MetaTrans::MappingTable* MapTable;
 
 namespace MetaTrans {
     
+MetaTrans::MappingTable* MapTable = nullptr;
+
 //===-------------------------------------------------------------------------------===//
 /// Meta Function pass implementation, Will be invoked by LLVM pass manager.
 
@@ -46,17 +48,11 @@ namespace MetaTrans {
         std::string ASMJSON = name + "/asm.json";
         std::string asmStr  = MetaUtil::readFromFile(ASMJSON);
 
-        MapTable = new MappingTable();
         MetaLearner* learner = new MetaLearner();
 
         learner->setMapTable(MapTable);
 
         AddrMappingTable& addrMapTable = AddrMappingTable::getInstanceRef();
-
-        MapTable->setName(name+"/")
-                ->loadMappingTable()
-                ->initTableMeta();
-
 
         MetaUnit* asmUnit = new MetaUnit(asmStr);
 
@@ -145,7 +141,40 @@ namespace MetaTrans {
         typeMap = YamlUtil::parseMapConfig("ir.yml", MetaFunctionPass::str_inst_map);
     }
 
+    std::string getFunctionArchitecture(const llvm::Function *F) {
+        llvm::StringRef TargetTriple = F->getParent()->getTargetTriple();
+        llvm::Triple Triple(TargetTriple);
+        llvm::StringRef ArchName = Triple.getArchName();
+        std::string arch;
+        if (ArchName.startswith("x86")) {
+            arch = "x86";
+        } else if (ArchName.startswith("arm") || ArchName.startswith("aarch64")) {
+            arch = "arm";
+        } else if (ArchName.startswith("riscv")) {
+            arch = "riscv";
+        } else {
+            arch = "unknown";
+        }
+        printf("INFO: Initing Map Table for arch=%s\n", arch.c_str());
+        return arch;
+    }
+
+    void MetaFunctionPass::initMapTable(const llvm::Function *F) {
+        if (MapTable != nullptr) return;
+
+        std::string home = getenv("HOME");
+        MapTable = new MappingTable();
+        MapTable
+            ->setArch(getFunctionArchitecture(F))
+            ->setPath(home + "/")
+            ->loadMappingTable()
+            ->initTableMeta();
+    }
+
     bool MetaFunctionPass::runOnFunction(Function & F) {
+
+        initMapTable(&F);
+
         outs() << "running MetaInst pass on function " << F.getName() << " ... " << "\n";
         MetaFunction* metaFunc = builder
                                     .setFunction(&F)

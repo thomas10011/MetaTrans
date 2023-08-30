@@ -124,5 +124,7 @@ struct MetaFunctionPass : public llvm::FunctionPass {
 
     void processMatch();
 
+    void initMapTable(const llvm::Function *F);
+
 };
 }
