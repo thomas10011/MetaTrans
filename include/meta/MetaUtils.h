@@ -3,7 +3,7 @@
 #include "llvm/IR/Instructions.h"
 #include "yaml-cpp/yaml.h"
 #include "MetaTrans.h"
-
+#include <queue>
 #include <iostream>
 #include <unordered_map>
 
@@ -68,7 +68,9 @@ public:
                 if(tmp.IsScalar()){
                     std::cout << "String opcode IsScalar =  " << tmp.as<std::string>() << std::endl;
                     opcode = tmp.as<std::string>();
-                    value.push_back(std::make_pair(str_inst_type_map[tmp.as<std::string>()], info));
+                    if(str_inst_type_map.find(tmp.as<std::string>()) != str_inst_type_map.end()) {
+                        value.push_back(std::make_pair(str_inst_type_map[tmp.as<std::string>()], info));
+                    }
                 }
                 else if(tmp.IsMap()){
                         std::cout << "tmp is IsMap !" << std::endl;
@@ -111,8 +113,9 @@ public:
                     // YAML::Node src = tmp.second.as<YAML::Node>();
                 // if(tmp.IsSequence() && tmp.second.Type() != YAML::NodeType::Null){
                     
-                    value.push_back(std::make_pair(str_inst_type_map[opcode], info));
-
+                    if(str_inst_type_map.find(opcode) != str_inst_type_map.end()) {
+                        value.push_back(std::make_pair(str_inst_type_map[opcode], info));
+                    }
                     std::cout << "Make pair completes! " << std::endl;
 
                     }   
@@ -282,6 +285,7 @@ public:
 
     static int count_args(const char* fmt);
 
+    static bool test();
 
 };
 
@@ -330,6 +334,233 @@ public:
     }
 };
 
+
+template <class T>
+class Graph {
+
+private:
+T root;
+
+std::unordered_map<T, std::vector<T>*> succTable;
+std::unordered_map<T, std::vector<T>*> predTable;
+
+int _size;
+
+public:
+
+Graph() : root(NULL) {
+
+}
+
+~Graph() {
+    for (auto it = succTable.begin(); it != succTable.end(); ++it) delete it->second;
+}
+
+
+Graph& setRoot(T r) { root = r; return *this; }
+T getRoot() { return root; }
+
+// add an edge from x to y.
+// x --> y
+Graph& add(T x, T y) {
+    std::vector<T>* succs = getSuccPtr(x);
+    std::vector<T>* preds = getPredPtr(y);
+    succs->push_back(y);
+    preds->push_back(x);
+    return *this;
+}
+
+Graph& add(T x, const std::vector<T>& Y) {
+    std::vector<T>* succs = getSuccPtr(x);
+    for (T y : Y) {
+    std::vector<T>* preds = getPredPtr(y);
+        succs->push_back(y);
+        preds->push_back(x);
+    }
+    return *this;
+}
+
+std::vector<T> getSuccessors(T x) {
+    return *(getSuccPtr(x));
+}
+
+std::vector<T> getPredecessors(T x) {
+    return *(getPredPtr(x));
+}
+
+T getSuccessor(T x, int idx) {
+    return succTable[x]->at(idx);
+}
+
+T getPredecessor(T x, int idx) {
+    return predTable[x]->at(idx);
+}
+
+std::vector<T>* getSuccPtr(T x) {
+    if (succTable.find(x) == succTable.end()) {
+        ++ _size;
+        return succTable[x] = new std::vector<T>();
+    }
+
+    else 
+        return succTable[x];
+}
+
+
+std::vector<T>* getPredPtr(T x) {
+    if (predTable.find(x) == predTable.end()) {
+        ++ _size;
+        return predTable[x] = new std::vector<T>();
+    }
+    else 
+        return predTable[x];
+}
+
+std::vector<T> getDFSseq() {
+    std::vector<T> discovered, seq;
+    std::unordered_set<T> visited;
+    discovered.push_back(root);
+
+    assert(root);
+    while (!discovered.empty()) {
+        T cur = discovered.back(); discovered.pop_back();
+
+        if (visited.count(cur)) continue;
+
+        visited.insert(cur);
+        seq.push_back(cur);
+
+        std::vector<T> succ = getSuccessors(cur);
+        for (auto it = succ.rbegin(); it != succ.rend(); ++it) {
+            if (!visited.count(*it)) {
+                discovered.push_back(*it);
+            }
+        }
+    }
+    return seq;
+}
+
+std::vector<T> getBFSseq() {
+    std::queue<T> que;
+    std::vector<T> seq;
+    std::unordered_set<T> visited;
+    que.push(root);
+    while (!que.empty()) {
+        T cur = que.front(); que.pop();
+
+        if (visited.count(cur)) continue;
+
+        visited.insert(cur);
+        seq.push_back(cur);
+
+        for (auto t : getSuccessors(cur)) 
+            if (!visited.count(t))
+                que.push(t);
+    }
+    return seq;
+}
+
+
+int size() { return _size; }
+
+
+};
+
+
+template<class T>
+class DominateTree {
+    
+private:
+
+Graph<T> tree;
+
+void dfs (
+    const Graph<T>& g,
+    T& cur,
+    std::unordered_map<T, int>& dfn,
+    std::unordered_map<T, T>& parent,
+    std::vector<T>& seq
+) {
+    dfn[cur] = seq.size();
+    seq.push_back(cur);
+    for (T suc : g.getSuccessors(cur)) {
+        if (dfn.find(suc) != dfn.end()) {
+            dfs(suc);
+            parent[suc] = cur;
+        }
+    }
+}
+
+
+void getSdom(
+    const Graph<T>& g,
+    std::unordered_map<T, int>& dfn,
+    std::unordered_map<T, T>& parent,
+    std::vector<T>& seq
+) {
+    std::unordered_map<T, T> sdom, father;
+
+    for (auto T t : seq) {
+        father[t] = sdom[t] = t;
+    }
+
+    auto find = [&] (T x) -> T {
+        if (father[x] == x) return x;
+        // 路径压缩的过程中顺便更新最小的sdom
+        if (dfn[sdom[father[x]]] < dfn[sdom[x]]) sdom[x] = father[x];
+        return father[x] = find(father[x]);
+    };
+
+    for (auto it = seq.rbegin(); it != seq.rend(); ++it) {
+        T curr = *it, semi = NULL;
+        for (T pred : g.getPredecessors(curr)) {
+            find(pred);
+            if (dfn[pred] < dfn[curr]) {
+                if (dfn.find(semi) != dfn.end() && dfn[semi] < dfn[pred])
+                    semi = pred;
+            }
+            else {
+                if (dfn[sdom[pred]] < dfn[sdom[curr]])
+                    semi = sdom[pred];
+            }
+        }
+        sdom[curr] = semi;
+        father[curr] = parent[curr];
+    }
+    return sdom;
+}
+
+public:
+
+DominateTree(const Graph<T>& g) {
+    std::unordered_map<T, int> dfn;
+    std::unordered_map<T, T> parent;
+    std::vector<T> seq;
+    dfs(g, g.getRoot(), dfn, parent, seq);
+
+    
+
+}
+
+DominateTree(Graph<T>* g) {
+    DominateTree(*g);
+}
+
+
+
+std::vector<T> getDominateFrontier() {
+
+}
+
+T getImmDomNode(T x) {
+    return tree.getPredecessor(0);
+}
+
+std::vector<T> getDomNodes(T x) {
+
+}
+
+};
 
 } // namespace MetaTrans
 

@@ -540,6 +540,8 @@ MetaTrans::MappingTable* MapTable = nullptr;
     }
     
     MetaFunctionBuilder& MetaFunctionBuilder::createMetaInst(Instruction& i, MetaBB& b) {
+        printf("INFO: Cretaing MetaInst for IR Ins = %s\n", i.getName().str().c_str());
+
         MetaInst* newInst = b.buildInstruction((*typeMap)[i.getOpcode()]);
 
         std::string globalVarNmae = "";
