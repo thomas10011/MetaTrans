@@ -492,7 +492,7 @@ void dfs (
 }
 
 
-void getSdom(
+std::unordered_map<T, T> getSdom(
     const Graph<T>& g,
     std::unordered_map<T, int>& dfn,
     std::unordered_map<T, T>& parent,
@@ -500,7 +500,7 @@ void getSdom(
 ) {
     std::unordered_map<T, T> sdom, father;
 
-    for (auto T t : seq) {
+    for (T t : seq) {
         father[t] = sdom[t] = t;
     }
 
@@ -538,15 +538,7 @@ DominateTree(const Graph<T>& g) {
     std::vector<T> seq;
     dfs(g, g.getRoot(), dfn, parent, seq);
 
-    
-
 }
-
-DominateTree(Graph<T>* g) {
-    DominateTree(*g);
-}
-
-
 
 std::vector<T> getDominateFrontier() {
 
