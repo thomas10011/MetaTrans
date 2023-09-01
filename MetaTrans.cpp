@@ -21,8 +21,10 @@ const std::string BOLD("\033[1m");
 // Create a Global Map Table;
 MetaTrans::MappingTable* MapTable = NULL;
 
-namespace MetaTrans { 
-    
+extern llvm::cl::opt<bool> GPTMapping;
+
+namespace MetaTrans {
+
 //===-------------------------------------------------------------------------------===//
 /// Function Mata Data implementation.
 
@@ -1698,6 +1700,9 @@ namespace MetaTrans {
             std::cout << "ERROR:: getTableName() exceeds the range of vector MappingName!\n";
             return "";
         }
+        if(GPTMapping) {
+            return path + "gpt." + arch + "." + MappingName[id];
+        }
         return path + arch + "." + MappingName[id];
     }
 
@@ -1990,6 +1995,4 @@ std::string CodePiece::toString() {
 
 //===-------------------------------------------------------------------------------===//
 
-
-
-} // end namespace MetaTrans
+    } // end namespace MetaTrans
