@@ -524,7 +524,7 @@ namespace MetaTrans {
 
     bool MetaInst::isMemOp() { return isLoad() || isStore(); }
 
-    bool MetaInst::isAddressing() { return getColor()->type == 0; }
+    bool MetaInst::isAddressing() { return getColor()->type == 0 || ifAddrGen(); }
 
     bool MetaInst::isComputing() { return getColor()->type == 1; }
 
