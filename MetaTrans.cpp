@@ -482,7 +482,7 @@ namespace MetaTrans {
             .setHashcode            (hashCode)
             .setDataRoot            (dataRoot)
             .setGlobalSymbolName    (globalSymbolName)
-            .setAddress             (address)
+            .setAddress             (addr)
             .setAddrGen             (isAddrGen)
             .setID                  (id)
             ;
@@ -917,7 +917,7 @@ namespace MetaTrans {
         setGlobalSymbolName(globalSymbolName);
         setHashcode(hashCode);
         setID(id);
-        setAddress(address);
+        setAddress(addr);
         setAddrGen(isAddrGen);
 
         return *this; 

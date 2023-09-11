@@ -3,6 +3,7 @@
 #include <iostream>
 #include <unistd.h>
 #include <regex>
+#include <queue>
 
 
 namespace MetaTrans {
@@ -722,12 +723,12 @@ namespace MetaTrans {
     void MetaUtil::setDataRoot(MetaFunction* mF) {
         for (auto func_iter = mF->bb_begin(); func_iter != mF->bb_end(); ++func_iter) {
             MetaBB* bb = *func_iter;
-            std::cout << "-- setDataRoot for MetaFunction: " << " --" << "\n";
+            std::cout << "-- setDataRoot for MetaFunction: " << " -- " << mF->getFunctionName() << std::endl;
             for (auto bb_iter = bb->inst_begin(); bb_iter != bb->inst_end(); ++bb_iter) { 
                 MetaInst* inst = *bb_iter;
                 std::string ans = MetaUtil::findDataRoot(inst);
                 if(ans != "") {
-                    std::cout << "\t -- setDataRoot for inst: " << inst << ", ans -- " << ans << "\n";
+                    std::cout << "\t -- setDataRoot for inst: " << inst->getID() << ", ans -- " << ans << "\n";
                     inst->setDataRoot("TIR_GLOBAL");
                     inst->setGlobalSymbolName(ans);
                 }
@@ -736,29 +737,28 @@ namespace MetaTrans {
     }
 
     std::string MetaUtil::findDataRoot(MetaInst* inst) {
-        std::unordered_set<MetaOperand*> s;
-        std::string ans = MetaUtil::findDataRootRecursive(inst, s);
-        return ans;
-    }
-
-    std::string MetaUtil::findDataRootRecursive(MetaOperand* inst, std::unordered_set<MetaOperand*> set) {
-        if(!inst || set.count(inst)) return "";
-        set.insert(inst);
-        if(inst->isMetaConstant()) {
-            if(((MetaConstant*)inst)->isGlobal()) {
-                return ((MetaConstant*)inst)->getName();
+        // Using BFS to find the data root
+        std::queue<MetaOperand*> q;
+        std::unordered_set<MetaOperand*> set;
+        q.push(inst);
+        while(!q.empty()) {
+            MetaOperand* cur = q.front();
+            q.pop();
+            if(!cur || set.count(cur)) continue;
+            set.insert(cur);
+            if(cur->isMetaConstant()) {
+                if(((MetaConstant*)cur)->isGlobal()) {
+                    return ((MetaConstant*)cur)->getName();
+                }
+            }
+            if(cur->isMetaInst()) {
+                auto list = ((MetaInst*)cur)->getOperandList();
+                for(auto it = list.begin(); it != list.end(); it++) {
+                    q.push(*it);
+                }
             }
         }
-        std::string ans = "";
-        if(inst->isMetaInst()) {
-            auto list = ((MetaInst*)inst)->getOperandList();
-            for(auto it = list.begin(); it != list.end(); it++) {
-                ans = findDataRootRecursive(*it, set);
-                if(ans != "") return ans;
-            }
-        }
-        set.erase(inst);
-        return ans;
+        return "";
     }
 
     // A function that returns true if a character is a format flag

@@ -62,7 +62,7 @@ MetaInst* trainControlFlow(MetaInst* cur, MetaInst* irinst);
 
 void pushMatchedInst(MetaInst* key, MetaInst* value);
 bool ifOrderMatters(InstType type);
-
+void trainBinOPInstructions(MetaInst *asmLoad1, MetaInst *asmLoad2, MetaInst *asmStore);
 };
 
 } // end namespace MetaTrans
