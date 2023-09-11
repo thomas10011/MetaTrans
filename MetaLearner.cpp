@@ -87,7 +87,7 @@ MetaBB* MetaLearner::trainBB(MetaBB* cur, MetaBB* irbb) {
     for(auto inst= cur->begin(); inst != cur->end(); inst++){
         // Visit all the load and store instructions
         //if((*inst)->getInstType()[0] !=InstType::LOAD && (*inst)->getInstType()[0] !=InstType::STORE)
-        std::cout << "DEBUG:: Checking Inst: "<< (*inst)->getOriginInst()<< std::endl;
+        std::cout << "DEBUG:: Checking Inst: 0x" << std::hex << (*inst)->getAddress() << std::dec << " " << (*inst)->getOriginInst() << std::endl;
 
         if(ifMatched(*inst) && (*inst)->getInstType()[0] != InstType::LOAD) {
             
@@ -101,7 +101,7 @@ MetaBB* MetaLearner::trainBB(MetaBB* cur, MetaBB* irbb) {
                 auto it = getMatchedInst(*inst)[getMatchedInst(*inst).size()-1];
                 std::cout << "DEBUG:: The end of MatchedInst ID is = "<< it->getID()
                             << ", Type is "
-                            <<  it->getInstType()[0] 
+                            <<  InstTypeName[it->getInstType()[0]] 
                             << std::endl;
                 if(!it)
                     std::cout << "DEBUG:: getMatchedInst() returns NULL!\n";
@@ -109,7 +109,29 @@ MetaBB* MetaLearner::trainBB(MetaBB* cur, MetaBB* irbb) {
                     trainEquivClass(*inst, it);
             }
         }
-            
+
+        if((*inst)->getOperandNum() == 2) {
+            std::vector<MetaInst*> op = (*inst)->getOperandOnlyInstList();
+            std::cout << "Enter trainBinOPInstructions() " << (*inst)->getAddress() << " Check op.size() " << op.size() << " ....." << std::endl;
+            if(op.size() == 2) {
+                bool okForTrain = true;
+                for (int i = 0; i < op.size() && okForTrain; i++) {
+                    std::cout << op[i]->toString() << std::endl;
+                    if(ifMatched(op[i])) std::cout << "Matched!\n";
+                    else std::cout << "Not Matched!\n";
+                    if (!op[i]->isMetaInst() || !op[i]->isType(InstType::LOAD) || !ifMatched(op[i])) {
+                        okForTrain = false;
+                    }
+                }
+                MetaInst *instCopy = *inst;
+                while(instCopy && !instCopy->isType(InstType::STORE)) {
+                    std::cout << "InstCopy: " << instCopy->toString() << std::endl;
+                    instCopy = instCopy->getUsers()[0];
+                }
+                if (instCopy && okForTrain) trainBinOPInstructions(op[0], op[1], instCopy);
+            }
+        }
+
         if((*inst)->isType(InstType::BRANCH)) {
             auto matchvec = findTheSameInst(*inst, irbb);
             if(matchvec.size() != 1 ){
@@ -1120,7 +1142,7 @@ std::vector<MetaInst*> MetaLearner::findMatchedInst(MetaInst* cur, std::vector<M
     int  asmOpCnt   = asmOpVec.size();
     int  irOpCnt    = 0;
 
-    std::cout << "DEBUG:: Enter function findMatchedInst(), ASM OpCnt = " << asmOpCnt;
+    std::cout << "DEBUG:: Enter function findMatchedInst(), ASM inst " << cur->getOriginInst() << ", OpCnt = " << asmOpCnt << " : ";
     for (int i = 0; i < asmOpCnt; i++){
         std::cout << ", " << MetaUtil::toString(asmOpVec[i]);
     }
@@ -1130,9 +1152,9 @@ std::vector<MetaInst*> MetaLearner::findMatchedInst(MetaInst* cur, std::vector<M
 
     // Perfect 1-1 or N-N mapping 
     std::cout << "this: " << MetaUtil::toString(cur->getInstType()) << std::endl;
-
+    std::cout << "irvec: ";
     for( auto it = irvec.begin(); it != irvec.end(); it++){
-        std::cout << "irvec: " << MetaUtil::toString((*it)->getInstType()) << std::endl;
+        std::cout << "irvec: " << (*it)->getOriginInst() << ", type : " << MetaUtil::toString((*it)->getInstType()) << std::endl;
         if(cur->hasStrictSameType(*it)){
             //this->MatchedInst.push_back(*it);
             tmp.push_back(*it);
@@ -1370,6 +1392,62 @@ MetaInst* MetaLearner::trainControlFlow(MetaInst* cur, MetaInst* irinst){
     return cur;
 }
 
+MetaInst* lowestCommonAncestor(MetaInst* root, MetaInst* p, MetaInst* q) {
+    MetaInst *ans = nullptr;
+    std::unordered_map<MetaInst*, bool> vis;
+    while(p && p != root) {
+        vis[p] = true;
+        p = p->getUsers().at(0);
+    }
+    while(q && q != root) {
+        if(vis[q]) return q;
+        q = q->getUsers().at(0);
+    }
+    return nullptr;
+}
+
+// This function train the whole instruction sequences between load and store of ASM and IR
+// First, go down find the first joint node of asmLoad1 and asmLoad2 as `asmJoint`
+// Second, collect asmJointNode and go down until asmStore, this part sequence instructions are `asmSeq`
+// Third, do the same thing for irLoad1, irLoad2 and irStore, the sequence instructions are `irSeq`
+// Fourth, mark `asmSeq` and `irSeq` as mapping rule
+void MetaLearner::trainBinOPInstructions(MetaInst* asmLoad1, MetaInst* asmLoad2, MetaInst* asmStore) {
+    std::cout << "DEBUG:: Entering function trainBinOPInstructions().....\n";   
+    MetaInst *irLoad1 = getMatchedInst(asmLoad1).size() ? getMatchedInst(asmLoad1)[0] : nullptr;
+    MetaInst *irLoad2 = getMatchedInst(asmLoad2).size() ? getMatchedInst(asmLoad2)[0] : nullptr;
+    MetaInst *irStore = getMatchedInst(asmStore).size() ? getMatchedInst(asmStore)[0] : nullptr;
+    if(!irLoad1 || !irLoad2 || !irStore) {
+        std::cout << "DEBUG:: trainBinOPInstructions() irLoad1 = " << irLoad1 << ", irLoad2 = " << irLoad2 << ", irStore = " << irStore << std::endl;
+        return;
+    }
+    MetaInst* asmJoint = lowestCommonAncestor(asmStore, asmLoad1, asmLoad2);
+    if(!asmJoint) {
+        std::cout << "DEBUG:: trainBinOPInstructions() asmJoint = " << asmJoint << std::endl;
+        return;
+    }
+    MetaInst* irJoint = lowestCommonAncestor(irStore, irLoad1, irLoad2);
+    if(!irJoint) {
+        std::cout << "DEBUG:: trainBinOPInstructions() irJoint = " << irJoint << std::endl;
+        return;
+    }
+    
+    std::vector<MetaInst*> asmSeq;
+    while(asmJoint && asmJoint != asmStore) {
+        asmSeq.push_back(asmJoint);
+        asmJoint = asmJoint->getUsers().at(0);
+    }
+    std::vector<MetaInst*> irSeq;
+    while(irJoint && irJoint != irStore) {
+        irSeq.push_back(irJoint);
+        irJoint = irJoint->getUsers().at(0);
+    }
+
+    std::cout << "DEBUG:: trainBinOPInstructions() asmSeq.size() = " << asmSeq.size() << ": ";
+    for(auto it = asmSeq.begin(); it != asmSeq.end(); it++) { std::cout << (*it)->getOriginInst() << ", "; }
+    std::cout << std::endl << "DEBUG:: trainBinOPInstructions() irSeq.size() = " << irSeq.size() << ": ";
+    for(auto it = irSeq.begin(); it != irSeq.end(); it++) { std::cout << (*it)->getOriginInst() << ", "; }
+    std::cout << std::endl;
+}
 
 void MetaLearner::pushMatchedInst(MetaInst* key, MetaInst* value) {
     auto it = matchedInstMap.find(key);
