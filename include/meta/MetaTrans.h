@@ -328,7 +328,7 @@ protected:
 
     std::vector<std::vector<int>> typeSrc;
 
-    std::vector<MetaOperand*> operandList; // when `initOperands`, resize it to MAX_OPERAND_WITH_ARGUMENTS. so [0-2] is rs1-rs3, [3] is imm; [4-11] a0-a7 and [12-19] fa0-fa7 only for jal 
+    std::vector<MetaOperand*> operandList; // when `initOperands`, resize it to MAX_OPERAND + callArguments.size(). so [0-2] is rs1-rs3, [3] is imm 
 
     InstMetaData metaData;
 
@@ -501,6 +501,8 @@ public:
     virtual MetaPrimType getDataType() override;
 
     bool fold();
+
+    bool fold(int idx);
 
     bool isFake();
 

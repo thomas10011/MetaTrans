@@ -717,13 +717,14 @@ namespace MetaTrans {
 
     void MetaInst::setTransInst(llvm::Instruction* inst){
         this->TransInst = inst;
-    }
+        }
 
-    bool MetaInst::fold() {
-        if (operandList.size() != 1) {
+    // 使用当前指令的第几个 operand 进行 fold
+    bool MetaInst::fold(int idx) {
+        if (operandList.size() <= idx) {
             return false;
         }
-        MetaOperand* origin = operandList.at(0);
+        MetaOperand* origin = operandList.at(idx);
         origin->removeUser(this);
         origin->addUsers(this->getUsers());
         for (auto user : users) {
@@ -731,6 +732,10 @@ namespace MetaTrans {
         }
         this->erase();
         return true;
+    }
+
+    bool MetaInst::fold() {
+        return fold(0);
     }
 
     MetaInst&  MetaInst::removeOperand(MetaOperand* op) {
