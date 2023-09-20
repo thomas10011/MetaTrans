@@ -720,8 +720,8 @@ protected:
     std::vector<MetaBB*> bbs;
 
     // CFG root and exit point.
-    MetaBB* root;
-    MetaBB* exit;
+    MetaBB* root = nullptr;
+    MetaBB* exit = nullptr;
 
     std::string funcName;
 

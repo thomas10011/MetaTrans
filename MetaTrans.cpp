@@ -1303,9 +1303,11 @@ namespace MetaTrans {
             context.restoreContext();
         }
         
+        int rootBBIdx = object["rootBB"].getAsInteger().getValue();
+        int exitBBIdx = object["exitBB"].getAsInteger().getValue();
         (*this)
-            .setRoot(context.getMetaBB(object["rootBB"].getAsInteger().getValue()))
-            .setExit(context.getMetaBB(object["exitBB"].getAsInteger().getValue()))
+            .setRoot(context.getMetaBB(rootBBIdx))
+            .setExit(context.getMetaBB(exitBBIdx))
             ;
 
         for (int i = 0; i < blocks.size(); ++i) {
@@ -1443,7 +1445,7 @@ namespace MetaTrans {
             "\"funcName\":" + "\"" + funcName + "\"" + "," +
             "\"stackSize\":" + std::to_string(stackSize) + "," +
             "\"rootBB\":" + std::to_string(root->getID()) + "," +
-            "\"exitBB\":" + std::to_string(exit->getID()) + "," +
+            "\"exitBB\":" + (exit ? std::to_string(exit->getID()) : "-1") + "," +
             "\"returnType\":" + "\"" + MetaUtil::toString(returnType) + "\"" + "," +
             "\"arguments\":" + argStr + "," +
             "\"constants\":" + constStr + "," +
