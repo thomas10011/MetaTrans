@@ -3,7 +3,6 @@
 #include <iostream>
 #include <unistd.h>
 #include <regex>
-#include <queue>
 
 
 namespace MetaTrans {
@@ -151,6 +150,36 @@ namespace MetaTrans {
         return false;
     }
 
+    bool MetaUtil::isFuncPtrDeclaration(std::string& str) {
+        std::regex funcPtrPattern("[a-zA-Z0-9_]*\\s*\\(\\s*\\*\\s*[a-zA-Z0-9_]*\\s*\\)\\s*\\(.*\\)");
+        std::smatch matches;
+        if (std::regex_match(str, matches, funcPtrPattern)) {
+            return true;
+        }
+        return false;
+    }
+
+    std::vector<int> MetaUtil::find(std::string s, std::string& text) {
+        std::vector<int> ret;
+        int n = s.length(), m = text.length();
+        int next[n];
+        for (int i = 1, j = next[0] = -1; i < n; ) {
+            if (j < 0 || s[i - 1] == s[j]) next[i++] = ++j;
+            else j = next[j];
+        }
+        for (int i = 0, j = 0; i < m; ) {
+            if (j == n - 1 && s[j] == text[i]) {
+                ret.push_back(i - n + 1);
+                j = next[j];
+            }
+            else if (j < 0 || s[j] == text[i]) {
+                ++i; ++j;
+            }
+            else j = next[j];
+        }
+        return ret;
+    }
+
     bool MetaUtil::isEmpty(std::string s) {
         if (s.length() == 0) return true;
         for (int i = 0; i < s.length(); ++i) {
@@ -235,12 +264,13 @@ namespace MetaTrans {
         // remove the space in the head and tail
         if (str.length() == 0) {
             return str;
-        }else if(str.length() == 1 && str[0] == ' ') {
+        }
+        else if(str.length() == 1 && str[0] == ' ') {
             return "";
         }
         std::string ans = str;
         std::string blanks("\f\v\r\t\n ");
-        ans.erase(0,str.find_first_not_of(blanks));
+        ans.erase(0, str.find_first_not_of(blanks));
         ans.erase(str.find_last_not_of(blanks) + 1);
         return ans;
     }
@@ -256,6 +286,32 @@ namespace MetaTrans {
     bool MetaUtil::isNumber(std::string s) {
         std::regex reg("[-+]?([0-9]*\.[0-9]+|[0-9]+)");
         return std::regex_match(s, reg);
+    }
+
+    bool MetaUtil::same(std::string x, std::string y) {
+        // Convert both strings to lowercase for comparison
+        std::string lowerX = x;
+        std::string lowerY = y;
+
+        std::transform(lowerX.begin(), lowerX.end(), lowerX.begin(), ::tolower);
+        std::transform(lowerY.begin(), lowerY.end(), lowerY.begin(), ::tolower);
+
+        // Perform the comparison
+        return lowerX == lowerY;
+    }
+
+    std::string MetaUtil::int2hex(int64_t num) {
+        std::stringstream stream;
+        stream << std::hex << num;
+        return stream.str();
+    }
+
+    int64_t MetaUtil::hex2int(std::string str) {
+        int64_t result;
+        std::stringstream stream;
+        stream << std::hex << str; // Convert hexadecimal string to integer using stringstream
+        stream >> result; // Extract the integer from the stringstream
+        return result;
     }
 
     std::string MetaUtil::toString(DataType type) {
@@ -480,7 +536,7 @@ namespace MetaTrans {
     // if type is ADDRESSING, color inst as ADDRESSING until 'lui'
     // return last color used
     int MetaUtil::paintInsColorRecursive(MetaInst* inst, int color, int type, int depth, Path* p, std::unordered_set<MetaInst*> &visited) {
-        if (visited.count(inst)) return color;
+        if (visited.count(inst) && type != COLORTYPE::ADDRESSINGCOLOR && !inst->ifAddrGen()) return color;
         if (inst->isMetaPhi()) return color;
         if (inst->isType(InstType::JUMP)) return color;
 
@@ -536,7 +592,6 @@ namespace MetaTrans {
             }
 
         }
-        visited.erase(inst);
 
         return color;
     }
@@ -692,7 +747,7 @@ namespace MetaTrans {
             auto types = inst->getInstType();
             std::string typeName = "";
             for(int j = 0; j < types.size(); j++) {
-                typeName = typeName + InstTypeName[types[j]];
+                typeName = typeName + InstTypeName.at(types.at(j));
             }
             stringList.push_back(typeName);
         }
@@ -723,12 +778,12 @@ namespace MetaTrans {
     void MetaUtil::setDataRoot(MetaFunction* mF) {
         for (auto func_iter = mF->bb_begin(); func_iter != mF->bb_end(); ++func_iter) {
             MetaBB* bb = *func_iter;
-            std::cout << "-- setDataRoot for MetaFunction: " << " -- " << mF->getFunctionName() << std::endl;
+            std::cout << "-- setDataRoot for MetaFunction: " << " --" << "\n";
             for (auto bb_iter = bb->inst_begin(); bb_iter != bb->inst_end(); ++bb_iter) { 
                 MetaInst* inst = *bb_iter;
                 std::string ans = MetaUtil::findDataRoot(inst);
                 if(ans != "") {
-                    std::cout << "\t -- setDataRoot for inst: " << inst->getID() << ", ans -- " << ans << "\n";
+                    std::cout << "\t -- setDataRoot for inst: " << inst << ", ans -- " << ans << "\n";
                     inst->setDataRoot("TIR_GLOBAL");
                     inst->setGlobalSymbolName(ans);
                 }
@@ -737,28 +792,29 @@ namespace MetaTrans {
     }
 
     std::string MetaUtil::findDataRoot(MetaInst* inst) {
-        // Using BFS to find the data root
-        std::queue<MetaOperand*> q;
-        std::unordered_set<MetaOperand*> set;
-        q.push(inst);
-        while(!q.empty()) {
-            MetaOperand* cur = q.front();
-            q.pop();
-            if(!cur || set.count(cur)) continue;
-            set.insert(cur);
-            if(cur->isMetaConstant()) {
-                if(((MetaConstant*)cur)->isGlobal()) {
-                    return ((MetaConstant*)cur)->getName();
-                }
-            }
-            if(cur->isMetaInst()) {
-                auto list = ((MetaInst*)cur)->getOperandList();
-                for(auto it = list.begin(); it != list.end(); it++) {
-                    q.push(*it);
-                }
+        std::unordered_set<MetaOperand*> s;
+        std::string ans = MetaUtil::findDataRootRecursive(inst, s);
+        return ans;
+    }
+
+    std::string MetaUtil::findDataRootRecursive(MetaOperand* inst, std::unordered_set<MetaOperand*> set) {
+        if(!inst || set.count(inst)) return "";
+        set.insert(inst);
+        if(inst->isMetaConstant()) {
+            if(((MetaConstant*)inst)->isGlobal()) {
+                return ((MetaConstant*)inst)->getName();
             }
         }
-        return "";
+        std::string ans = "";
+        if(inst->isMetaInst()) {
+            auto list = ((MetaInst*)inst)->getOperandList();
+            for(auto it = list.begin(); it != list.end(); it++) {
+                ans = findDataRootRecursive(*it, set);
+                if(ans != "") return ans;
+            }
+        }
+        set.erase(inst);
+        return ans;
     }
 
     // A function that returns true if a character is a format flag
@@ -838,5 +894,45 @@ namespace MetaTrans {
             printf("%d ", seq[i]);
         }
         printf("\n");
+    }
+
+    std::pair<int, std::vector<int>> MetaUtil::getReturnAndArgumentRegFromFuncPtrString(std::string funcPtrStr) {
+        std::vector<int> leftBracketPos  = MetaUtil::find("(", funcPtrStr);
+        std::vector<int> rightBracketPos = MetaUtil::find(")", funcPtrStr);
+
+        assert(leftBracketPos.size() == rightBracketPos.size() && leftBracketPos.size() == 2);
+
+        std::string retTypeStr = MetaUtil::trim(funcPtrStr.substr(0, leftBracketPos[0]));
+        std::string argStr = funcPtrStr.substr(leftBracketPos[1] + 1, rightBracketPos[1] - leftBracketPos[1] - 1);
+
+        printf("INFO: getFuncPtrType.\n");
+        printf("INFO: retTypeStr = %s\n", retTypeStr.c_str());
+        printf("INFO: argStr = %s\n", argStr.c_str());
+
+        std::pair<int, std::vector<int>> ret;
+        ret.first = retTypeStr == "void" ? 0 : (retTypeStr == "float" || retTypeStr == "double" ? 2 : 1);
+
+        std::vector<std::string> argStrs = MetaUtil::split(",", argStr);
+        int a0count = ARG_START_REG, fa0count = FARG_START_REG;
+        std::vector<int> ans;
+        for (auto str : argStrs) {
+            if(str.find("*") != std::string::npos) {
+                if(a0count > ARG_END_REG) ans.push_back(-1);
+                else ans.push_back(a0count++);
+            }
+            else if(str.find("double")!= std::string::npos || str.find("float")!= std::string::npos){
+                if(fa0count > FARG_END_REG) ans.push_back(-2);
+                else ans.push_back(fa0count++);
+            }
+            else if(str == "...") {
+                break;  
+            }
+            else{
+                if(a0count > ARG_END_REG) ans.push_back(-1);
+                else ans.push_back(a0count++);
+            }
+        }
+        ret.second = ans;
+        return ret;
     }
 }

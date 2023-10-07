@@ -319,8 +319,6 @@ private:
     
     std::string originInst;
 
-    MetaInst& erase();
-
 protected:
 
     // a vector to indicate the real type of a instruction.
@@ -356,6 +354,10 @@ protected:
 
     bool fake = false;
 
+    int stackOffset = 0;
+
+    bool stackAddressing = false;
+
 public:
 
     MetaInst();
@@ -377,6 +379,12 @@ public:
     MetaInst& addInstType(InstType ty);
 
     MetaInst& setParentScope(MetaScope* scope);
+
+    MetaInst& setStackAddressing(bool flag);
+
+    MetaInst& setStackOffset(int offset);
+
+    MetaInst& erase();
 
     void dumpPath(int index);
 
@@ -451,6 +459,10 @@ public:
     bool virtual isComputing();
 
     bool virtual isControlFlow();
+
+    bool isStackAddressing();
+
+    int getStackOffset();
 
     void setColor(int c, int t);
 

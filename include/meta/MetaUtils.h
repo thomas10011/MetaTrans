@@ -6,6 +6,7 @@
 #include <queue>
 #include <iostream>
 #include <unordered_map>
+#include <macro.h>
 
 using namespace llvm;
 
@@ -212,8 +213,13 @@ public:
             std::cout << "key: "<< pair->first << "  -->>  " << "value: " << pair->second << std::endl;
     }
 
+    static bool isFuncPtrDeclaration(std::string& str);
+
     // text中是否包含s
     static bool contain(std::string s, std::string& text);
+
+    // test 中 s 出现的所有位置
+    static std::vector<int> find(std::string s, std::string& text);
 
     // s是否为空串或者由空字符组成
     static bool isEmpty(std::string s);
@@ -234,6 +240,13 @@ public:
     static bool startwith(std::string s, const std::string& text);
 
     static bool isNumber(std::string s);
+    
+    // 比对两个字符串，忽略大小写
+    static bool same(std::string x, std::string y);
+
+    static std::string int2hex(int64_t num);
+
+    static int64_t hex2int(std::string str);
 
     static std::string toString(DataType type);
 
@@ -287,6 +300,8 @@ public:
 
     static bool test();
 
+    static std::pair<int, std::vector<int>>
+    getReturnAndArgumentRegFromFuncPtrString(std::string funcPtrStr);
 };
 
 template<class X, class Y>

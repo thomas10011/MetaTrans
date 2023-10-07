@@ -473,7 +473,7 @@ namespace MetaTrans {
         std::string     globalSymbolName    = JSON["globalSymbolName"]    .getAsString().getValue().str();
         unsigned long   hashCode            = JSON.getInteger("hashCode") .getValue();
         int64_t         id                  = JSON.getInteger("id")       .getValue();
-        int64_t         addr                = JSON.getInteger("address")  .getValue();
+        int64_t         addr                = MetaUtil::hex2int(JSON.getString("address").getValue().str());
         bool            isAddrGen           = JSON.getBoolean("isAddrGen").getValue();
         bool            isfake              = JSON.getBoolean("isFake").getValue();
 
@@ -529,6 +529,10 @@ namespace MetaTrans {
     bool MetaInst::isComputing() { return getColor()->type == 1; }
 
     bool MetaInst::isControlFlow() { return getColor()->type == 2; }
+
+    bool MetaInst::isStackAddressing() { return stackAddressing; }
+
+    int MetaInst::getStackOffset() { return stackOffset; }
 
     int MetaInst::getOperandNum() { return operandList.size(); }
 
@@ -641,7 +645,7 @@ namespace MetaTrans {
         std::string str = "{";
         str = str + 
             "\"id\":" + std::to_string(id) + "," +
-            "\"address\":" + std::to_string(address) + "," +
+            "\"address\":\"" + MetaUtil::int2hex(address) + "\"," +
             "\"originInst\":" + "\"" +originInst + "\"" + "," +
             "\"isMetaCall\":" + "false" + "," +
             "\"isMetaPhi\":false,\"type\":" + MetaUtil::toString(type) + "," +
@@ -690,6 +694,10 @@ namespace MetaTrans {
     MetaInst& MetaInst::setDataRoot(std::string s) { dataRoot = s; return *this; }
 
     MetaInst& MetaInst::setGlobalSymbolName(std::string s) { globalSymbolName = s; return *this; }
+
+    MetaInst& MetaInst::setStackAddressing(bool flag) { stackAddressing = true; return *this;}
+
+    MetaInst& MetaInst::setStackOffset(int offset) { stackOffset = offset; return *this; }
 
     std::vector<Path *>& MetaInst::getAllPath() { return paths; }
 
