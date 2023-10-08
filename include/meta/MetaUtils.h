@@ -1,3 +1,18 @@
+//===-- MetaUtils.h -----------------*- C++ -----------------------------*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// This file contains the declaration of utility functions. These functions are
+// mainly general functions, such as string compare and process, parse yaml files,
+// convert int to string and string to int, etc. These functions can be widly 
+// used in preprocessing, learning, and translating.
+//
+//===----------------------------------------------------------------------===//
+
 #pragma once
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
@@ -6,7 +21,6 @@
 #include <queue>
 #include <iostream>
 #include <unordered_map>
-#include <macro.h>
 
 using namespace llvm;
 
@@ -300,8 +314,6 @@ public:
 
     static bool test();
 
-    static std::pair<int, std::vector<int>>
-    getReturnAndArgumentRegFromFuncPtrString(std::string funcPtrStr);
 };
 
 template<class X, class Y>

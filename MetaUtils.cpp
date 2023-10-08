@@ -896,43 +896,5 @@ namespace MetaTrans {
         printf("\n");
     }
 
-    std::pair<int, std::vector<int>> MetaUtil::getReturnAndArgumentRegFromFuncPtrString(std::string funcPtrStr) {
-        std::vector<int> leftBracketPos  = MetaUtil::find("(", funcPtrStr);
-        std::vector<int> rightBracketPos = MetaUtil::find(")", funcPtrStr);
 
-        assert(leftBracketPos.size() == rightBracketPos.size() && leftBracketPos.size() == 2);
-
-        std::string retTypeStr = MetaUtil::trim(funcPtrStr.substr(0, leftBracketPos[0]));
-        std::string argStr = funcPtrStr.substr(leftBracketPos[1] + 1, rightBracketPos[1] - leftBracketPos[1] - 1);
-
-        printf("INFO: getFuncPtrType.\n");
-        printf("INFO: retTypeStr = %s\n", retTypeStr.c_str());
-        printf("INFO: argStr = %s\n", argStr.c_str());
-
-        std::pair<int, std::vector<int>> ret;
-        ret.first = retTypeStr == "void" ? 0 : (retTypeStr == "float" || retTypeStr == "double" ? 2 : 1);
-
-        std::vector<std::string> argStrs = MetaUtil::split(",", argStr);
-        int a0count = ARG_START_REG, fa0count = FARG_START_REG;
-        std::vector<int> ans;
-        for (auto str : argStrs) {
-            if(str.find("*") != std::string::npos) {
-                if(a0count > ARG_END_REG) ans.push_back(-1);
-                else ans.push_back(a0count++);
-            }
-            else if(str.find("double")!= std::string::npos || str.find("float")!= std::string::npos){
-                if(fa0count > FARG_END_REG) ans.push_back(-2);
-                else ans.push_back(fa0count++);
-            }
-            else if(str == "...") {
-                break;  
-            }
-            else{
-                if(a0count > ARG_END_REG) ans.push_back(-1);
-                else ans.push_back(a0count++);
-            }
-        }
-        ret.second = ans;
-        return ret;
-    }
 }
