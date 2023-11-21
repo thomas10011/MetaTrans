@@ -124,7 +124,7 @@ MetaBB* MetaLearner::trainBB(MetaBB* cur, MetaBB* irbb) {
                     }
                 }
                 MetaInst *instCopy = *inst;
-                while(instCopy && !instCopy->isType(InstType::STORE)) {
+                while(okForTrain && instCopy && !instCopy->isType(InstType::STORE)) {
                     std::cout << "InstCopy: " << instCopy->toString() << std::endl;
                     instCopy = instCopy->getUsers().at(0);
                 }

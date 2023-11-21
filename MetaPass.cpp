@@ -297,6 +297,7 @@ MetaTrans::MappingTable* MapTable = nullptr;
         instMap     .clear();
         argMap      .clear();
         // constantMap .clear();
+        dmt         .clear();
         return *this;
     }
 
@@ -456,12 +457,21 @@ MetaTrans::MappingTable* MapTable = nullptr;
                 copyDependencies(&*i);
             }
         }
+        llvm::BasicBlock* root = &(F->front());
+        dmt.setRoot(bbMap[root]);
+        mF->setRoot(bbMap[root]);
+
         // print some info   
         for (auto bb = mF->bb_begin(); bb != mF->bb_end(); ++bb) {
             outs() << "successor number of " << *bb << " is " << (*bb)->getNextBB().size() << "\n";
             MetaUtil::printInstDependencyGraph(*bb);
         }
         outs() << "\n";
+
+        dmt
+            .compute()
+            .dump()
+            ;
         return *this;
     }
 
@@ -653,6 +663,7 @@ MetaTrans::MappingTable* MapTable = nullptr;
                     .addNextBB(bbMap[bb])
                     .setTerminator(inst)
                     ;
+                dmt.add(curBB, bbMap[bb]);
             }
 
             // only call instruction has function as operand
