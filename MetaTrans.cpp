@@ -21,8 +21,6 @@ const std::string BOLD("\033[1m");
 // Create a Global Map Table;
 MetaTrans::MappingTable* MapTable = NULL;
 
-extern llvm::cl::opt<bool> GPTMapping;
-
 namespace MetaTrans {
 
 //===-------------------------------------------------------------------------------===//
@@ -64,14 +62,15 @@ namespace MetaTrans {
 /// Meta Operand implementation.
 
     MetaOperand& MetaOperand::addUser(MetaInst* user) {
+        for (auto u : users) if (u == user) return *this;
         users.push_back(user);
         return *this;
     }
 
     MetaOperand& MetaOperand::addUsers(std::vector<MetaInst*> vec) {
-        std::unordered_set<MetaInst*> sset(users.begin(), users.end());
+        std::unordered_set<MetaInst*> set(users.begin(), users.end());
         for(MetaInst* user : vec) {
-            if(sset.count(user) == 0)
+            if(set.count(user) == 0)
                 users.push_back(user);
         }
         return *this;
@@ -80,7 +79,6 @@ namespace MetaTrans {
     MetaOperand& MetaOperand::removeUser(MetaInst* user) {
         for (auto it = users.begin(); it != users.end(); ) {
             if (*it == user) {
-                printf("removed user %d!\n", user);
                 it = users.erase(it);
             }
             else ++it;
@@ -108,11 +106,13 @@ namespace MetaTrans {
     MetaUnit& MetaOperand::getMetaUnit() { return *((MetaUnit*)parentScope->getRootScope()); }
 
     MetaOperand& MetaOperand::registerToMetaUnit() {
+        if (parentScope == nullptr) return *this;
         getMetaUnit().registerOperand(this);
         return *this;
     }
 
     MetaOperand& MetaOperand::unregisterFromMetaUnit() {
+        if (parentScope == nullptr) return *this;
         getMetaUnit().unregisterOperand(this);
         return *this;
     }
@@ -253,7 +253,6 @@ namespace MetaTrans {
             else {
                 primaryType.setType(DataType::INT);
             }
-            primaryType.setWidth(64); 
         }
         return *this;
     }
@@ -476,6 +475,8 @@ namespace MetaTrans {
         int64_t         addr                = MetaUtil::hex2int(JSON.getString("address").getValue().str());
         bool            isAddrGen           = JSON.getBoolean("isAddrGen").getValue();
         bool            isfake              = JSON.getBoolean("isFake").getValue();
+        bool            isChangeNZCV        = JSON.getBoolean("isChangeNZCV").getValue();
+        std::string     isReadNZCV          = JSON["isReadNZCV"]          .getAsString().getValue().str();
 
         (*this)
             .setOriginInst          (originInst)
@@ -484,6 +485,8 @@ namespace MetaTrans {
             .setGlobalSymbolName    (globalSymbolName)
             .setAddress             (addr)
             .setAddrGen             (isAddrGen)
+            .setChangeNZCV          (isChangeNZCV)
+            .setReadNZCV            (isReadNZCV)
             .setID                  (id)
             ;
 
@@ -656,7 +659,9 @@ namespace MetaTrans {
             "\"hashCode\":" + std::to_string(hashCode) + "," + 
             "\"dataRoot\":\"" + dataRoot + "\"," + 
             "\"globalSymbolName\":\"" + globalSymbolName + "\"" + "," + 
-            "\"isFake\":" + (isFake() ? "true" : "false") +
+            "\"isFake\":" + (isFake() ? "true" : "false") + "," +
+            "\"isChangeNZCV\":" + (changeNZCV ? "true" : "false") + "," +
+            "\"isReadNZCV\":" + "\"" + readNZCV + "\""
             "}"
             ;
         return str;
@@ -729,6 +734,21 @@ namespace MetaTrans {
 
     // 使用当前指令的第几个 operand 进行 fold
     bool MetaInst::fold(int idx) {
+        std::cout << "INFO: MetaInst::fold " << std::hex << this->getOriginInst() << std::dec << " at " << idx << " " << this->toString() << std::endl;
+
+        // print operandList
+        for (int i = 0; i < operandList.size(); ++i) {
+            if (operandList[i]) {
+                std::cout << "operandList[" << i << "]: " << operandList[i]->toString() << std::endl;
+            }
+        }
+        // print users
+        for (int i = 0; i < users.size(); ++i) {
+            if (users[i]) {
+                std::cout << "users[" << i << "]: " << users[i]->toString() << std::endl;
+            }
+        }
+
         if (operandList.size() <= idx) {
             return false;
         }
@@ -761,10 +781,10 @@ namespace MetaTrans {
         return *this;
     }
 
-
     MetaInst& MetaInst::erase() {
         MetaBB* parent = (MetaBB*)(this->getParentScope());
-
+        for (auto op : operandList) op->removeUser(this);
+        // assert users didn' use this instruction.
         parent->removeInst(this);
         unregisterFromMetaUnit();
 
@@ -773,15 +793,39 @@ namespace MetaTrans {
 
     MetaOperand* MetaInst::getOperand(int idx) { return operandList.at(idx); }
 
-
     bool MetaInst::isFake(){
         return this->fake;
     }
 
     MetaInst& MetaInst::setFake(){
         this->fake = true;
+        return *this;
     }
 
+    MetaInst& MetaInst::setDefineIdx(int idx) {
+        defineIdx = idx;
+        return *this;
+    }
+
+    int MetaInst::getDefineIdx() { return defineIdx; }
+    
+    bool MetaInst::getChangeNZCV() {
+        return changeNZCV;
+    }
+
+    MetaInst& MetaInst::setChangeNZCV(bool b) {
+        changeNZCV = b;
+        return *this;
+    }
+
+    std::string MetaInst::getReadNZCV() {
+        return readNZCV;
+    }
+
+    MetaInst& MetaInst::setReadNZCV(std::string s) {
+        readNZCV = s;
+        return *this;
+    }
 
 
 //===-------------------------------------------------------------------------------===//
@@ -799,20 +843,63 @@ namespace MetaTrans {
 
     MetaPhi& MetaPhi::addValue(MetaBB* bb, MetaOperand* op) {
         bbValueMap.insert({bb, op});
+        op->addUser(this);
         return *this;
+    }
+
+    MetaPhi& MetaPhi::updateValue(MetaBB* bb, MetaOperand* op) {
+        bbValueMap[bb]->removeUser(this);
+        bbValueMap[bb] = op;
+        op->addUser(this);
+        return *this;
+    }
+
+    bool MetaPhi::updateValueIfSelfLoop(MetaBB* bb, MetaOperand* op) {
+        if (bbValueMap[bb] == nullptr || bbValueMap[bb] == this) {
+            bbValueMap[bb] = op;
+            op->addUser(this);
+            return true;
+        }
+        return false;
+    }
+
+    MetaPhi& MetaPhi::setPhiNum(int num) {
+        phiNum = num;
+        return *this;
+    }
+
+    MetaPhi& MetaPhi::addDefine(MetaOperand* operand) {
+        defineSet.insert(operand);
+        return *this;
+    }
+
+    MetaPhi& MetaPhi::setDefineSet(std::unordered_set<MetaOperand*> set) {
+        defineSet = set;
+        return *this;
+    }
+
+    std::unordered_set<MetaOperand*> MetaPhi::getDefineSet() {
+        return defineSet;
     }
 
     bool MetaPhi::equals(MetaPhi* phi) {
         if (bbValueMap.size() != phi->getMapSize()) return false;
         for (auto it = bbValueMap.begin(); it != bbValueMap.end(); ++it) {
             MetaBB* key = it->first;
-            if (this->getValue(key) != phi->getValue(key)) return false;
+            MetaOperand* thisValue = this->getValue(key);
+            MetaOperand* thatValue = phi->getValue(key);
+            if (thisValue == this && thatValue == phi) continue;
+            if (thisValue != thatValue) return false;
         }
         return true;
     }
 
     int MetaPhi::getMapSize() {
         return bbValueMap.size();
+    }
+
+    int MetaPhi::getPhiNum() {
+        return phiNum;
     }
 
     MetaOperand* MetaPhi::getValue(MetaBB* bb) {
@@ -834,34 +921,49 @@ namespace MetaTrans {
     std::string MetaPhi::toString() {
 
         std::string opList = operandList.size() == 0 ? "[]" : "[";
-        for (MetaOperand* oprand : operandList) { opList = opList + std::to_string(oprand->getID()) + ","; }
+        for (MetaOperand* operand : operandList) { 
+            std::string opStr = "";
+            if (operand->getID() == -1) {
+                opStr = opStr + "-1(0x" + MetaUtil::int2hex((int64_t)operand) + " ";
+                if (operand->isMetaInst()) {
+                    opStr += ((MetaInst*)operand)->getOriginInst();
+                }
+                opStr = opStr + ")";
+            }
+            else opStr = std::to_string(operand->getID());
+            opList = opList + opStr + ","; 
+        }
         opList[opList.length() - 1] = ']';
+        std::string userList = users.size() == 0 ? "[]" : "[";
+        for (MetaOperand* user : users) { userList = userList + std::to_string(user->getID()) + ","; }
+        userList[userList.length() - 1] = ']';
         
         std::string phiMapStr = bbValueMap.size() == 0 ? "{}" : "{";
         for (auto pair = bbValueMap.begin(); pair != bbValueMap.end(); ++pair) {
             phiMapStr = phiMapStr + "\"" + std::to_string(pair->first->getID()) + "\":" + std::to_string(pair->second->getID()) + ",";
         }
         phiMapStr[phiMapStr.length() - 1] = '}'; 
-
+        
         std::string str = "{";
         return str + 
             "\"id\":" + std::to_string(id) + "," +
-            "\"address\":" + std::to_string(MetaInst::getAddress()) + "," + 
+            "\"phiNum\":" + std::to_string(phiNum) + "," + 
+            "\"parent\":" + std::to_string(getParentScope()->getID()) + "," + 
             "\"isMetaCall\":false," + 
             "\"isMetaPhi\":true,\"type\":" + MetaUtil::toString(type) + 
             ",\"operandList\":" + opList + 
+            ",\"userList\":" + userList +
             ",\"bbValueMap\":" + phiMapStr +
+            ",\"dataType\":" + "\"" + dataType.toString() + "\"" +
             "}";
     }
 
     MetaInst& MetaPhi::buildFromJSON(MetaUnitBuildContext& context) {
-        llvm::json::Object JSON = context.getHoldObject();
-        
-        int64_t id = JSON.getInteger("id").getValue();
-        int64_t address = JSON.getInteger("address").getValue();
-
+        llvm::json::Object JSON    = context.getHoldObject();
+        int64_t             id     = JSON.getInteger("id").getValue();
+        int64_t             phiNum = JSON.getInteger("phiNum").getValue();
         setID(id);
-        setAddress(address);
+        setAddress(phiNum);
         return *this;
     }
 
@@ -1146,6 +1248,14 @@ namespace MetaTrans {
 
     MetaInst* MetaBB::getTerminator() { return terminator; }
 
+    MetaPhi* MetaBB::getPhiByDefine(int idx) {
+        for (auto i : instList) {
+            if (!i->isMetaPhi()) break;
+            if (i->getDefineIdx() == idx) return (MetaPhi*)i;
+        }
+        return nullptr;
+    }
+
     std::vector<MetaInst*>& MetaBB::getInstList() { return instList; }
 
     int MetaBB::getNumInst() { return instList.size(); }
@@ -1238,6 +1348,17 @@ namespace MetaTrans {
             "\"instList\":" + instListStr + "," +
             "\"successors\":" + sucStr + 
             "}";
+    }
+
+    void MetaBB::dump() {
+        printf("BB ID = %d, next = ", getID());
+        for (auto next : successors) {
+            printf("%d, ", next->getID());
+        }
+        printf("\n");
+        for (auto inst : instList) {
+            printf("memory address: 0x%lx, %s\n", inst, inst->toString().c_str());
+        }
     }
 
     MetaBB& MetaBB::swapSuccessors() {
@@ -1459,6 +1580,30 @@ namespace MetaTrans {
             "\"constants\":" + constStr + "," +
             "\"basicBlocks\":" + bbStr +
             "}";
+    }
+
+
+    void MetaFunction::dump() {
+        printf("====>>>> Dumping Function %s <<<<==== \n\n", funcName.c_str());
+        printf("print argument...\n\n");
+        for (auto arg : args) {
+            printf("%s\n", arg->toString().c_str());
+        }
+        printf("\n");
+
+        printf("print constants...\n\n");
+        for (auto c : constants) {
+            printf("%s\n", c->toString().c_str());
+        }
+        printf("\n");
+        
+        printf("print BB...\n\n");
+        for (auto bb : bbs) {
+
+            bb->dump();
+            printf("\n");
+        }
+        printf("\n========>>>> Dump End <<<<======== \n\n");
     }
 
     Stream<MetaBB*> MetaFunction::stream() { Stream<MetaBB*> s(bbs); return s; }
@@ -1703,6 +1848,11 @@ namespace MetaTrans {
         return this;
     }
 
+    MappingTable* MappingTable::setGPT(bool b) {
+        useGPT = b;
+        return this;
+    }
+
     MappingTable* MappingTable::initName() {
         this->MappingName.push_back("TableMeta.mapping");
         for(int i = 1; i <= this->max; i++)
@@ -1711,11 +1861,11 @@ namespace MetaTrans {
     }
 
     std::string MappingTable::getTableName(int id) {
-        if(id > this->max){
+        if (id > this->max) {
             std::cout << "ERROR:: getTableName() exceeds the range of vector MappingName!\n";
             return "";
         }
-        if(GPTMapping) {
+        if (useGPT) {
             return path + "gpt." + arch + "." + MappingName[id];
         }
         return path + arch + "." + MappingName[id];
@@ -1791,7 +1941,6 @@ namespace MetaTrans {
         int op_id = 0, scope_id = 0, inst_address = 0;
         for (auto operand : operands) {
             operand->setID(op_id++);
-            printf("ID = %d, operand = %s\n", operand->getID(), operand->toString().c_str());
             if (fillAddress && operand->isMetaInst())
                 ((MetaInst*)operand)->setAddress(inst_address++);
         }
@@ -1864,6 +2013,14 @@ namespace MetaTrans {
             + "\"globalVar\":" + globalVarStr
             + "}"
             ;
+    }
+
+
+    void MetaUnit::dump() {
+        for (auto func : funcs) {
+            func->dump();
+            printf("\n");
+        }
     }
 
 

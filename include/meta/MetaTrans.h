@@ -323,202 +323,130 @@ protected:
 
     // a vector to indicate the real type of a instruction.
     std::vector<InstType> type;
-
     std::vector<std::vector<int>> typeSrc;
-
     std::vector<MetaOperand*> operandList; // when `initOperands`, resize it to MAX_OPERAND + callArguments.size(). so [0-2] is rs1-rs3, [3] is imm 
-
     InstMetaData metaData;
-
     ColorData color; // color, type(0 addressing 1 data computing 2 control flow)
-
     std::vector<Path*> paths ; // fitst node of path, (0 addressing 1 data computing 2 control flow)
-
     unsigned long hashCode = 0;
-
     std::string dataRoot = "";
-
     std::string globalSymbolName = "";
-
-    uint64_t address;
-
+    uint64_t address = 0;
     llvm::Instruction* TransInst = NULL;
-
     bool AddrGenFlag = false;
-
     bool sign = true;
-
     int NumOperands = 0;
-
     MetaPrimType dataType;
-
     bool fake = false;
-
     int stackOffset = 0;
-
     bool stackAddressing = false;
+    int defineIdx = -1;
+
+
+    bool changeNZCV = false;
+
+    std::string readNZCV = "";
 
 public:
 
     MetaInst();
-
+    MetaInst(std::vector<InstType> ty);
     virtual ~MetaInst();
 
-    MetaInst(std::vector<InstType> ty);
-
     MetaInst& setOriginInst(std::string name);
-
     MetaInst& setInstType(std::vector<InstType> ty);
-
     MetaInst& setInstType(InstType ty);
-
     MetaInst& setDataType(MetaPrimType ty);
-
     MetaInst& setTypeSrc(std::vector<std::vector<int>>);
-
     MetaInst& addInstType(InstType ty);
-
     MetaInst& setParentScope(MetaScope* scope);
-
     MetaInst& setStackAddressing(bool flag);
-
     MetaInst& setStackOffset(int offset);
-
+    MetaInst& setHashcode(unsigned long hashCode);
+    MetaInst& setDataRoot(std::string s);
+    MetaInst& setGlobalSymbolName(std::string s);
     MetaInst& erase();
-
-    void dumpPath(int index);
-
-    // 创建固定个数的nullptr操作数
-    MetaInst& initOperands(int num);
-
-    // 将所有为nullptr的operand去除
+    MetaInst& setSigned(bool sign);
+    MetaInst& setDefineIdx(int idx);
+    MetaInst& setFake();
+    MetaInst& setAddrGen(bool b);
+    MetaInst& setAddress(uint64_t address); // 创建固定个数的nullptr操作数
+    MetaInst& initOperands(int num); // 将所有为nullptr的operand去除
     MetaInst& filterNullOperands();
-
     MetaInst& checkNullOperands();
-
     MetaInst& addOperand(MetaOperand* op);
-
     MetaInst& addOperandAt(MetaOperand* op, int index);
-
     MetaInst& addOperandAtLast(MetaOperand* op);
-
+    MetaInst& addToPath(Path* p);
     MetaInst& removeOperand(MetaOperand* op);
 
-    virtual MetaInst& replaceOperand(MetaOperand* src, MetaOperand* dest);
-
+    std::vector<MetaOperand*>::iterator op_begin();
+    std::vector<MetaOperand*>::iterator op_end();
     // if nullptr exists in operandList, return false.
     // else return true
     bool checkOperands();
-
-    std::string getOriginInst();
-
-    virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context);
-
-    int getOperandNum();
-
-    std::vector<InstType> getInstType();
-
-    std::vector<MetaOperand*>& getOperandList();
-
-    MetaOperand* getOperand(int idx);
-
-    std::vector<MetaInst*> getOperandOnlyInstList();
-
-    std::vector<MetaOperand*>::iterator op_begin();
-    
-    std::vector<MetaOperand*>::iterator op_end();
-        
     // return true if has absolute same type (same number of types and same type) with i.
     bool hasStrictSameType(MetaInst* i);
-
     // return true if has one same type with i.
     bool hasRelaxedSameType(MetaInst* i);
-    
     // return true if ty is in type vector.
     bool isType(InstType ty);
-
     // return trie of this instruction only has single type amd same with ty.
     bool isSingleType(InstType ty);
-
     bool virtual isMetaInst() override;
-
-    std::string virtual toString() override;
-
     bool virtual isMetaPhi();
-
     bool virtual isMetaCall();
-
     bool virtual isLoad();
-
     bool virtual isStore();
-
     bool virtual isMemOp();
-
     bool virtual isAddressing();
-
     bool virtual isComputing();
-
     bool virtual isControlFlow();
-
     bool isStackAddressing();
-
-    int getStackOffset();
-
-    void setColor(int c, int t);
-
-    ColorData* getColor();
-
-    unsigned long getHashcode();
-
-    MetaInst& setHashcode(unsigned long hashCode);
-
-    uint64_t getAddress();
-
-    MetaInst& setAddress(uint64_t address);
-
-    std::string getDataRoot();
-
-    std::string getGlobalSymbolName();
-
-    MetaInst& setDataRoot(std::string s);
-
-    MetaInst& setGlobalSymbolName(std::string s);
-    
-    std::vector<Path *> &getAllPath();
-
-    Path* getPath(int type);
-
-    MetaInst& addToPath(Path* p);
-    
-    llvm::Instruction* getTransInst();
-
-    void setTransInst(llvm::Instruction* inst);
-
-    MetaInst& setAddrGen(bool b);
-
     bool ifAddrGen();
-
     bool isUnsigned();
-
     bool isSigned();
-
-    MetaInst& setSigned(bool sign);
-
-    int getNumOperands();
-
-    int getValidOperandNum();
-
-    void setNumOperands(int i);
-
-    virtual MetaPrimType getDataType() override;
-
     bool fold();
-
     bool fold(int idx);
-
     bool isFake();
 
-    MetaInst& setFake();
+    void setColor(int c, int t);
+    void setTransInst(llvm::Instruction* inst);
+    void setNumOperands(int i);
+    void dumpPath(int index);
+
+    int getNumOperands();
+    int getValidOperandNum();
+    int getDefineIdx(); // 这条指令定义的变量的编号
+    int getStackOffset();
+    uint64_t getAddress();
+
+    std::string getOriginInst();
+    std::string getDataRoot();
+    std::string getGlobalSymbolName();
+
+    std::vector<Path*>& getAllPath();
+    std::vector<InstType> getInstType();
+    std::vector<MetaOperand*>& getOperandList();
+    std::vector<MetaInst*> getOperandOnlyInstList();
+    MetaOperand* getOperand(int idx);
+    ColorData* getColor();
+    int getOperandNum();
+    unsigned long getHashcode();
+    Path* getPath(int type);
+    llvm::Instruction* getTransInst();
+    virtual MetaPrimType getDataType() override;
+    virtual std::string toString() override;
+    virtual MetaInst& replaceOperand(MetaOperand* src, MetaOperand* dest);
+    virtual MetaInst& buildFromJSON(MetaUnitBuildContext& context);
+
+    bool getChangeNZCV();
+
+    MetaInst& setChangeNZCV(bool b);
+
+    std::string getReadNZCV();
+
+    MetaInst& setReadNZCV(std::string s);
 
 };
 
@@ -529,6 +457,10 @@ protected:
 
     std::unordered_map<MetaBB*, MetaOperand*> bbValueMap;
 
+    int phiNum = 0;
+
+    std::unordered_set<MetaOperand*> defineSet;
+
 public:
 
     MetaPhi(std::vector<InstType> ty); 
@@ -537,11 +469,25 @@ public:
 
     MetaPhi& addValue(MetaBB* bb, MetaOperand* op);
 
+    MetaPhi& updateValue(MetaBB* bb, MetaOperand* op);
+
+    MetaPhi& addDefine(MetaOperand* operand);
+
+    MetaPhi& setDefineSet(std::unordered_set<MetaOperand*> set);
+
+    std::unordered_set<MetaOperand*> getDefineSet();
+
+    bool updateValueIfSelfLoop(MetaBB* bb, MetaOperand* op);
+
+    MetaPhi& setPhiNum(int num);
+
     bool equals(MetaPhi* phi);
 
     MetaOperand* getValue(MetaBB* bb);
 
     int getMapSize();
+
+    int getPhiNum();
 
     std::unordered_map<MetaBB*, MetaOperand*>::iterator begin();
 
@@ -601,123 +547,72 @@ private:
 protected:
 
     std::vector<MetaInst*> instList;
-    
     // point to next BB if exists.
     std::vector<MetaBB*> successors;
     std::vector<MetaBB*> predecessors;
-
     // first non phi instruction.
     MetaInst* entry;
-
     // each bb end with a terminator.
     MetaInst* terminator;
-
     std::vector<int> features;
-
     double modular;
-    
     MetaBB& addPrevBB(MetaBB* prev);
 
 public:
 
     MetaBB();
-
     MetaBB(MetaFunction* parent);
-
     ~MetaBB(); 
 
     // Build a new instruction and append to instList.
     MetaInst* buildInstruction(std::vector<InstType> ty);
-
     MetaInst* buildInstruction();
-
+    MetaInst* getEntry();
+    MetaInst* getTerminator();
+    MetaInst* inst_last();
     MetaInst* buildCall();
-
     MetaPhi* buildPhi(bool insertAtHead = false);
-
+    MetaPhi* getPhiByDefine(int definedIdx);
     MetaBB& addPhi(MetaPhi* phi, bool insertAtHead = false);
-
     MetaBB& addInstruction(MetaInst* inst);
-
     MetaBB& addNextBB(MetaBB* next);
-
     MetaBB& addFeature(int f);
-
     MetaBB& setEntry(MetaInst* inst);
-
     MetaBB& setTerminator(MetaInst* inst);
-
     MetaBB& setParentScope(MetaScope* scope);
-
     MetaBB& buildInstFromJSON(MetaUnitBuildContext& context);
-
     MetaBB& buildInstGraphFromJSON(MetaUnitBuildContext& context);
-
     MetaBB& registerToMetaUnit();
-
     MetaBB& setID(int64_t id);
-
     std::vector<int> getFeature();
-
     int getNumLoad();
-
     int getNumStore();
-
     // 获取 load / store 的总数
     int getNumMemOp();
-
     int isLinearInCFG();
-
     int isSelfLoop();
-
-    std::vector<MetaBB*> getNextBB();
-
-    std::vector<MetaBB*> getPrevBB();
-
-    MetaBB* getNextBB(int index);
-
-    MetaInst* getEntry();
-
-    MetaInst* getTerminator();
-
-    std::vector<MetaInst*>& getInstList();
-
     int getNumInst();
-
+    std::vector<MetaBB*> getNextBB();
+    std::vector<MetaBB*> getPrevBB();
+    std::vector<MetaInst*>& getInstList();
     std::string toString();
-
     double getModular();
-
     double similarity(MetaBB& bb);
-
     double memOpSimilarity(MetaBB* bb);
-
     Stream<MetaInst*> stream();
-
     std::vector<MetaInst*>::iterator begin();
-
     std::vector<MetaInst*>::iterator end();
-
     std::vector<MetaInst*>::iterator inst_begin();
-
     std::vector<MetaInst*>::iterator inst_end();
-
-    MetaInst* inst_last();
-
     std::vector<MetaBB*>::iterator next_begin();
-
     std::vector<MetaBB*>::iterator next_end();
-
     MetaBB* trainBB(MetaBB* irbb);
-
-    MetaUnit& getMetaUnit();
-
+    MetaBB* getNextBB(int index);
     MetaBB& swapSuccessors();
-
     MetaBB& removeInst(MetaInst* inst);
-
     MetaBB* trainLoad(MetaBB* irbb);
-
+    MetaUnit& getMetaUnit();
+    void dump();
 };
 
 class MetaFunction : public MetaScope {
@@ -814,6 +709,8 @@ public:
 
     std::vector<MetaArgument*>::iterator arg_end();
 
+    void dump();
+
 };
 
 
@@ -880,6 +777,7 @@ public:
 class MappingTable {
 private:
     std::string arch, path;
+    bool useGPT = false;
 
 public:
 
@@ -913,6 +811,8 @@ public:
 
     MappingTable* setPath(std::string path);
 
+    MappingTable* setGPT(bool b);
+
     MappingTable* initName();
     
     MappingTable* initTableMeta();
@@ -926,6 +826,7 @@ public:
     std::string getTableMetaName();
 
     MappingTable* updateTableMeta();
+
 
 
 };
@@ -984,6 +885,8 @@ public:
     std::vector<MetaFunction*>::iterator end();
 
     std::string toString();
+
+    void dump();
 
 
 };

@@ -21,11 +21,33 @@
 #include <queue>
 #include <iostream>
 #include <unordered_map>
+#include <functional>
 
 using namespace llvm;
 
 namespace MetaTrans {
-    static std::vector<std::string> InstTypeName = {"LOAD", "STORE", "COMPARE", "CALL", "BRANCH", "JUMP", "PHI", "ADD", "SUB", "MUL", "DIV", "REMAINDER", "AND", "OR", "XOR", "SHIFT", "NEG", "RET", "ALLOCATION", "ADDRESSING", "EXCEPTION", "SWAP", "MIN", "MAX", "SQRT", "FENCE", "CONVERT", "HINT", "MOV", "CSR", "SIGN", "COMPLEX"};
+static std::vector<std::string> InstTypeName = {"LOAD", "STORE", "COMPARE", "CALL", "BRANCH", "JUMP", "PHI", "ADD", "SUB", "MUL", "DIV", "REMAINDER", "AND", "OR", "XOR", "SHIFT", "NEG", "RET", "ALLOCATION", "ADDRESSING", "EXCEPTION", "SWAP", "MIN", "MAX", "SQRT", "FENCE", "CONVERT", "HINT", "MOV", "CSR", "SIGN", "COMPLEX"};
+
+class LibFunctionTable {
+
+private:
+
+std::string TableName;
+std::map<std::string, std::pair<std::string, std::string>> LibFunctionMap;
+
+public:
+
+LibFunctionTable(std::string path);
+~LibFunctionTable();
+void setName(std::string path);
+void loadLibFunctionTable();
+std::string getReturnType(std::string funcName);
+std::vector<std::string> getArgumentTypesList(std::string funcName);
+bool getIsVarArgs(std::string funcName);
+void dump(std::string funcName);
+bool contain(const std::string& funcName);
+
+};
 
 class YamlUtil {
 
@@ -272,7 +294,7 @@ public:
 
     static std::string upper(std::string s);
 
-    static std::string lower(std::string& str); 
+    static std::string lower(std::string str); 
     
     static InstType stringToInstType(std::string str);
 
@@ -291,6 +313,30 @@ public:
     static void writeToFile(std::string, std::string file);
 
     static std::string readFromFile(std::string file);
+
+    // union
+    template<typename T>
+    static std::unordered_set<T> u(const std::unordered_set<T>& x, const std::unordered_set<T>& y) {
+        std::unordered_set<T> result = x;
+        result.insert(y.begin(), y.end());
+        return result;
+    }
+
+    // intersection
+    template<typename T>
+    static std::unordered_set<T> i(const std::unordered_set<T>& x, const std::unordered_set<T>& y) {
+        std::unordered_set<T> result;
+        for (auto e : x) if (y.count(e)) result.insert(e);
+        return result;
+    }
+
+    // exclusive, x - y
+    template<typename T>
+    static std::unordered_set<T> e(const std::unordered_set<T>& x, const std::unordered_set<T>& y)  {
+        std::unordered_set<T> result;
+        for (auto e : x) if (!y.count(e)) result.insert(e);
+        return result;
+    }
 
     /// if a value not exist in the map, create it by default constructor.
     template<typename K, typename V>
@@ -313,6 +359,26 @@ public:
     static int count_args(const char* fmt);
 
     static bool test();
+
+    template<typename T>
+    static int64_t hash(std::unordered_set<T> set) {
+        size_t result = 0;
+        std::hash<T> hash;
+        for (auto e : set) {
+            result += hash(e);
+        }
+        return result;
+    }
+
+    template<typename T>
+    static int64_t hash(std::vector<T> vec) {
+        size_t result = 0;
+        std::hash<T> hash;
+        for (auto e : vec) {
+            result += hash(e);
+        }
+        return result;
+    }
 
 };
 
@@ -361,17 +427,40 @@ public:
     }
 };
 
+template <class T>
+class GraphNode {
+private:
+T data;
+std::vector<GraphNode<T>*> succVec;
+std::vector<GraphNode<T>*> prevVec;
+
+public:
+GraphNode(T _data) : data(_data) { }
+GraphNode() : data(NULL) { }
+~GraphNode() {
+    succVec.clear();
+    prevVec.clear();
+}
+
+T getData() { return data; }
+GraphNode& setData(T _data) { data = _data; return *this;}
+GraphNode& addPred(GraphNode<T>* pred) { prevVec.push_back(pred); return*this; }
+GraphNode& addSucc(GraphNode<T>* succ) { succVec.push_back(succ); return*this; }
+std::vector<GraphNode<T>*> getPred() { return prevVec; }
+std::vector<GraphNode<T>*> getSucc() { return succVec; }
+GraphNode<T>* getPred(int idx) { return prevVec.at(idx); }
+GraphNode<T>* getSucc(int idx) { return succVec.at(idx); }
+};
 
 template <class T>
 class Graph {
+protected:
+GraphNode<T>* root;
+// 存点
+std::vector<GraphNode<T>*> nodeVec;
+std::unordered_map<T, int> idxMap;
 
-private:
-T root;
-
-std::unordered_map<T, std::vector<T>*> succTable;
-std::unordered_map<T, std::vector<T>*> predTable;
-
-int _size;
+std::vector<GraphNode<T>*> cachedPostOrder;
 
 public:
 
@@ -379,145 +468,331 @@ Graph() : root(NULL) {
 
 }
 
+Graph(const Graph<T>& g) {
+    printf("INFO: Coping graph.\n");
+    this->idxMap = g.idxMap;
+    // 拷贝节点
+    for (int i = 0; i < g.nodeVec.size(); ++i) {
+        GraphNode<T>* node = g.nodeVec.at(i);
+        GraphNode<T>* newNode = new GraphNode<T>(node->getData());
+        this->nodeVec.push_back(newNode);
+    }
+    // 拷贝边
+    for (int i = 0; i < g.nodeVec.size(); ++i) {
+        GraphNode<T>* node = g.nodeVec[i];
+        GraphNode<T>* newNode = this->nodeVec[i];
+        for (auto next : node->getSucc()) {
+            newNode->addSucc(this->nodeVec[this->idxMap[next->getData()]]);
+        }
+        for (auto prev : node->getPred()) {
+            newNode->addPred(this->nodeVec[this->idxMap[prev->getData()]]);
+        }
+    }
+
+    this->root = getNode(g.root->getData());
+}
+
 ~Graph() {
-    for (auto it = succTable.begin(); it != succTable.end(); ++it) delete it->second;
+    for (auto node : nodeVec) delete node;
 }
 
 
-Graph& setRoot(T r) { root = r; return *this; }
-T getRoot() { return root; }
+Graph& setRoot(T r) { root = getNode(r); return *this; }
+T getRoot() { return root->getData(); }
+GraphNode<T>* getRootNode() { return root; }
 
 // add an edge from x to y.
 // x --> y
 Graph& add(T x, T y) {
-    std::vector<T>* succs = getSuccPtr(x);
-    std::vector<T>* preds = getPredPtr(y);
-    succs->push_back(y);
-    preds->push_back(x);
+    GraphNode<T>* m = addNode(x);
+    GraphNode<T>* n = addNode(y);
+    m->addSucc(n);
+    n->addPred(m);
     return *this;
 }
 
 Graph& add(T x, const std::vector<T>& Y) {
-    std::vector<T>* succs = getSuccPtr(x);
-    for (T y : Y) {
-    std::vector<T>* preds = getPredPtr(y);
-        succs->push_back(y);
-        preds->push_back(x);
-    }
+    for (T y : Y) add(x, y);
     return *this;
 }
 
 std::vector<T> getSuccessors(T x) {
-    return *(getSuccPtr(x));
+    std::vector<T> result;
+    for (GraphNode<T>* node : getNode(x)->getSucc()) {
+        result.push_back(node->getData());
+    }
+    return result;
+}
+
+// 添加一个节点，不会重复添加
+GraphNode<T>* addNode(T n) {
+    if (idxMap.find(n) == idxMap.end()) {
+        GraphNode<T>* node = new GraphNode<T>(n);
+        nodeVec.push_back(node);
+        idxMap[n] = nodeVec.size() - 1;
+    }
+    return nodeVec.at(idxMap[n]);;
+}
+
+GraphNode<T>* getNode(T n) {
+    if (idxMap.count(n)) return nodeVec.at(idxMap[n]);
+    printf("WARN: didn't find node!\n");
+    return nullptr;
+}
+
+int getIdx(T n) {
+    if (idxMap.count(n)) return idxMap[n];
+    return -1;
 }
 
 std::vector<T> getPredecessors(T x) {
-    return *(getPredPtr(x));
-}
-
-T getSuccessor(T x, int idx) {
-    return succTable[x]->at(idx);
-}
-
-T getPredecessor(T x, int idx) {
-    return predTable[x]->at(idx);
-}
-
-std::vector<T>* getSuccPtr(T x) {
-    if (succTable.find(x) == succTable.end()) {
-        ++ _size;
-        return succTable[x] = new std::vector<T>();
+    std::vector<T> result;
+    for (GraphNode<T>* node : getNode(x)->getPred()) {
+        result.push_back(node->getData());
     }
-
-    else 
-        return succTable[x];
+    return result;
 }
 
-
-std::vector<T>* getPredPtr(T x) {
-    if (predTable.find(x) == predTable.end()) {
-        ++ _size;
-        return predTable[x] = new std::vector<T>();
-    }
-    else 
-        return predTable[x];
-}
-
-std::vector<T> getDFSseq() {
-    std::vector<T> discovered, seq;
-    std::unordered_set<T> visited;
-    discovered.push_back(root);
-
+std::vector<GraphNode<T>*> getPreOrderDFSNodeSeq() {
+    using NodePtr = GraphNode<T>*;
+    std::vector<NodePtr> stack = { root }, seq = { root };
+    std::unordered_set<NodePtr> visited, discovered = { root };
+    stack.push_back(root);
+    
     assert(root);
-    while (!discovered.empty()) {
-        T cur = discovered.back(); discovered.pop_back();
+    while (!stack.empty()) {
+        NodePtr top = stack.back();
 
-        if (visited.count(cur)) continue;
-
-        visited.insert(cur);
-        seq.push_back(cur);
-
-        std::vector<T> succ = getSuccessors(cur);
-        for (auto it = succ.rbegin(); it != succ.rend(); ++it) {
-            if (!visited.count(*it)) {
-                discovered.push_back(*it);
+        bool flag = false;
+        for (NodePtr suc : top->getSucc()) {
+            if (discovered.count(suc))  { /* backward */ }
+            else if (visited.count(suc))  { /* forward */ }
+            else {
+                flag = true;
+                stack.push_back(suc);
+                discovered.insert(suc);
+                seq.push_back(suc);
             }
+        }
+        if (!flag) {
+            stack.pop_back();
+            visited.insert(top);
         }
     }
     return seq;
 }
 
-std::vector<T> getBFSseq() {
-    std::queue<T> que;
-    std::vector<T> seq;
-    std::unordered_set<T> visited;
+std::vector<GraphNode<T>*> getPostOrderDFSNodeSeq() {
+    if (!cachedPostOrder.empty()) return cachedPostOrder;
+    using NodePtr = GraphNode<T>*;
+    std::vector<NodePtr> stack = { root }, cachedPostOrder;
+    std::unordered_set<NodePtr> visited, discovered = { root };
+    assert(root);
+    while (!stack.empty()) {
+        NodePtr top = stack.back();
+
+        bool flag = false;
+        for (NodePtr suc : top->getSucc()) {
+            if (discovered.count(suc))  { /* backward */ }
+            else if (visited.count(suc))  { /* forward */ }
+            else {
+                flag = true;
+                stack.push_back(suc);
+                discovered.insert(suc);
+            }
+        }
+        if (!flag) {
+            stack.pop_back();
+            visited.insert(top);
+            cachedPostOrder.push_back(top);
+        }
+    }
+    return cachedPostOrder;
+}
+
+std::vector<GraphNode<T>*> getReversePostOrderDFSNodeSeq() {
+    using NodePtr = GraphNode<T>*;
+    std::vector<NodePtr> seq = getPostOrderDFSNodeSeq();
+    std::reverse(seq.begin(), seq.end());
+    return seq;
+}
+
+std::vector<T> getPostOrderDFSSeq() {
+    return (unpack(getPostOrderDFSNodeSeq()));
+}
+
+std::vector<T> getPreOrderDFSSeq() {
+    return (unpack(getPreOrderDFSNodeSeq()));
+}
+
+std::vector<T> getReversePostOrderDFSSeq() {
+    return (unpack(getReversePostOrderDFSNodeSeq()));
+}
+
+std::vector<int> getPostOrderDFSIdxSeq() {
+    return (unpack2idx(getPostOrderDFSNodeSeq()));
+}
+
+std::vector<GraphNode<T>*> getBFSNodeSeq() {
+    using NodePtr = GraphNode<T>*;
+    std::queue<NodePtr> que;
+    std::vector<NodePtr> seq;
+    std::unordered_set<NodePtr> visited;
     que.push(root);
     while (!que.empty()) {
-        T cur = que.front(); que.pop();
+        NodePtr cur = que.front(); que.pop();
 
         if (visited.count(cur)) continue;
 
         visited.insert(cur);
         seq.push_back(cur);
 
-        for (auto t : getSuccessors(cur)) 
-            if (!visited.count(t))
-                que.push(t);
+        for (auto t : cur->getSucc()) if (!visited.count(t)) que.push(t);
     }
+
     return seq;
 }
 
+std::vector<T> getBFSSeq() {
+    return unpack(getBFSNodeSeq());
+}
 
-int size() { return _size; }
+std::vector<int> getBFSIdxSeq() {
+    return unpack2idx(getBFSNodeSeq());
+}
 
+std::vector<T> unpack(std::vector<GraphNode<T>*> nodes) {
+    std::vector<T> result;
+    for (GraphNode<T>* node : nodes) {
+        result.push_back(node->getData());
+    }
+    return result;
+} 
+
+std::vector<int> unpack2idx(std::vector<GraphNode<T>*> nodes) {
+    std::vector<int> result;
+    for (GraphNode<T>* node : nodes) {
+        result.push_back(idxMap[node->getData()]);
+    }
+    return result;
+} 
+
+int size() { return nodeVec.size(); }
+
+Graph<T>& clear() {
+    idxMap.clear();
+    for (auto node : nodeVec) delete node;
+    nodeVec.clear();
+    cachedPostOrder.clear();
+    root = nullptr;
+    return *this;
+}
+
+
+Graph<T>& dump() {
+    for (int i = 0; i < nodeVec.size(); ++i) {
+        auto node = nodeVec[i];
+        printf("node %d[%lx] --> [", i, node);
+        for (auto suc : node->getSucc()) {
+            printf("%d[%lx], ", idxMap[suc->getData()], suc);
+        }
+        printf("]\n");
+    }
+}
 
 };
 
 
 template<class T>
-class DominateTree {
+class DominateTree : public Graph<T> {
     
-private:
+protected:
 
-Graph<T> tree;
+std::unordered_map<GraphNode<T>*, std::unordered_set<GraphNode<T>*>> domMap;
+std::unordered_map<GraphNode<T>*, GraphNode<T>*> idomMap; // key' dominator is value.
+std::unordered_map<GraphNode<T>*, std::unordered_set<GraphNode<T>*>> domFrtMap; // record dominate frontier
 
-void dfs (
-    const Graph<T>& g,
-    T& cur,
-    std::unordered_map<T, int>& dfn,
-    std::unordered_map<T, T>& parent,
-    std::vector<T>& seq
-) {
-    dfn[cur] = seq.size();
-    seq.push_back(cur);
-    for (T suc : g.getSuccessors(cur)) {
-        if (dfn.find(suc) != dfn.end()) {
-            dfs(suc);
-            parent[suc] = cur;
+std::unordered_map<GraphNode<T>*, std::vector<GraphNode<T>*>> tree;
+
+void naivedom() {
+    using NodePtr = GraphNode<T>*;
+    assert(this->root);
+    const int rootIdx = this->idxMap[this->root->getData()];
+    std::vector<NodePtr> seq = this->getReversePostOrderDFSNodeSeq(); // 最好是图的逆后序
+
+    domMap[this->root] = { this->root };
+    bool flag = true;
+    while (flag) {
+        flag = false;
+        // 对所有节点遍历
+        for (NodePtr u : seq) {
+            std::vector<NodePtr> preds = u->getPred();
+            std::unordered_set<NodePtr> tmp;
+            int idx = 0;
+            while (idx < preds.size() && !domMap.count(preds[idx])) // 寻找第一个不是全集的前驱
+                idx++;
+            if (idx == preds.size()) continue;
+            tmp = domMap[preds.at(idx++)];
+            while (idx < preds.size()) {
+                NodePtr pred = preds.at(idx++);
+                if (domMap.find(pred) != domMap.end()) { // 如果 domMap 不包含 pred 则此时 pred 为全集
+                    tmp = MetaUtil::i(tmp, domMap[pred]);
+                }
+            }
+            tmp.insert(u);
+            if (tmp != domMap[u]) {
+                domMap[u] = tmp;
+                flag = true;
+            }
+        }
+    }
+
+}
+
+void naiveidom() {
+    using NodePtr = GraphNode<T>*;  
+    for (int i = 0; i < this->size(); ++i) {
+        NodePtr u = this->nodeVec[i];
+        assert(domMap.count(u));
+        for (NodePtr v : domMap[u]) {
+            assert(domMap.count(v));
+            std::unordered_set<NodePtr> tmp = MetaUtil::e(domMap[u], MetaUtil::i(domMap[v], domMap[u]));
+            if (tmp.size() == 1 && tmp.count(u)) {
+                idomMap[u] = v;
+                tree[v].push_back(u);
+                printf("INFO: Setting idom %d --> %d\n", v->getData(), u->getData());
+                break;
+            }
         }
     }
 }
 
+void naivefrontier() {
+    using NodePtr = GraphNode<T>*; 
+    for (NodePtr node : this->nodeVec) {
+        std::vector<NodePtr> preds = node->getPred();
+        if (preds.size() < 2) continue;
+        for (NodePtr pred : preds) {
+            NodePtr runner = pred;
+            // x 是 node 的前驱的必经结点，但不是 node 的严格必经结点。
+            // 则 node 属于 x 的必经节点边界
+            while (runner != this->root && runner != idomMap[node]) {
+                domFrtMap[runner].insert(node);
+                runner = idomMap[runner];
+            }
+        }
+    }
+}
+
+public:
+
+DominateTree(const Graph<T>& g) : Graph<T>(g) {
+    naivedom();
+    naiveidom();
+    naivefrontier();
+}
+
+DominateTree() : Graph<T>() { }
 
 std::unordered_map<T, T> getSdom(
     const Graph<T>& g,
@@ -557,26 +832,86 @@ std::unordered_map<T, T> getSdom(
     return sdom;
 }
 
-public:
-
-DominateTree(const Graph<T>& g) {
-    std::unordered_map<T, int> dfn;
-    std::unordered_map<T, T> parent;
-    std::vector<T> seq;
-    dfs(g, g.getRoot(), dfn, parent, seq);
-
+std::vector<T> getDominateFrontierVec(T x) {
+    std::unordered_set<GraphNode<T>*>& frontier = domFrtMap[this->getNode(x)];
+    std::vector<T> result;
+    for (auto node : frontier) result.push_back(node->getData());
+    return result;
 }
 
-std::vector<T> getDominateFrontier() {
-
+std::unordered_set<T> getDominateFrontierSet(T x) {
+    std::unordered_set<GraphNode<T>*>& frontier = domFrtMap[this->getNode(x)];
+    std::unordered_set<T> result;
+    for (auto node : frontier) result.insert(node->getData());
+    return result;
 }
 
-T getImmDomNode(T x) {
-    return tree.getPredecessor(0);
+T getIDom(T x) {
+    GraphNode<T>* node = this->nodeVec[this->idxMap[x]];
+    if (idomMap.count(node)) return this->idomMap[node]->getData();
+    return NULL;
 }
 
-std::vector<T> getDomNodes(T x) {
+std::vector<T> getNext(T x) {
+    return this->unpack(tree[this->getNode(x)]);
+}
 
+T getPrev(T x) {
+    return idomMap[this->getNode(x)]->getData();
+}
+
+std::vector<T> getDoms(T x) {
+    std::unordered_set<GraphNode<T>*>& doms = domMap[this->getNode(x)];
+    std::vector<T> result;
+    for (auto node : doms) result.push_back(node->getData());
+    return result;
+}
+
+DominateTree<T>& compute() {
+    naivedom();
+    naiveidom();
+    naivefrontier();
+    return *this;
+}
+
+DominateTree<T>& clear() {
+    tree.clear();
+    domMap.clear();
+    idomMap.clear();
+    domFrtMap.clear();
+    Graph<T>::clear();
+    return *this;
+}
+
+DominateTree<T>& dump() {
+    Graph<T>::dump();
+    
+    printf("\nDOM INFO: \n");
+    for (int i = 0; i < this->size(); ++i) {
+        GraphNode<T>* cur = this->nodeVec[i];
+        T data = cur->getData();
+        printf("node: id = %d[0x%lx]: [", this->getIdx(data), data);
+        for (auto node : domMap[cur])
+            printf("id = %d(0x%lx), ", this->getIdx(node->getData()), node->getData());
+        printf("]\n");
+    }
+    printf("\nIDOM INFO: \n");
+    for (int i = 0; i < this->size(); ++i) {
+        T data = this->nodeVec[i]->getData();
+        printf("id = %d[0x%lx] idom id = %d[0x%lx] \n", this->getIdx(getIDom(data)), getIDom(data), this->getIdx(data), data);
+    }
+    printf("\n");
+    printf("\nDOM FRONTITER INFO: \n");
+    for (int i = 0; i < this->size(); ++i) {
+        GraphNode<T>* cur = this->nodeVec[i];
+        T data = cur->getData();
+        printf("node: id = %d[0x%lx]: [", this->getIdx(data), data);
+        for (auto node : domFrtMap[cur])
+            printf("id = %d(0x%lx), ", this->getIdx(node->getData()), node->getData());
+        printf("]\n");
+    }
+    printf("\n");
+    return *this;
 }
 
 };

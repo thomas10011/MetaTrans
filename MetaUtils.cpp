@@ -8,6 +8,136 @@
 namespace MetaTrans {
 
 //===-------------------------------------------------------------------------------===//
+/// Lib Function Table implementation.
+
+LibFunctionTable::LibFunctionTable(std::string path) {
+    this->TableName = path;
+    this->loadLibFunctionTable();
+}
+
+LibFunctionTable::~LibFunctionTable() {}
+
+void LibFunctionTable::setName(std::string path) {this->TableName = path;}
+
+void LibFunctionTable::loadLibFunctionTable() {
+
+    std::ifstream file(this->TableName);
+    if (!file) {
+        std::ofstream new_file(this->TableName);
+        new_file.close();
+        std::cout << "LibFunctionTable Table " << this->TableName << "does not exist! Creating a new one! \n";
+    }
+    // Check if the file was opened successfully
+    if (!file.is_open()) {
+        std::cerr << "Error: Could not open file "<< this->TableName << std::endl;
+    }
+
+    std::string line;
+    int count = 0;
+    while (std::getline(file, line)) {
+        // Split the line into three parts, spilit with ",", get three string
+        std::vector<std::string> split_line = MetaUtil::split(",", line);
+        assert(split_line.size() == 3);
+        for(int i = 0; i < split_line.size(); i++) {
+            split_line[i] = MetaUtil::trim(split_line[i]);
+        }
+        this->LibFunctionMap[split_line[0]] = std::make_pair(split_line[1], split_line[2]);
+        count++;
+    }
+
+    std::cout << "LibFunctionTable Table " << this->TableName << " loaded! " << count << " functions in total! \n";
+
+}
+
+std::string LibFunctionTable::getReturnType(std::string funcName) {
+    std::cout << "INFO::LibFunctionTable::getReturnType, Function Name: " << funcName << std::endl;
+    if(funcName.find("plt_function(") != std::string::npos) {
+        // funcName is like "plt_function(putchar)", remain "putchar"
+        funcName =  funcName.substr(funcName.find("(") + 1, funcName.find(")") - funcName.find("(") - 1);
+    }
+    if(!this->LibFunctionMap.count(funcName)) {
+        std::cout << "ERROR:: LibFunctionTable Function " << funcName << " not found in LibFunctionTable" << std::endl;
+        return "";
+    }
+    std::pair<std::string, std::string> value = LibFunctionMap[funcName];
+    return value.first;
+}
+
+std::vector<std::string> LibFunctionTable::getArgumentTypesList(std::string funcName) {
+    std::vector<std::string> ans;
+    if(!this->LibFunctionMap.count(funcName)) {
+        // funcName is like "plt_function(putchar)", remain "putchar"
+        funcName =  funcName.substr(funcName.find("(") + 1, funcName.find(")") - funcName.find("(") - 1);
+        if(!this->LibFunctionMap.count(funcName)) {
+            std::cout << "ERROR:: LibFunctionTable Function " << funcName << " not found in LibFunctionTable" << std::endl;
+            return ans;
+        }
+    }
+    std::pair<std::string, std::string> value = LibFunctionMap[funcName];
+    std::string value2 = value.second;
+    // replace all "const" in value2 with ""
+    std::string::size_type n = 0;
+    while ( ( n = value2.find( "const", n ) ) != std::string::npos )
+    {
+        value2.replace( n, 5, "" );
+        n += 0;
+    }
+    value2 = MetaUtil::trim(value2);
+    std::cout << "INFO::LibFunctionTable::getArgumentTypesList, Function Name: " << funcName << ", Argument Types: " << value2 << std::endl;
+    if(value2 != "") {
+        // if no ","
+        if(value2.find(";") == std::string::npos) {
+            ans.push_back(value2);
+        }
+        // else if 1 ","
+        else if(value2.find(";") == value2.rfind(";")) {
+            std::string first = value2.substr(0, value2.find(";"));
+            std::string second = value2.substr(value2.find(";") + 1);
+            first = MetaUtil::trim(first);
+            second = MetaUtil::trim(second);
+            ans.push_back(first);
+            ans.push_back(second);
+        }
+        else {
+            ans = MetaUtil::split(";", value2);
+            for(int i = 0; i < ans.size(); i++) {
+                ans[i] = MetaUtil::trim(ans[i]);
+            }
+        }
+    }
+    // dump
+    std::cout << "INFO::LibFunctionTable::getArgumentTypesList, Function Name: " << funcName << ", argument size = " << ans.size() << ",  types: ";
+    for(int i = 0; i < ans.size(); i++) {
+        std::cout << ans[i] << ", ";
+    }
+    std::cout << std::endl;
+    return ans;
+}
+
+bool LibFunctionTable::getIsVarArgs(std::string funcName) {
+    std::vector<std::string> args = this->getArgumentTypesList(funcName);
+    for(int i = 0; i < args.size(); i++) {
+        if(args[i] == "...") return true;
+    }
+    return false;
+}
+
+bool LibFunctionTable::contain(const std::string& funcName) {
+    return LibFunctionMap.find(funcName) != LibFunctionMap.end();
+}
+
+void LibFunctionTable::dump(std::string funcName) {
+    if(!this->LibFunctionMap.count(funcName)) {
+        std::cout << "ERROR:: LibFunctionTable Function " << funcName << " not found in LibFunctionTable" << std::endl;
+        return;
+    }
+    std::pair<std::string, std::string> value = LibFunctionMap[funcName];
+    std::cout << "INFO::LibFunctionTable::dump, Function Name: " << funcName << ", return type: " << value.first << ", argument types: " << value.second << std::endl;
+}
+
+
+
+//===-------------------------------------------------------------------------------===//
 /// Yaml Util implementation.
 
     int YamlUtil::test() {
@@ -265,14 +395,15 @@ namespace MetaTrans {
         if (str.length() == 0) {
             return str;
         }
-        else if(str.length() == 1 && str[0] == ' ') {
+        else if (str.length() == 1 && str[0] == ' ') {
             return "";
         }
-        std::string ans = str;
         std::string blanks("\f\v\r\t\n ");
-        ans.erase(0, str.find_first_not_of(blanks));
-        ans.erase(str.find_last_not_of(blanks) + 1);
-        return ans;
+        int l = str.find_first_not_of(blanks);
+        int r = str.find_last_not_of(blanks);
+
+        if (l == str.npos) return "";
+        return str.substr(l, r - l + 1);
     }
 
 
@@ -336,7 +467,7 @@ namespace MetaTrans {
         return s;
     }
 
-    std::string MetaUtil::lower( std::string& str) {
+    std::string MetaUtil::lower(std::string str) {
         std::string result(str.size(), ' ');
         std::transform(str.begin(), str.end(), result.begin(),
                  [](unsigned char c) { return std::tolower(c); });
@@ -500,6 +631,7 @@ namespace MetaTrans {
 
     DataType MetaUtil::extractDataType(std::string& src) {
         MetaUtil::strip(" ", src);
+        MetaUtil::strip("const ", src);
         if (MetaUtil::startwith("char", src)) return DataType::INT;
         if (MetaUtil::startwith("int", src)) return DataType::INT;
         if (src[src.size() - 1] == '*') return DataType::INT;
@@ -514,6 +646,7 @@ namespace MetaTrans {
 
     int MetaUtil::extractDataWidth(std::string& src) {
         MetaUtil::strip(" ", src);
+        MetaUtil::strip("const ", src);
         if (MetaUtil::startwith("char", src)) return 8;
         if (MetaUtil::startwith("int", src)) return 32;
         if (MetaUtil::startwith("long", src)) return 32;
@@ -874,26 +1007,74 @@ namespace MetaTrans {
     bool MetaUtil::test() {
         printf("INFO: testing Graph API.\n");
         Graph<int> g;
-        g.add(1, {2, 3, 4});
-        g.setRoot(1);
-        g.add(2, 5);
-        g.add(5, 3);
-        g.add(3, 5);
-        g.add(5, 6);
-        g.add(6, 4);
+        g.add(0, 1);
+        g.setRoot(0);
+        g.add(1, {2, 5});
+        g.add(2, 3);
+        g.add(3, {4, 1});
+        g.add(5, {6, 8});
         g.add(6, 7);
-        std::vector<int> seq = g.getDFSseq();
+        g.add(7, 3);
+        g.add(8, 7);
+        std::vector<int> seq = g.getReversePostOrderDFSSeq();
+            
+        printf("Reverse Post Order: ");
+        for (int i = 0; i < seq.size(); ++i) {
+            printf("%d ", seq[i]);
+        }
+        printf("\n");
+
+        Graph<int> G(g);
+
+        seq = G.getPostOrderDFSSeq();
+
+        printf("Post Order: ");
         for (int i = 0; i < seq.size(); ++i) {
             printf("%d ", seq[i]);
         }
         printf("\n");
 
 
-        seq = g.getBFSseq();
+        seq = G.getPreOrderDFSSeq();
+        printf("Pre Order: ", seq.size());
         for (int i = 0; i < seq.size(); ++i) {
             printf("%d ", seq[i]);
         }
         printf("\n");
+
+        seq = G.getPostOrderDFSIdxSeq();
+        printf("Post Order Idx: ", seq.size());
+        for (int i = 0; i < seq.size(); ++i) {
+            printf("%d ", seq[i]);
+        }
+        printf("\n");
+
+        seq = g.getBFSSeq();
+        printf("BFS Order: ", seq.size());
+        for (int i = 0; i < seq.size(); ++i) {
+            printf("%d ", seq[i]);
+        }
+        printf("\n");
+
+        DominateTree<int> dmt(g);
+        dmt.dump();
+        Graph<int> h;
+        h.add(1, {2, 5, 9});
+        h.add(2, 3);
+        h.add(3, {3, 4});
+        h.add(4, 13);
+        h.add(5, {5, 6, 7});
+        h.add(6, {4, 8});
+        h.add(7, {8, 12});
+        h.add(8, 13);
+        h.add(9, {10, 11});
+        h.add(10, 12);
+        h.add(11, 12);
+        h.add(12, 13);
+
+        h.setRoot(1);
+        DominateTree<int> tmd(h);
+        tmd.dump();
     }
 
 
