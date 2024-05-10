@@ -2,7 +2,7 @@
 # MetaTrans
 
 > [!NOTE]
-> Since most of the codes in this repository has been integrate into the main repository, it's currently in archive status.
+> Since most of the codes in this repository has been integrated into the main repository, it's currently in archive status.
 
 ## How to BUILD && RUN
 1. Clone llvm project.
