@@ -1,6 +1,9 @@
 
 # MetaTrans
 
+> [!NOTE]
+> Since most of the codes in this repository has been integrate into the main repository, it's currently in archive status.
+
 ## How to BUILD && RUN
 1. Clone llvm project.
 2. Clone code into `llvm-project/llvm/lib/Transforms/`, so the full relative path should be `llvm-project/llvm/lib/Transforms/MetaTrans`.
